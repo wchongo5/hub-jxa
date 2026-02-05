@@ -1,0 +1,475 @@
+// v1.0
+
+// const {
+//    applyColorsToBlocks,
+//    createSmartMailbox,
+//    decodeQuotedPrintable,
+//    getGroupsInfoExtra,
+//    getMailMessagesInfo,
+//    getMailMessagesInfoProcess,
+//    getMailMessageSender,
+//    saveMailMessagesAttachments,
+// } = Library("mailLib")
+
+const { alert } = Library('displayLib');
+const { cfl, cfl2Str } = Library('cflLib');
+const { formatDateV3 } = Library('datetimeLib');
+const { copyPaste, doMenu } = Library('menuLib');
+var objCLib = Library('objCLib');
+const { pressEscape, enter } = Library('systemLib');
+
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var mailAppControllerP = seApp.processes['Mail'];
+
+// --------------------------------------- DELAYS
+
+var d0p1 = 0.1;
+// var d0p2 = 0.2
+var d0p3 = 0.3;
+var d1 = 1;
+//var d1p5 = 1.5
+
+// ---------------------------------------
+function applyColorsToBlocks(htmlContent) {
+  const colors = [
+    'red',
+    'blue',
+    'green',
+    'purple',
+    'orange',
+    'cyan',
+    'magenta',
+    'lime',
+    'pink',
+    'teal',
+    'lavender',
+    'brown',
+    'beige',
+    'maroon',
+    'mint',
+    'olive',
+    'apricot',
+    'navy',
+    'grey',
+    'yellow',
+    'turquoise',
+    'tan',
+    'salmon',
+    'plum',
+    'orchid',
+    'black',
+    'indigo',
+    'coral',
+    'crimson',
+    'fuchsia',
+  ];
+
+  let colorIndex = 0;
+
+  // At this stage the code was decoed so "=3D" is "=" after decoded. So we are looking for <blockquote type="cite"> not <blockquote type=3D"cite"> before decoded.
+  const blockquoteRegex = /<blockquote type="cite">/g;
+
+  return (htmlContent = htmlContent.replace(blockquoteRegex, () => {
+    const color = colors[colorIndex++ % colors.length];
+    return `<blockquote type="cite" style="color: ${color};">`;
+  }));
+}
+
+/*
+function createSmartMailbox(groupNameInput) {
+   doMenu("Mail", "Mailbox", "New Smart Mailbox…")
+   copyPaste(groupNameInput)
+
+   // // ----- In Smart Folder open conditions window, click to open dropdown list
+
+   // 🔴🔴🔴 NOTE QUE HÁ INVERSÃO DE ÍNDICES ENTRE BOTÃO 1 (REF01) e 2 (REF02), dependendo de opção de botação 1 se é "From" ou "Sender is member of group"
+   // 🔴🔴🔴 SE VERIFICAR ERRO NO FUTURO, VER SE NÃO UNIFORMIZARAM A SEQUÊNCIA DE ÍNDICES
+
+   var sheet = mailAppControllerP.windows[0].sheets[0]
+
+   // REF01 — Para opção "From" é popUpButtons[0] e "Sender is member of group" é popUpButtons[1] e para escolher o grupo popUpButtons[0]
+   sheet.scrollAreas[0].popUpButtons[0].click()
+
+   delay(d0p3)
+
+   // Click to select "Any recipient"
+   sheet.scrollAreas[0].popUpButtons[0].menus[0].menuItems["Sender is member of group"].click()
+   delay(d1) // Era d0p3
+
+   // REF02 — Para opção "From" é popUpButtons[1] e "Sender is member of group" é popUpButtons[0] e para escolher o grupo popUpButtons[0]
+   sheet.scrollAreas[0].popUpButtons[0].click()
+   delay(d0p3) // Era d0p3
+   
+   try {
+      sheet.scrollAreas[0].popUpButtons[0].menus[0].menuItems[groupNameInput].click()
+      delay(d0p3)
+      
+      sheet.checkboxes["Include messages from Sent"].click()
+   
+      enter(1)
+      
+   } catch (error) {
+      pressEscape(2) // 2
+   }
+}
+*/
+
+function createSmartMailbox(dropdown1Name, dropdown2Name, includeMessagesFromTrash, includeMessagesFromSent) {
+  doMenu('Mail', 'Mailbox', 'New Smart Mailbox…');
+
+  let smartMailBoxName = dropdown2Name;
+
+  // ----- For GroupsInfoExtra
+  if (dropdown1Name === 'Message is in mailbox' && dropdown2Name === 'Drafts') {
+    smartMailBoxName = `P0 - Drafts to Delete`;
+  }
+
+  if (dropdown1Name === 'Message was not replied to') {
+    smartMailBoxName = `P0 - Replied - No`;
+  }
+
+  if (dropdown1Name === 'Message was replied to') {
+    smartMailBoxName = `P0 - Replied - Yes`;
+  }
+
+  if (dropdown1Name === 'Date received' && dropdown2Name === 'is today') {
+    smartMailBoxName = `P0 - Today - Received`;
+  }
+
+  if (dropdown1Name === 'Message is unread') {
+    smartMailBoxName = `P0 - Unread`;
+  }
+
+  // -----
+
+  copyPaste(smartMailBoxName);
+
+  // // ----- In Smart Folder open conditions window, click to open dropdown list
+
+  // 🔴🔴🔴 NOTE QUE HÁ INVERSÃO DE ÍNDICES ENTRE BOTÃO 1 (REF01) e 2 (REF02), dependendo de opção de botação 1 se é "From" ou "Sender is member of group"
+  // 🔴🔴🔴 SE VERIFICAR ERRO NO FUTURO, VER SE NÃO UNIFORMIZARAM A SEQUÊNCIA DE ÍNDICES
+
+  var sheet = mailAppControllerP.windows[0].sheets[0];
+
+  // REF01 — Para opção "From" é popUpButtons[0] e "Sender is member of group" é popUpButtons[1] e para escolher o grupo popUpButtons[0]
+  sheet.scrollAreas[0].popUpButtons[0].click();
+
+  delay(d0p3);
+
+  // Click to select "Any recipient"
+  sheet.scrollAreas[0].popUpButtons[0].menus[0].menuItems[dropdown1Name].click();
+  delay(d1); // Era d0p3
+
+  try {
+    if (dropdown2Name) {
+      // REF02 — Para opção "From" é popUpButtons[1] e "Sender is member of group" é popUpButtons[0] e para escolher o grupo popUpButtons[0]
+      sheet.scrollAreas[0].popUpButtons[0].click();
+      delay(d0p3); // Era d0p3
+
+      sheet.scrollAreas[0].popUpButtons[0].menus[0].menuItems[dropdown2Name].click();
+    }
+
+    if (includeMessagesFromTrash) {
+      delay(d0p3);
+      sheet.checkboxes['Include messages from Trash'].click();
+    }
+
+    if (includeMessagesFromSent) {
+      delay(d0p3);
+      sheet.checkboxes['Include messages from Sent'].click();
+    }
+
+    enter(1);
+  } catch (error) {
+    pressEscape(2); // 2
+  }
+}
+
+function decodeQuotedPrintable(quotedPrintable) {
+  let app = Application.currentApplication();
+  app.includeStandardAdditions = true;
+
+  // Create a temporary file path
+  const temporaryFolder = app.pathTo('temporary items').toString();
+  const tempFilePath = `${temporaryFolder}/temp_quoted_printable.txt`;
+
+  // Write the quoted-printable content to a temporary file
+  const fileManager = $.NSFileManager.defaultManager;
+  const contentData = $.NSString.alloc.initWithUTF8String(quotedPrintable).dataUsingEncoding($.NSUTF8StringEncoding);
+  fileManager.createFileAtPathContentsAttributes(tempFilePath, contentData, $());
+
+  // Prepare the command to decode quoted-printable using Perl
+  const command = `perl -MMIME::QuotedPrint -ne 'print decode_qp($_);' < '${tempFilePath}'`;
+
+  // Execute the command and return the result
+  try {
+    return app.doShellScript(command);
+  } catch (e) {
+    console.error('Error in decoding:', e.message);
+    return null;
+  } finally {
+    // Clean up: Delete the temporary file
+    app.doShellScript(`rm '${tempFilePath}'`);
+  }
+}
+
+function getMailMessagesInfo(messages, isCreateFolder, includeSenderName = false) {
+  let senderName = null;
+  const messagesCollection = {};
+  const messageIdAndEmailCollection = {};
+
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+
+    var messageDateReceived = message.dateReceived();
+    const messageId = message.id();
+    const messageIdWithIdStr = `id${messageId}`;
+    const { dateY4M2D2__H2M2S2 } = formatDateV3(messageDateReceived).formats;
+
+    const { senderName, senderEmail } = getMailMessageSender(message);
+    const iSum = i + 1;
+    const messageNumber = `${iSum < 10 ? ' ' + iSum : iSum}`;
+    const dateAndSenderAndId = `${messageNumber}. ${dateY4M2D2__H2M2S2} ${senderName} #${messageIdWithIdStr}`;
+
+    // messageIdAndEmailList.push[[messageId, senderEmail]]
+
+    if (messageIdAndEmailCollection[messageIdWithIdStr] === undefined) {
+      messageIdAndEmailCollection[messageIdWithIdStr] = senderEmail;
+    }
+
+    if (message.mailAttachments().length === 0) {
+      messagesCollection[dateAndSenderAndId] = ``;
+    } else {
+      for (var attachment of message.mailAttachments()) {
+        var originalName = attachment.name();
+
+        if (messagesCollection[dateAndSenderAndId] === undefined) {
+          messagesCollection[dateAndSenderAndId] = originalName;
+        } else {
+          messagesCollection[dateAndSenderAndId] += ` | ${originalName}`;
+        }
+      }
+    }
+  }
+
+  const messagesCollectionArray = Object.entries(messagesCollection).map(item => {
+    const itemItem2 = item[1];
+
+    if (itemItem2 === ``) {
+      return item[0];
+    } else {
+      return item.join(' — ');
+    }
+  });
+
+  /*
+  if (messagesCollectionArray.lengh === 1) {
+    var messageInfo = messagesCollectionArray[0];
+  } else {
+    var messageInfo = cfl2Str(messagesCollectionArray, `Seleccione a mensagem`, messagesCollectionArray[0]);
+  }
+
+  const pattern = /\s#id(\d+)/;
+  const idToFind = Number(messageInfo.match(pattern)[1]);
+  const senderEmailFound = messageIdAndEmailCollection[`id${idToFind}`];
+
+  const messageDateAndSenderParts = messageInfo.split(pattern)[0].split('. ')[1].split(' ');
+
+  const dateY4M2D2__H2M2S2 = messageDateAndSenderParts[0];
+
+  const senderNameParts = messageDateAndSenderParts.slice(1, messageDateAndSenderParts.length);
+
+  if (isCreateFolder && includeSenderName) {
+    if (senderNameParts.length === 1) {
+      senderName = senderNameParts[0];
+    } else {
+      var senderNamePartsSelected = cfl(senderNameParts, 'Elementos para composição do nome', senderNameParts[0], 'm');
+
+      senderName = senderNamePartsSelected.join(' ');
+    }
+  }
+  
+  return {
+     idToFind,
+     senderEmailFound,
+     dateY4M2D2__H2M2S2,
+     senderName,
+   };
+   */
+
+  const mailMessagesInfoProcessed = getMailMessagesInfoProcess(
+    messagesCollectionArray,
+    messageIdAndEmailCollection,
+    isCreateFolder,
+    includeSenderName
+  );
+
+  return mailMessagesInfoProcessed;
+}
+
+function getMailMessagesInfoProcess(messagesCollectionArray, messageIdAndEmailCollection, isCreateFolder, includeSenderName) {
+  var messagesInfoArray;
+
+  if (messagesCollectionArray.length === 1) {
+    messagesInfoArray = [messagesCollectionArray[0]];
+  } else {
+    messagesInfoArray = cfl(
+      messagesCollectionArray,
+      `Seleccione as mensagens\n\n—\nAceita múltiplas selecções`,
+      messagesCollectionArray[0],
+      'm'
+    );
+  }
+
+  return messagesInfoArray.map(messageInfo => {
+    var pattern = /\s#id(\d+)/;
+    var idMatch = messageInfo.match(pattern);
+    var idToFind = Number(idMatch[1]);
+    var senderEmailFound = messageIdAndEmailCollection[`id${idToFind}`];
+
+    var messageDateAndSenderParts = messageInfo.split(pattern)[0].split('. ')[1].split(' ');
+    var dateY4M2D2__H2M2S2 = messageDateAndSenderParts[0];
+    var senderNameParts = messageDateAndSenderParts.slice(1);
+
+    var senderName = '';
+    if (isCreateFolder && includeSenderName) {
+      if (senderNameParts.length === 1) {
+        senderName = senderNameParts[0];
+      } else {
+        var senderNamePartsSelected = cfl(senderNameParts, 'Elementos para composição do nome', senderNameParts[0], 'm');
+        senderName = senderNamePartsSelected.join(' ');
+      }
+    }
+
+    return {
+      idToFind,
+      senderEmailFound,
+      dateY4M2D2__H2M2S2,
+      senderName,
+    };
+  });
+}
+
+/*
+function getMailMessageSender(message) {
+  const senderItems = message.sender().split(' <');
+  const senderName = senderItems[0];
+  const senderEmail = senderItems[1].split('>')[0];
+
+  return {
+    senderName,
+    senderEmail,
+  };
+}
+*/
+
+function getMailMessageSender(message) {
+  const sender = message.sender();
+
+  if (sender.includes('<') && sender.includes('>')) {
+    const startOfEmail = sender.indexOf('<');
+    const endOfEmail = sender.indexOf('>');
+    const senderName = sender.substring(0, startOfEmail).trim();
+    const senderEmail = sender.substring(startOfEmail + 1, endOfEmail).trim();
+
+    return {
+      senderName,
+      senderEmail,
+    };
+  } else {
+    return {
+      senderName: 'No System Name',
+      senderEmail: sender.trim(),
+    };
+  }
+}
+
+/*
+function saveMailMessagesAttachments(messages, pathStr) {
+  for (var message of messages) {
+    for (var attachment of message.mailAttachments()) {
+      var originalName = attachment.name();
+
+      try {
+        attachment.save({ in: Path(`${pathStr}/${originalName}`) });
+      } catch (error) {
+        alert(`Erro gravando anexos`, error.message);
+      }
+    }
+  }
+}
+  */
+
+function saveMailMessagesAttachments(messages, pathStr) {
+  for (var message of messages) {
+    var attachments = message.mailAttachments();
+    if (attachments.length === 0) {
+      alert('Sem anexos');
+    } else {
+      for (var attachment of attachments) {
+        var originalName = attachment.name();
+        try {
+          attachment.save({ in: Path(`${pathStr}/${originalName}`) });
+        } catch (error) {
+          app.displayDialog(`Erro gravando anexos: ${error.message}`);
+        }
+      }
+    }
+  }
+}
+
+function processAndSaveHtmlFile(emailSource, headerEssential, pathStrWithName) {
+  // FOUR SITUATIONS, ONE REGEX see situations in file "• MAIL - SOURCE SITUATIONS.md"
+  const matches1 = emailSource.match(/Content-Type: text\/html;.*?\n.*?\n\n([\s\S]*?)(?:\n------|=\n.*\n--Apple-Mail.*|\n\n)/m);
+
+  try {
+    var encodedContent = matches1[1];
+  } catch (error) {
+    var decodedContent = null;
+  }
+
+  if (encodedContent) {
+    var decodedContent = decodeQuotedPrintable(encodedContent);
+  } else {
+    var decodedContent = 'No HTML content found';
+  }
+
+  const headerEssentialHtml = headerEssential
+    .split('\n')
+    .map(item => `<div>${item}</div>`)
+    .join('\n');
+
+  let htmlContent = `${headerEssentialHtml}${decodedContent}`;
+
+  const metaCharsetUTF8Tag = `<meta charset="UTF-8">`;
+  const hasMetaCharsetUTF8 = htmlContent.toLowerCase().includes(metaCharsetUTF8Tag.toLocaleLowerCase());
+
+  if (!hasMetaCharsetUTF8) {
+    htmlContent = `${metaCharsetUTF8Tag}${htmlContent}`;
+  }
+
+  const htmlContentBlocksColored = applyColorsToBlocks(htmlContent);
+
+  const htmlPathStr = `${pathStrWithName}.html`;
+  const fileWritten = objCLib.writeToFile(htmlPathStr, `${htmlContentBlocksColored}`);
+
+  if (fileWritten) {
+    finderApp.open(Path(htmlPathStr));
+  }
+}
+
+/* // 🔴🔴🔴 RETUNS NULL
+function sortMailMessages(messages, isAscending) {
+    messages.sort((a, b) => {
+        if (isAscending) {
+            // For ascending order, compare normally
+            return a.dateReceived() - b.dateReceived();
+        } else {
+            // For descending order, reverse the comparison
+            return b.dateReceived() - a.dateReceived();
+        }
+    });
+}
+*/

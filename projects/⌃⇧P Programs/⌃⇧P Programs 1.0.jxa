@@ -1,0 +1,165 @@
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+const {
+  cfl,
+  // cfl2Str,
+} = Library('cflLib');
+const notesLib = Library('notesLib');
+const pathLib = Library('pathLib');
+const { appsRunningClose } = Library('systemLib');
+
+// ---------------------------------------
+
+const notesApp = Application('Notes');
+const numbersApp = Application('Numbers');
+
+// --------------------------------------- DELAYS
+
+const d0p3 = 0.3;
+// const d0p5 = 0.5
+// const d1 = 1
+// const d1p5 = 1.5
+// const d2 = 2
+// const d3 = 3
+// const d5 = 5
+// const d6 = 6
+// const d10 = 10
+// const d13 = 13
+
+// ---------------------------------------
+
+const numXG5Path = pathLib.getNumXG5PathStr();
+
+const closeAppsItem = 'Close Apps';
+
+const apps = [
+  closeAppsItem,
+  '-----------',
+  'Contacts - 8',
+  'Messages - 9',
+  // 'Notes - 3',
+  'com.apple.Notes - 3',
+  'Numbers - 5',
+  'Mail - 1',
+  'Safari - 4',
+  'WhatsApp - 2',
+  '-----------',
+  'Automator - 7',
+  'Visual Studio Code - 6',
+];
+
+const notesFiltersToOpen = [
+  ['P1', '7DaysNOW2'],
+  ['P1', 'Criação de Nota'],
+  // ['P5', 'XDXFAF210603 SENAMI POSTAL'],
+  // ['P5', 'XDWFAP240902 ALMEIDA'],
+];
+
+const mailIsRunning = Application('Mail').running();
+
+const contactsIsRunning = Application('Contacts').running();
+const automatorIsRunning = Application('Automator').running();
+// const vscodeIsRunning = Application("Visual Studio Code").running();
+
+const appsD = apps.filter(item => {
+  if (item.startsWith('---')) {
+    return false;
+  }
+
+  if (item.startsWith('Contacts') && !mailIsRunning) {
+    return mailIsRunning && contactsIsRunning;
+  }
+
+  if (item.startsWith('Automator') && !mailIsRunning) {
+    return mailIsRunning && automatorIsRunning;
+  }
+
+  // if (item.startsWith("Visual Studio Code")) {
+  //     return mailIsRunning && vscodeIsRunning;
+  // }
+
+  if (item === closeAppsItem) {
+    return mailIsRunning;
+  }
+
+  // Include all other items
+  // return true;
+
+  if (!mailIsRunning) {
+    return true;
+  }
+
+  return false;
+});
+
+const appsSelected = cfl(apps, 'Applicativos\n\n-----\n🔴 Ver se JXA já suporta TAGS.', appsD, 'm');
+
+const appsSelectedL = appsSelected.length;
+
+// const isCloseApps = appsSelected.find(app => app === closeAppsItem)
+// const isCloseApps = appsSelected.includes(closeAppsItem)
+const isCloseApps = appsSelected[0] === closeAppsItem;
+
+if (isCloseApps && appsSelectedL > 1) {
+  alert(
+    `Erro. "${closeAppsItem}" deve ser selecionada sozinha. Agora são (${appsSelectedL}):\n${appsSelected
+      .map(item => `• ${item}`)
+      .join('\n')}`,
+    ``
+  );
+}
+
+const appsListSorted = appsSelected
+  .filter(item => !item.includes(closeAppsItem))
+  .sort((a, b) => {
+    const numA = parseInt(a.split(' - ')[1]);
+    const numB = parseInt(b.split(' - ')[1]);
+
+    return numB - numA;
+  })
+  .map(app => app.split(' - ')[0]);
+
+if (isCloseApps) {
+  appsRunningClose();
+}
+
+appsListSorted.forEach(appName => {
+  const app = Application(appName);
+
+  // if (isCloseApps) {
+
+  //     if (app.running()) {
+
+  //         try {
+  //             app.quit();
+
+  //         } catch (error) {
+
+  //         }
+  //     }
+  // } else {
+  if (!app.running()) {
+    app.activate();
+    delay(d0p3);
+
+    if (appName === 'Notes') {
+      notesFiltersToOpen.forEach(([folderName, filter]) => {
+        const folder = notesApp.folders[folderName];
+        folder.show();
+
+        const notes = folder.notes.whose({ name: { _contains: filter } }); //[0]
+
+        if (notes.length > 0) {
+          notesLib.noteOpenInNewWindow(notes[0]);
+        }
+      });
+    }
+
+    if (appName === 'Numbers') {
+      const docNumXG5 = numbersApp.open(Path(numXG5Path));
+    }
+  }
+  // }
+});

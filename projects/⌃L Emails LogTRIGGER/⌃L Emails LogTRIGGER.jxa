@@ -1,0 +1,22 @@
+
+
+// v1.1
+
+var pathLib = Library("pathLib")
+
+var seApp = Application("System Events");
+
+var finderApp = Application("Finder");
+
+var dateMain = new Date();
+
+var yyyy = (dateMain.getFullYear().toString());
+var mm = dateMain.toLocaleString("en", {month: "2-digit"});
+var dd = dateMain.toLocaleString("en", {day: "2-digit"});
+var time = (dateMain.toLocaleString("en", {hourCycle: "h24", hour: "2-digit", minute: "2-digit", second: "2-digit"})).replace(/:/g, "");
+
+var timeStamp = yyyy + mm + dd + "-" + time
+
+var emailsProcessTriggerStr = pathLib.getPlataformsPathStr() + "/APPS WF/EMAILS LOG TRIGGER"
+
+finderApp.make({new: "folder", at: Path(emailsProcessTriggerStr), withProperties: {name: "TRIGGER " + timeStamp }});

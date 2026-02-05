@@ -1,0 +1,1165 @@
+// v1.0
+// const {
+// 	calculateAlarmInputs,
+// 	convertBasicDT2ISO,
+// 	convertDeadlineToDaysWithUnits,
+// 	dateEntry_mr,
+// 	ddEntryWithPreviousAndOrNext30DaysDisplay,
+// 	dateInfo,
+// 	daysInMonth,
+// 	dueDays,
+// 	formatDate,
+// 	formatDateV2,
+// 	formatDateV3,
+// 	getAutoDate,
+// 	getDateEnglishToPortugue,
+// 	getDateYyyyMmDd__timeHhMnSs,
+// 	getExpedientDates,
+// 	getDelays,
+// 	getAdjustedEventDatesIfNotSameDay,
+// 	getDurationUnit,
+// 	getDurationInputWithUnit,
+// 	getEventStandardDuration,
+// 	getFileInfo,
+// 	getMonths,
+// 	getTimeUnitDict,
+// 	getWorkDurationNumbersWithUnit,
+// 	getYearAndMonth,
+// 	getYyyyMmMinus1,
+// 	getYyyyMmPlus1,
+// 	monthEnglishToPortuguese,
+// 	monthSelector,
+// 	mmEnglishToPortuguese,
+// 	mmStr2mmNum,
+// 	mmNum2mmStr,
+// 	offsetDateByComponents,
+// 	offsetDateByInput,
+// 	timeElapsed,
+// } = Library("datetimeLib")
+
+// ---- NOTAS
+// • NOTE QUE delay(63) no Code pode resultar 78s de relógio - percebido em processTimeElapsed
+
+const { addZero, formatNumber } = Library('numberLib');
+const cflLib = Library('cflLib');
+const { alert, dialog } = Library('displayLib');
+const documentLib = Library('documentLib');
+
+// ---------------------------------------
+
+function calculateAlarmInputs(dateStart, dateEnd) {
+  const alarms = [];
+  const eventDuration = (new Date(dateEnd).getTime() - new Date(dateStart).getTime()) / 1000; // duration in seconds
+
+  const oneDay = 24 * 60 * 60;
+  const oneHour = 60 * 60;
+  const fifteenMinutes = 15 * 60;
+
+  // Add '3d' alarm only if the event duration is at least 3 days
+  if (eventDuration >= 3 * oneDay) {
+    alarms.push('3d');
+  }
+
+  // Add '2d' alarm only if the event duration is at least 2 days
+  if (eventDuration >= 2 * oneDay) {
+    alarms.push('2d');
+  }
+
+  // d: day, h: hour, m: minute
+
+  // Add '1d' alarm only if the event duration is at least 1 day
+  if (eventDuration >= oneDay) {
+    alarms.push('1d');
+
+    // Add additional alarms in the last 24 hours
+    alarms.push('6h');
+    alarms.push('3h');
+    alarms.push('1h');
+    // alarms.push('30m');
+    // alarms.push('15m');
+  } else if (eventDuration >= oneHour) {
+    // Add alarms for shorter events
+    alarms.push('1h');
+    alarms.push('30m');
+    alarms.push('15m');
+  } else if (eventDuration >= fifteenMinutes) {
+    alarms.push('15m');
+  }
+
+  return alarms; //.join(', ');
+}
+
+function convertBasicDT2ISO(basicDatetime) {
+  // basicDatetime in XD5: 20240731-151222
+  // DT - datetime. ISO 8601
+  const [yyyy, mm, dd, h, min, s] = [
+    basicDatetime.slice(0, 4),
+    basicDatetime.slice(4, 6),
+    basicDatetime.slice(6, 8),
+    basicDatetime.slice(9, 11),
+    basicDatetime.slice(11, 13),
+    basicDatetime.slice(13, 15),
+  ];
+  // return `${y}-${m}-${d}T${h}:${min}:${s}`;
+
+  return {
+    yyyy,
+    dd,
+    mm,
+    dateISO8601: `${yyyy}-${mm}-${dd}T${h}:${min}:${s}`,
+  };
+}
+
+function convertDeadlineToDaysWithUnits(deadlineWithUnit) {
+  var deadlineWithUnitItems = deadlineWithUnit.split(' ');
+
+  if (deadlineWithUnitItems[1][0] == 'a') {
+    return Number(deadlineWithUnitItems[0]) * 365 + 'd';
+  } else if (deadlineWithUnitItems[1][0] == 'd') {
+    return Number(deadlineWithUnitItems[0]) + 'd';
+  } else if (deadlineWithUnitItems[1][0] == 'm') {
+    return Number(deadlineWithUnitItems[0]) * 7 * 4 + 'd';
+  } else if (deadlineWithUnitItems[1][0] == 's') {
+    return Number(deadlineWithUnitItems[0]) * 7 + 'd';
+  }
+}
+
+function dateEntry_mr(
+  ddEntryDescription,
+  dateDescription,
+  yyyy,
+  mm,
+  mmNum,
+  mmStr,
+  dd,
+  monthType,
+  operationSlashType,
+  payrunPayFrequency
+) {
+  if (operationSlashType == undefined) {
+    var { ddEntry } = ddEntryWithPreviousAndOrNext30DaysDisplay(`Anteriores`, ddEntryDescription);
+  } else if (operationSlashType == 'Extrato') {
+    var { ddEntry } = ddEntryWithPreviousAndOrNext30DaysDisplay(`Anteriores`, ddEntryDescription);
+  }
+
+  if (operationSlashType != 'Extrato') {
+    if (Number(ddEntry) > Number(dd)) {
+      if (mmNum - 1 == 0) {
+        var mmNum = '12';
+      } else {
+        var mmNum = mmNum - 1;
+      }
+      var mmStr = mmNum2mmStr(mmNum);
+    }
+  }
+
+  var mmStrTrack = monthSelector('Mês', mmNum, mmStr, 'auto_mmStr').slice(0, 3);
+  var mmNumTrack = mmStr2mmNum(mmStrTrack);
+
+  if (Number(mmNumTrack) > Number(mm)) {
+    // >= em Extrato Start Date
+    var yyyyTrack = yyyy - 1;
+  } else {
+    var yyyyTrack = yyyy;
+  }
+
+  if (operationSlashType == 'D. Create - Payrun (WX)') {
+    if (payrunPayFrequency == 'Monthly') {
+      var date = new Date(dialog('Data', '1' + ' ' + mmStrTrack + ' ' + yyyyTrack));
+    } else {
+      var ddEntry = dialog('Dia (Início)', dd);
+      var date = new Date(dialog('Data (Início)', ddEntry + ' ' + mmStrTrack + ' ' + yyyyTrack));
+    }
+  } else {
+    var date = new Date(dialog(dateDescription, ddEntry + ' ' + mmStrTrack + ' ' + yyyyTrack));
+  }
+
+  var dateDdNew = dateInfo(date, { day: '2-digit' });
+  var dateMmNew = dateInfo(date, { month: '2-digit' });
+  var dateMmStrNew = dateInfo(date, { month: monthType });
+  var dateYyyyNew = dateInfo(date, { year: 'numeric' });
+
+  return dateDdNew + ' | ' + dateMmNew + ' | ' + dateMmStrNew + ' | ' + dateYyyyNew;
+}
+
+function ddEntryWithPreviousAndOrNext30DaysDisplay(previousOrNext, ddEntryDescription) {
+  var dateCalculeted = new Date();
+  //var dateCalculeted = new Date ("5/31/2022") // Testing
+  var currentDay = dateCalculeted.getDate(); // 1 ou 13
+  var numberOfNextDays = 30; // Aceita mais que 30 dias mas não está configurado para zerar se for mais que 1 mês - zero o primeiro mês apenas - 30 dias são suficientes para a necessidade actual
+
+  if (previousOrNext == `Anteriores` || previousOrNext == `Anteriores15dEPróximos15d`) {
+    if (previousOrNext == `Anteriores`) {
+      // numberOfNextDays - 1 para incluir o último dia que é o corrente/hoje
+      var daysToSubtract = 1;
+    } else if (previousOrNext == `Anteriores15dEPróximos15d`) {
+      var daysToSubtract = 16; // (1 + 15) para hoje estar no meio (será 16?)
+    }
+
+    var dateCalculeted = new Date(dateCalculeted.setDate(dateCalculeted.getDate() - (numberOfNextDays - daysToSubtract)));
+  }
+
+  var numberOfDaysInMonth = daysInMonth(dateCalculeted); // 28
+
+  var startDay = dateCalculeted.getDate(); //13
+
+  var monthGridDaysName = `${numberOfNextDays} dias (${previousOrNext})\n* dia de hoje.`;
+
+  // Cada letra inicial do dia tem "espaço" e depois "tab" para centralização
+  var next30DaysDisplay = [' M	 T	 W	 T	 F	 S	 S\n'];
+  var next7DaysCollection = [];
+
+  var startDayOfWeek = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+
+  var currentWeekDay = dateCalculeted.toLocaleString('en', { weekday: 'long' }); //"Wednesday"
+
+  for (var i = 0; i < numberOfNextDays; i++) {
+    if (i == 0) {
+      var loopToWeekDay = startDayOfWeek[currentWeekDay];
+
+      for (var j = 0; j < loopToWeekDay; j++) {
+        next7DaysCollection.push('');
+      }
+    }
+
+    var day = i + startDay;
+
+    if (numberOfDaysInMonth < day) {
+      var day = (day - numberOfDaysInMonth).toString();
+    }
+
+    if (day.toString().length == 1) {
+      var day = ' ' + day;
+    }
+
+    if (
+      (previousOrNext == `Próximos` && i == 0) ||
+      (previousOrNext == `Anteriores` && i == numberOfNextDays - 1) ||
+      (previousOrNext == `Anteriores15dEPróximos15d` && day == currentDay)
+    ) {
+      day += '*';
+    }
+
+    next7DaysCollection.push(day);
+
+    if (next7DaysCollection.length == 7) {
+      next30DaysDisplay.push(next7DaysCollection.join('	') + '\n');
+
+      var next7DaysCollection = [];
+    } else if (next7DaysCollection.length + numberOfNextDays - i <= 7) {
+      // O primeiro "	" pode ser "", "tab", não muda nada
+      next30DaysDisplay.push(next7DaysCollection.join('	') + '	');
+
+      var next7DaysCollection = [];
+    }
+  }
+
+  var next30DaysDisplayStr = next30DaysDisplay.join('');
+
+  const ddEntry = dialog(monthGridDaysName + `\n\n` + next30DaysDisplayStr + `\n\n\n${ddEntryDescription}`, currentDay);
+
+  return {
+    ddEntry,
+    ddEntryPadded: addZero(ddEntry),
+  };
+}
+
+function dateInfo(dateInput, theOptions) {
+  //
+  return dateInput.toLocaleString('en', theOptions);
+}
+
+function daysInMonth(anyDateInMonth) {
+  // 0 is the last day of Month
+  return new Date(anyDateInMonth.getFullYear(), anyDateInMonth.getMonth() + 1, 0).getDate();
+}
+
+function dueDays() {
+  var invoiceDueDays = cflLib.cfl2Str(['7', '15', '30', 'X'], 'Validade (Dias)', '15');
+
+  if (invoiceDueDays == 'X') {
+    return dialog(`Dias`, ``);
+  } else {
+    return invoiceDueDays;
+  }
+}
+
+// function formatDate(date) {
+//   /* // 🔴🔴🔴 HOW TO USE
+
+// 	## Mind this
+// 	yyyy_mm_dd_hh_mm_ss | 20221124074922
+// 	yyyy_mm_dd__hh_mm_ss | 20221124-074922
+
+// 	const now = new Date()
+
+// 	const nowFormatted = formatDate(now)
+// 	const yyyy_mm_dd = nowFormatted.yyyy_mm_dd
+// 	const yyyy_mm_dd__hh_mm_ss = nowFormatted.yyyy_mm_dd__hh_mm_ss
+
+// 	const yyyy = nowFormatted.yyyy
+// 	const yy = nowFormatted.yy
+// 	const mm = nowFormatted.mm
+// 	const mmStr = nowFormatted.mmStr
+// 	const dd = nowFormatted.dd
+
+// 	// If 🔴🔴🔴 is specific, include keyword
+// 	const endDateTimeFormatted = formatDate(endDateTime)
+// 	const endDateTime_yyyy_mm_dd__hh_mm_ss = endDateTimeFormatted.yyyy_mm_dd__hh_mm_ss
+
+// 	const modification_yyyy_mm_dd =
+// 	const creation_yyyy_mm_dd =
+
+// 	*/
+
+//   const yyyy = date.getFullYear().toString();
+//   const yy = yyyy.slice(-2);
+//   const mm = addZero(date.getMonth() + 1); // Mais 1 por que Jan é 0.
+//   const mmNum = Number(mm);
+//   const mmStr = date.toLocaleString('en', { month: 'long' });
+//   const mmStrShort = date.toLocaleString('en', { month: 'short' });
+//   const dd = addZero(date.getDate());
+
+//   const hh_mm = date.toLocaleString('en', { hourCycle: 'h24', hour: '2-digit', minute: '2-digit' }).replace(/:/g, '');
+
+//   const hh__mm__ss = date.toLocaleString('en', { hourCycle: 'h24', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+//   const hh_mm_ss = hh__mm__ss.replace(/:/g, '');
+
+//   // "__" siginifica "-" no output
+
+//   const dd__mm__yyyy = `${dd}-${mm}-${yyyy}`;
+
+//   const yyyy_mm = yyyy + mm;
+//   const yyyy_mm_dd = yyyy + mm + dd;
+
+//   const yyyy__mm__dd = yyyy + '-' + mm + '-' + dd;
+//   const yyyy__mm__dd____hh__mm__ss = yyyy + '-' + mm + '-' + dd + ' ' + hh__mm__ss;
+
+//   const yyyy___mm___dd = yyyy + '.' + mm + '.' + dd;
+//   const yyyy___mm___dd____hh__mm__ss = yyyy + '.' + mm + '.' + dd + ' ' + hh__mm__ss;
+//   const yyyy___mm___dd__hh__mm__ss = yyyy + '.' + mm + '.' + dd + '-' + hh_mm_ss;
+
+//   const yyyy_mm_dd__hh_mm = yyyy + mm + dd + '-' + hh_mm;
+//   const yyyy_mm_dd__hh_mm_ss = yyyy + mm + dd + '-' + hh_mm_ss;
+//   const yyyy_mm_dd_hh_mm_ss = yyyy + mm + dd + hh_mm_ss;
+
+//   const ddMmStrYyyy = `${dd} ${mmStr} ${yyyy}`;
+//   const ddMmStr3cYyyy = `${dd} ${mmStr.slice(0, 3)} ${yyyy}`;
+
+//   // const yyyy__dd__mm = yyyy + "-" + dd + "-" + mm
+
+//   return {
+//     dd__mm__yyyy, // 14-07-2023
+
+//     yyyy, // 2023
+//     yy, // 23
+//     mm, // 01
+//     mmNum, // 1
+//     mmStr, // January
+//     mmStrShort, // Jan
+//     dd, // 21
+//     hh_mm, // 0921
+//     hh_mm_ss, // 092100
+//     yyyy_mm, // 202301
+//     yyyy_mm_dd, // 20230122
+//     yyyy__mm__dd, // 2023-01-22
+//     yyyy__mm__dd____hh__mm__ss, // 2023-10-07 12:52:31
+//     yyyy___mm___dd, // 2023.01.22
+//     yyyy___mm___dd____hh__mm__ss, // 2023.10.07 13:32:31
+//     yyyy___mm___dd__hh__mm__ss, // 2023.10.07-133231
+//     yyyy_mm_dd__hh_mm, // 20230122-0919
+//     yyyy_mm_dd__hh_mm_ss, // 20230122-092006
+//     yyyy_mm_dd_hh_mm_ss, // 20230122092030
+//     // ------------ DATES WITH STRINGS NOT OLNY NUMBERS
+//     ddMmStrYyyy, // 22 January 2023
+//     ddMmStr3cYyyy, // 22 Jan 2023
+
+//     // ------------ ENGLISH
+//     // yyyy__dd__mm, // 2023-02-01 // Not used yet
+//   };
+// }
+
+// /**
+//  * Formats a given date into various string representations.
+//  * @param date - The date to be formatted.
+//  * @returns An object containing various formatted date strings.
+//  *   - `yyyy`: "2023".
+//  *   - `mm`: "01".
+//  *   - `mmNum`: 1.
+//  *   - `mmStr`: "January".
+//  *   - `timeHhMnSs`: "092100"
+//  *   - `dateYyyyMmDd__timeHhMnSs`: "20230122-092006".
+//  *   - `dateYyyyMmDdTimeHhMnSs`: "20230122092030".
+//  *   - `dateDashYyyyMmDd`: "2023-01-22".
+//  *   - `dateDotYyyyMmDd_timeColonHhMnSs`: "2023.10.07 13:32:31".
+//  *   - `dateSlashMmYyyy`: "11/2023".
+//  *   - `dateSlashYyyyMmDd_timeColonHhMnSs`: "2023/10/07 13:32:31".
+//  *   - …
+//  *
+//  * @example
+//  * // Today
+//  * const today = new Date();
+//  * const todayFormatted = formatDate(today);
+//  * // Start and End dates
+//  * const endDateTimeFormatted = datetimeLib.formatDate(endDateTime)
+//  * const endDateTime_dateYyyyMm_dd__hh_mm_ss = endDateTimeFormatted.dateYyyyMmDd__timeHhMnSs
+//  * // Modification and Creation dates
+//  * const modification_dateYyyyMm_dd =
+//  * const creation_dateYyyyMm_dd =
+//  * // When first part of variable contains data
+//  * const inssDateRefForCopy_slashMmYyyy =
+//  */
+
+// function formatDateV2(date) {
+//   // Check if the date is valid
+//   if (isNaN(date.getTime())) {
+//     return {};
+//   }
+
+//   /* ------------ Notes
+//       "_" (dateDotYyyyMmDd_timeColonHhMnSs) 2023.10.07 13:32:31
+//       "__" (dateYyyyMmDd__timeHhMnSs) 20230122-092006
+
+//    */
+
+//   var yyyy = date.getFullYear().toString();
+//   var yy = yyyy.slice(-2);
+//   var mm = addZero(date.getMonth() + 1); // Mais 1 por que Jan é 0.
+//   var mmNum = Number(mm);
+//   var mmStr = date.toLocaleString('en', { month: 'long' });
+//   var dd = addZero(date.getDate());
+
+//   const hh = addZero(date.getHours()); // Using getHours to get 24-hour format
+//   const mn = addZero(date.getMinutes());
+//   const ss = addZero(date.getSeconds());
+
+//   const timeHhMn = `${hh}${mn}`;
+//   const timeHhMnSs = `${timeHhMn}${ss}`;
+//   const timeColonHhMn = `${hh}:${mn}`;
+//   const timeColonHhMnSs = `${hh}:${mn}:${ss}`;
+
+//   // "__" siginifica "-" no output
+//   const dateYyyyMm = `${yyyy}${mm}`;
+//   const dateYyyyMmDd = `${dateYyyyMm}${dd}`;
+//   const dateYyyyMmDdTimeHhMnSs = `${dateYyyyMmDd}${timeHhMnSs}`;
+//   const dateYyyyMmDd__timeHhMn = `${dateYyyyMmDd}-${timeHhMn}`;
+//   const dateYyyyMmDd__timeHhMnSs = `${dateYyyyMmDd}-${timeHhMnSs}`;
+
+//   const dateDashYyyyMm = `${yyyy}-${mm}`;
+//   const dateDashYyyyMmDd = `${dateDashYyyyMm}-${dd}`;
+//   const dateDashYyyyMmDd_timeColonHhMnSs = `${dateDashYyyyMmDd} ${timeColonHhMnSs}`;
+
+//   const dateISO8601 = `${dateDashYyyyMmDd}T${timeColonHhMnSs}`;
+
+//   const dateDotYyyyMmDd = `${yyyy}.${mm}.${dd}`;
+//   const dateDotYyyyMmDd_timeColonHhMn = `${dateDotYyyyMmDd} ${timeColonHhMn}`;
+//   const dateDotYyyyMmDd_timeColonHhMnSs = `${dateDotYyyyMmDd} ${timeColonHhMnSs}`;
+
+//   const dateSlashMmYyyy = `${mm}/${yyyy}`;
+//   const dateSlashYyyyMmDd = `${yyyy}/${mm}/${dd}`;
+//   const dateSlashYyyyMmDd_timeColonHhMnSs = `${dateSlashYyyyMmDd} ${timeColonHhMnSs}`;
+
+//   const dateDd_MmStr_Yyyy = `${dd} ${mmStr} ${yyyy}`;
+//   const dateDd_MmStr3c_Yyyy = `${dd} ${mmStr.slice(0, 3)} ${yyyy}`;
+
+//   return {
+//     yyyy, // 2023
+//     yy, // 23
+//     mm, // 01
+//     mmNum, // 1
+//     mmStr, // January
+//     dd, // 21
+//     timeHhMn, // 0921
+//     timeHhMnSs, // 092123
+//     timeColonHhMnSs, // 09:21:23
+//     dateISO8601, // 2024-07-09T17:00:00
+//     dateYyyyMm, // 202301
+//     dateYyyyMmDd, // 20230122
+//     dateYyyyMmDd__timeHhMn, // 20230122-0919
+//     dateYyyyMmDd__timeHhMnSs, // 20230122-092006
+//     dateYyyyMmDdTimeHhMnSs, // 20230122092030
+//     dateDashYyyyMm, // 2023-01
+//     dateDashYyyyMmDd, // 2023-01-22
+//     dateDashYyyyMmDd_timeColonHhMnSs, // 2023-10-07 12:52:31
+//     dateDotYyyyMmDd, // 2023.01.22
+//     dateDotYyyyMmDd_timeColonHhMn, // 2023.10.07 13:32:
+//     dateDotYyyyMmDd_timeColonHhMnSs, // 2023.10.07 13:32:31
+//     dateSlashMmYyyy, // 11/2023
+//     dateSlashYyyyMmDd, // 2023/01/22
+//     dateSlashYyyyMmDd_timeColonHhMnSs, // 2023/10/07 13:32:31
+//     // ------------ DATES WITH STRINGS NOT OLNY NUMBERS
+//     dateDd_MmStr_Yyyy, // 22 January 2023
+//     dateDd_MmStr3c_Yyyy, // 22 Jan 2023
+//   };
+// }
+
+function formatDateV3(date) {
+  if (isNaN(date.getTime())) return null;
+
+  // Typed components
+  const yearY4N = date.getFullYear(); // 4-digit year number
+  const yearY4 = yearY4N.toString(); // 4-digit year
+  const yearY2 = yearY4.slice(-2); // 2-digit year
+
+  const monthM1 = date.getMonth() + 1; // 1-12
+  const monthM2 = String(monthM1).padStart(2, '0'); // zero-padded
+  const monthLong = date.toLocaleString('en', { month: 'long' }); // July
+  const monthShort = monthLong.slice(0, 3); // Jul
+
+  const dayD1 = date.getDate(); // 1-31
+  const dayD2 = String(dayD1).padStart(2, '0'); // zero-padded
+
+  const hourH1 = date.getHours(); // H
+  const hourH2 = String(date.getHours()).padStart(2, '0'); // HH
+  const minuteM2 = String(date.getMinutes()).padStart(2, '0'); // MM
+  const secondS2 = String(date.getSeconds()).padStart(2, '0'); // SS
+
+  // Time helpers (typed)
+  const timeH2M2S2C = `${hourH2}:${minuteM2}:${secondS2}`; // "HH:MM:SS"
+  const timeH2M2C = `${hourH2}:${minuteM2}`; // "HH:MM"
+  const timeH2M2S2 = `${hourH2}${minuteM2}${secondS2}`; // "HHMMSS"
+  const timeH2M2 = `${hourH2}${minuteM2}`; // "HHMM"
+
+  const components = {
+    year: {
+      Y4: yearY4, //
+      Y4N: yearY4N,
+      Y2: yearY2,
+    },
+    month: {
+      M2: monthM2, //
+      M1: monthM1,
+      long: monthLong,
+      short: monthShort,
+    },
+    day: {
+      D2: dayD2, //
+      D1: dayD1,
+    },
+    time: {
+      H1: hourH1, // "H"
+      H2: hourH2, // "HH"
+      M2: minuteM2, // "MM"
+      S2: secondS2, // "SS"
+      H2M2S2C: timeH2M2S2C, // "HH:MM:SS"
+      H2M2C: timeH2M2C, // "HH:MM"
+      H2M2S2: timeH2M2S2, // "HHMMSS"
+      H2M2: timeH2M2, // "HHMM"
+    },
+  };
+
+  // Directly-named formats
+  const dateY4M2D2 = `${yearY4}${monthM2}${dayD2}`;
+  const dateY4M2D2H2M2S2 = `${dateY4M2D2}${timeH2M2S2}`;
+  const dateY4M2D2__H2M2 = `${dateY4M2D2}-${timeH2M2}`;
+  const dateY4M2D2__H2M2S2 = `${dateY4M2D2}-${timeH2M2S2}`;
+  const dateY4M2D2__H2M2S2C = `${dateY4M2D2}-${timeH2M2S2C}`;
+
+  const dateDashD2M2Y4 = `${dayD2}-${monthM2}-${yearY4}`;
+  const dateDashY4M2D2 = `${yearY4}-${monthM2}-${dayD2}`;
+  const dateDashY4M2D2_H2M2 = `${dateDashY4M2D2} ${timeH2M2}`;
+  const dateDashY4M2D2_H2M2S2 = `${dateDashY4M2D2} ${timeH2M2S2}`;
+  const dateDashY4M2D2_H2M2S2C = `${dateDashY4M2D2} ${timeH2M2S2C}`;
+
+  const dateDotY4M2D2 = `${yearY4}.${monthM2}.${dayD2}`;
+  const dateDotY4M2D2_H2M2 = `${dateDotY4M2D2} ${timeH2M2}`;
+  const dateDotY4M2D2_H2M2S2 = `${dateDotY4M2D2} ${timeH2M2S2}`;
+  const dateDotY4M2D2__H2M2S2 = `${dateDotY4M2D2}-${timeH2M2S2}`;
+  const dateDotY4M2D2_H2M2S2C = `${dateDotY4M2D2} ${timeH2M2S2C}`;
+
+  const dateSlashY4M2D2 = `${yearY4}/${monthM2}/${dayD2}`;
+  const dateSlashY4M2D2_H2M2 = `${dateSlashY4M2D2} ${timeH2M2}`;
+  const dateSlashY4M2D2_H2M2S2 = `${dateSlashY4M2D2} ${timeH2M2S2}`;
+  const dateSlashY4M2D2_H2M2S2C = `${dateSlashY4M2D2} ${timeH2M2S2C}`;
+
+  const monthSlashM1Y4 = `${monthM1}/${yearY4}`;
+  const monthSlashM2Y4 = `${monthM2}/${yearY4}`;
+  const monthSlashLongY4 = `${monthLong}/${yearY4}`;
+  const monthSlashShortY4 = `${monthShort}/${yearY4}`;
+
+  const yearY4M2 = `${yearY4}${monthM2}`;
+  const yearSlashY4M2 = `${yearY4}/${monthM2}`;
+  const yearDashY4M2 = `${yearY4}-${monthM2}`;
+
+  const humanD2MlongY4 = `${dayD2} ${monthLong} ${yearY4}`;
+  const humanD1MShortY4 = `${dayD1} ${monthShort} ${yearY4}`;
+  const humanD1MShortY2 = `${dayD1} ${monthShort} ${yearY2}`;
+
+  const iso8601 = `${dateDashY4M2D2}T${timeH2M2S2C}`;
+
+  const formats = {
+    // Typed patterns
+    dateY4M2D2, // 20250704
+    dateY4M2D2H2M2S2, // 20250704140530
+    dateY4M2D2__H2M2, // 20250704-1405
+    dateY4M2D2__H2M2S2, // 20250704-140530
+    dateY4M2D2__H2M2S2C, // 20250704-14:05:30
+
+    // Dash-separated date
+    dateDashD2M2Y4, // 04-07-2025
+    dateDashY4M2D2, // 2025-07-04
+    dateDashY4M2D2_H2M2, // 2025-07-04 1405
+    dateDashY4M2D2_H2M2S2, // 2025-07-04 140530
+    dateDashY4M2D2_H2M2S2C, // 2025-07-04 14:05:30
+
+    // Dot-separated date
+    dateDotY4M2D2, // 2025.07.04
+    dateDotY4M2D2_H2M2, // 2025.07.04 1405
+    dateDotY4M2D2_H2M2S2, // 2025.07.04 140530
+    dateDotY4M2D2__H2M2S2, // 2025.07.04-140530
+    dateDotY4M2D2_H2M2S2C, // 2025.07.04 14:05:30
+
+    // Slash-separated date
+    dateSlashY4M2D2, // 2025/07/04
+    dateSlashY4M2D2_H2M2, // 2025/07/04 1405
+    dateSlashY4M2D2_H2M2S2, // 2025/07/04 140530
+    dateSlashY4M2D2_H2M2S2C, // 2025/07/04 14:05:30
+
+    // Month/year
+    monthSlashM1Y4, // 7/2025
+    monthSlashM2Y4, // 07/2025
+    monthSlashLongY4, // July/2025
+    monthSlashShortY4, // Jul/2025
+
+    // Year/month
+    yearY4M2, // 202507
+    yearSlashY4M2, // 2025/07
+    yearDashY4M2, // 2025/07
+
+    // Human-readable
+    humanD2MlongY4, // 04 July 2025
+    humanD1MShortY4, // 4 Jul 2025
+    humanD1MShortY2, // 4 Jul 25
+
+    // ISO8601
+    iso8601, // 2025-07-04T14:05:30
+  };
+
+  return { components, formats };
+}
+
+function getAutoDate(dateYyyyMmDd) {
+  // CODE555
+  if (dateYyyyMmDd == 'now') {
+    return new Date();
+  } else {
+    var dateYyyyMmDdItems = dateYyyyMmDd.split('');
+
+    dateYyyyMmDdItems.splice(4, 0, '/');
+    dateYyyyMmDdItems.splice(7, 0, '/');
+    var dateYyyyMmDdWithSeparators = dateYyyyMmDdItems.join('');
+
+    return new Date(dateYyyyMmDdWithSeparators);
+  }
+}
+
+function getDateEnglishToPortugue(dateInput, monthFormat) {
+  if (monthFormat == 'long') {
+    var dateString = dateInput.toLocaleString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+    var dateStringSplit = dateString.split(' '); // ["12", "de", "abril", "de", "2020"]
+
+    var monthStringLower = dateStringSplit[2]; //[0].toUpperCase() + dateStringSplit.slice(1);
+    var monthCapitalized = monthStringLower[0].toUpperCase() + monthStringLower.slice(1);
+
+    return dateString.replace(monthStringLower, monthCapitalized);
+  } else if (monthFormat == '2-digit') {
+    return dateInput.toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } else if (monthFormat == 'numeric') {
+    return dateInput.toLocaleString('pt-PT', { day: '2-digit', month: 'numeric', year: 'numeric' });
+  }
+}
+
+function getDateYyyyMmDd__timeHhMnSs(date, dateDescription) {
+  const dateFormatted = formatDate(date);
+  const yyyy_mm = dateFormatted.yyyy_mm;
+  const hh_mm_ss = dateFormatted.hh_mm_ss;
+
+  const { ddEntryPadded } = ddEntryWithPreviousAndOrNext30DaysDisplay(`Anteriores`, 'Dia');
+
+  return dialog(`${dateDescription}`, `${yyyy_mm}${ddEntryPadded}-${hh_mm_ss}`);
+}
+
+// function getExpedientDates(date, basicDatetime, tagThisFolder, dateDescription) {
+function getExpedientDates(date, basicDatetime, priorityNumberString, dateDescription) {
+  if (basicDatetime) {
+    var { yyyy, mm, dd, dateISO8601 } = convertBasicDT2ISO(basicDatetime);
+    var dateInput = new Date(dateISO8601);
+    var ddEntryPadded = dd;
+  } else {
+    var dateInput = date;
+    var { ddEntryPadded } = ddEntryWithPreviousAndOrNext30DaysDisplay(`Anteriores`, 'Dia');
+  }
+
+  const dateFormatted = formatDateV3(dateInput);
+
+  if (!dateFormatted) return;
+
+  const {
+    components: {
+      time: { H2M2S2C: timeH2M2S2C },
+    },
+    formats: { yearDashY4M2 },
+  } = dateFormatted;
+
+  const dateStart_ = `${yearDashY4M2}-${ddEntryPadded}T${timeH2M2S2C}`;
+  const dateCreated_ = basicDatetime ? formatDateV3(new Date()).formats.iso8601 : dateStart_;
+
+  if (priorityNumberString) {
+    const expedientDuration = Number(dialog('Duração', '3'));
+
+    const dateDue_ = getOffsetDate(new Date(dateStart_), 0, expedientDuration, undefined, true).dateISO8601;
+
+    const datesStrs = dialog(`${dateDescription}`, `${dateCreated_}\n${dateStart_}\n${dateDue_}`);
+
+    const [dateCreated, dateStart, dateDue] = datesStrs.split('\n');
+
+    const dateY4M2D2__H2M2S2 = dateStart.replace(/-/g, '').replace('T', '-').replace(/:/g, '');
+
+    return {
+      dateCreated,
+      dateStart,
+      dateY4M2D2__H2M2S2,
+      dateDue,
+    };
+  } else {
+    const dateStart = dialog(`${dateDescription}`, `${dateStart_}`);
+    const dateY4M2D2__H2M2S2 = dateStart.replace(/-/g, '').replace('T', '-').replace(/:/g, '');
+    return {
+      dateY4M2D2__H2M2S2,
+    };
+  }
+}
+
+function getDelays() {
+  return {
+    d0p1: 0.1,
+    d0p2: 0.2,
+    d0p3: 0.3,
+    d0p5: 0.5,
+    d0p8: 0.8,
+    d1: 1,
+    d1p5: 1.5,
+    d2: 2,
+    d2p5: 2.5,
+    d3: 3,
+    d4: 4,
+    d5: 5,
+    d6: 6,
+    d7: 7,
+    d9: 9,
+    d10: 10,
+    d13: 13,
+    d16: 16, // d15 funcionava mas para segurança aumentei
+    d30: 30, // Temporary for Downloading BIM Statements taking long time: Weak internet
+  };
+}
+
+function getAdjustedEventDatesIfNotSameDay(dateStartString, dateDueString) {
+  let dateStart = new Date(dateStartString);
+  let dateDue = new Date(dateDueString);
+
+  const isSameDay = dateStart.toDateString() === dateDue.toDateString();
+
+  const houDateDue = dateDue.getHours();
+
+  // if (houDateDue < 10 || houDateDue > 15) {
+  if (!isSameDay && (houDateDue < 10 || houDateDue > 15)) {
+    dateDue.setHours(15, 0, 0, 0); // Set time to 15:30:00
+  }
+
+  dateStart = isSameDay ? dateStart : dateDue;
+  dateDue = isSameDay ? dateDue : new Date(dateDue.getTime() + getEventStandardDuration());
+
+  return { isSameDay, dateStartStr: formatDateV3(dateStart).formats.iso8601, dateDueStr: formatDateV3(dateDue).formats.iso8601 };
+}
+
+function getDurationUnit(durationC1) {
+  var durationUnits = ['ano', 'dia', 'mês', 'semana'];
+
+  return durationUnits.filter(item => item[0] === durationC1.toLocaleLowerCase());
+}
+
+function getEventStandardDuration() {
+  return 20 * 60 * 1000; // 20 minutes
+}
+
+function getDurationInputWithUnit(invoiceCs, extraTitle1, extraTitle2) {
+  var workID = invoiceCs.slice(4, 6);
+
+  if (workID == 'AP') {
+    var durationinputWithUnitD = '28d';
+  } else if (workID == 'AA' || workID == 'AC' || workID == 'AE' || workID == 'AF') {
+    var durationinputWithUnitD = '12m';
+  } else if (workID == 'UP') {
+    var durationinputWithUnitD = '6m';
+  } else if (workID.startsWith('R')) {
+    // Rebanho
+    var durationinputWithUnitD = '1d';
+  } else {
+    var durationinputWithUnitD = 'SemDuraçãoDefault';
+  }
+
+  return dialog(`${extraTitle1}• Dias introduz Xd (12d)\n• Meses introduz Xm (12m)${extraTitle2}`, durationinputWithUnitD);
+}
+
+function getMonths() {
+  return [
+    '1. January',
+    '2. February',
+    '3. March',
+    '4. April',
+    '5. May',
+    '6. June',
+    '7. July',
+    '8. August',
+    '9. September',
+    'Q. October',
+    'A. November',
+    'Z. December',
+  ];
+}
+
+function getOffsetDate(
+  baseDate, // New optional parameter
+  offsetMonths,
+  offsetDays = 0,
+  providedDay = 1,
+  useCurrentDay = false
+) {
+  // const currentDate = new Date();
+  let targetYear = baseDate.getFullYear();
+  let targetMonth = baseDate.getMonth() + offsetMonths; // Adjust month based on offset
+
+  // Adjust year and wrap month if necessary
+  while (targetMonth < 0) {
+    targetMonth += 12;
+    targetYear -= 1;
+  }
+  while (targetMonth > 11) {
+    targetMonth -= 12;
+    targetYear += 1;
+  }
+
+  let targetDay;
+
+  if (useCurrentDay) {
+    // If useCurrentDay is true, use the current day of the month
+    // targetDay = 5 //currentDate.getDate();
+    targetDay = baseDate.getDate();
+  } else if (providedDay !== undefined) {
+    // If providedDay is specified, use it regardless of useCurrentDay
+    targetDay = providedDay;
+  } else {
+    // Otherwise, default to the first day of the month
+    targetDay = 1;
+  }
+
+  // Create the target date
+  // const targetDate = new Date(targetYear, targetMonth, targetDay);
+
+  const targetDate = new Date(
+    targetYear,
+    targetMonth,
+    targetDay,
+    baseDate.getHours(),
+    baseDate.getMinutes(),
+    baseDate.getSeconds()
+  );
+
+  // Add offsetDays
+  targetDate.setDate(targetDate.getDate() + offsetDays);
+
+  const targetDateFormatted = formatDateV3(targetDate);
+
+  const dateDashY4M2D2 = targetDateFormatted.formats.dateDashY4M2D2;
+  const dateISO8601 = targetDateFormatted.formats.iso8601;
+
+  return {
+    dateDashY4M2D2,
+    dateISO8601,
+  };
+}
+
+function getTimeUnitDict(unitC1) {
+  // NOT USED YET
+  var timeUnitsDict = { a: 'Ano', d: 'Dia', s: 'Semana' };
+  return timeUnitsDict[unitC1.toLowerCase()];
+}
+
+function getWorkDurationNumbersWithUnit(quoteCs) {
+  let serviceGroup;
+
+  if (quoteCs.slice(4, 6) == 'AP' || quoteCs.slice(4, 6) == 'UP') {
+    serviceGroup = 'SG_PROJECTO';
+
+    var a5PWorkPhasesNames = [
+      '1. Levantamento planialtimétrico (Construções existentes)',
+      '2. Programa Base/Estudo Preliminar',
+      '3. Anteprojecto',
+      '4. Projecto Básico',
+      '5. Projecto executivo',
+    ];
+
+    var u5PWorkPhasesNames = [
+      'Fase 1 | Procedimentos Iniciais',
+      'Fase 2 | Estudos de Caracterização da Área de Intervenção',
+      'Fase 3 | O Plano',
+      'Fase 4 | O Plano Final (Conteúdo Documental)',
+    ];
+
+    const disciplineAndService = quoteCs.slice(4, 6);
+
+    const isArchitectural = disciplineAndService == 'AP';
+    const isUrbanism = disciplineAndService == 'UP';
+
+    // if (quoteCs.slice(4, 6) == 'AP') {
+    if (isArchitectural) {
+      var workPhasesNames = a5PWorkPhasesNames;
+      var workPhasesNumbersStrD = `0, 3, 11, 5, 9, d`; // `0, 1, 1, 2, s`
+      // } else if (quoteCs.slice(4, 6) == 'UP') {
+    } else if (isUrbanism) {
+      var workPhasesNames = u5PWorkPhasesNames;
+      var workPhasesNumbersStrD = `3, 6, 9, 8, s`;
+    }
+
+    var workPhasesNumbersStr = dialog(
+      `Duração por fase em dias (d), meses (m) ou semanas (s), de forma sequenciada.\n—\n${workPhasesNames.join('\n')}`,
+      workPhasesNumbersStrD
+    );
+
+    var workPhasesNumbers = documentLib.ensureSpaceAfterCommaInStr(workPhasesNumbersStr).split(', ');
+
+    var workPhasesNumbersL = workPhasesNumbers.length;
+
+    if ((isArchitectural && workPhasesNumbersL == 6) || (isUrbanism && workPhasesNumbersL == 5)) {
+      const durationC1 = workPhasesNumbers.pop()[0];
+
+      // return workPhasesNumbers
+      return {
+        serviceGroup,
+        durationC1,
+        workPhasesNumbers,
+      };
+    } else {
+      // TERMINAR 20250122-090300
+      return alert(
+        `Erro: O número de fases + unidade deve ser 5 (U5) ou 6 (A5) e não "${disciplineAndService} | ${workPhasesNumbersL}".`,
+        ``
+      );
+    }
+  } else {
+    alert(`Duração da obra já está configurada no Numbers XG5!`, ``);
+
+    // return false // ["NoWorkWeekNumbersCodedForThisWorkID"]
+    return {
+      serviceGroup,
+      durationC1: 'a',
+      // workPhasesNumbers: ["a"] // "a" for ano
+    }; // ["NoWorkWeekNumbersCodedForThisWorkID"]
+  }
+}
+
+function getYearAndMonth(theDescription, yyyy, mm, mmNum, mmStr, dd) {
+  var mmStrTrack = monthSelector(theDescription, mmNum, mmStr, 'mmStr');
+  var mmNumTrack = mmStr2mmNum(mmStrTrack);
+
+  if (Number(mmNumTrack) > Number(mm)) {
+    var yyyyTrack = yyyy - 1;
+  } else {
+    var yyyyTrack = yyyy;
+  }
+
+  var date = new Date(dd + ' ' + mmStrTrack + ' ' + yyyyTrack);
+
+  var dateMmNew = dateInfo(date, { month: '2-digit' });
+  var dateYyyyNew = dateInfo(date, { year: 'numeric' });
+
+  return dateYyyyNew + dateMmNew;
+}
+
+function getYyyyMmMinus1(yyyyMm) {
+  var yyyyMmStr = yyyyMm.toString();
+  var yyyy = Number(yyyyMmStr.slice(0, 4));
+  var mm = Number(yyyyMmStr.slice(4, 6)) - 1;
+
+  if (mm == 0) {
+    var mm = 12;
+    yyyy -= 1;
+  }
+
+  return yyyy.toString() + addZero(mm, 2, 2);
+}
+
+function getYyyyMmPlus1(yyyyMm) {
+  var yyyyMmStr = yyyyMm.toString();
+  var yyyy = Number(yyyyMmStr.slice(0, 4));
+  var mm = Number(yyyyMmStr.slice(4, 6)) + 1;
+
+  if (mm == 13) {
+    var mm = 1;
+    yyyy += 1;
+  }
+
+  return yyyy.toString() + addZero(mm, 2, 2);
+}
+
+function monthEnglishToPortuguese(monthStrToConvert) {
+  return new Date('20 ' + monthStrToConvert + ' 1980').toLocaleString('pt-PT', { month: 'long' });
+  // june // It's LowerCase
+}
+
+function monthSelector(theDescription, mmNum, mmStr, what2return) {
+  var months = getMonths();
+
+  if (mmNum == 10) {
+    var mmNum = 'Q';
+  }
+  if (mmNum == 11) {
+    var mmNum = 'A';
+  }
+  if (mmNum == 12) {
+    var mmNum = 'Z';
+  }
+
+  if (what2return.includes('auto')) {
+    // "auto_mmStr", "auto_mm"
+    var monthStr = mmStr;
+  } else {
+    //var monthStr = cflLib.cfl2Str(["1. January","2. February","3. March","4. April","5. May","6. June","7. July", "8. August","9. September","Q. October","A. November","Z. December"], theDescription, (mmNum.toString()) + ". " + mmStr)
+
+    var monthStr = cflLib.cfl2Str(months, theDescription, mmNum.toString() + '. ' + mmStr);
+  }
+
+  //if (what2return == "returnMmStr") { // June
+  if (what2return.includes('mmStr')) {
+    // June
+
+    if (monthStr.includes('.')) {
+      return monthStr.slice(3, monthStr.length);
+    } else {
+      return monthStr;
+    }
+
+    //} else if (what2return == "returnMm") { // 06
+  } else if (what2return.includes('mm')) {
+    // 06
+
+    if (monthStr.includes('.')) {
+      var monthNumber = monthStr.split('. ')[0];
+    } else {
+      var monthNumber = months.filter(month => month.includes(mmStr))[0].split('. ')[0];
+    }
+
+    if (monthNumber == 'Q') {
+      var monthNumber = '10';
+    }
+    if (monthNumber == 'A') {
+      var monthNumber = '11';
+    }
+    if (monthNumber == 'Z') {
+      var monthNumber = '12';
+    }
+
+    return addZero(monthNumber);
+  }
+}
+
+function mmEnglishToPortuguese(monthStrToConvert) {
+  return documentLib.capitalizeText(
+    new Date('20 ' + monthStrToConvert + ' 1980').toLocaleString('pt-PT', { month: 'long' }),
+    'NoExclusions'
+  );
+}
+
+function mmStr2mmNum(monthStr) {
+  // Accept any year and day. I need month only
+  // Formato de mês aceite "June", "Jun"
+  var thisD = new Date(monthStr + ' 20 1980');
+  return addZero(thisD.getMonth() + 1);
+}
+
+function mmNum2mmStr(mmNum) {
+  return new Date(mmNum + '/20/1980').toLocaleString('en-EN', { month: 'long' });
+}
+
+// offsetDateByComponents was addTime
+// const offsetEndDate = offsetDateByComponents()
+
+function offsetDateByComponents(dateInput, { months = 0, days = 0, weeks = 0, years = 0 } = {}) {
+  // Ensure dateInput is a Date object
+  if (!(dateInput instanceof Date)) {
+    dialog(`"dateInput" deve ser objecto de data.`, ``);
+  }
+
+  // Clone the date to avoid modifying the original
+  let newDate = new Date(dateInput);
+
+  newDate.setFullYear(newDate.getFullYear() + years);
+  newDate.setMonth(newDate.getMonth() + months);
+  newDate.setDate(newDate.getDate() + weeks * 7);
+  newDate.setDate(newDate.getDate() + days);
+
+  // Format the date as yyyy-mm-dd
+  // return newDate; //.toISOString().split('T')[0];
+  return {
+    newDateNumStr: newDate.toString(),
+  };
+}
+
+// offsetDateByInput was getDuration
+// Update createOptionFolder in xxNodejsJXALibFolder.jxa
+// Accept positve and negatve inputs (1.5m, -1.5m)
+// const offsetStartDate = offsetDateByInput()
+function offsetDateByInput(invoiceCs, startDate, extraTitle1, offsetD, showDialog) {
+  let offsetWithUnit;
+
+  if (showDialog === 'No') {
+    offsetWithUnit = offsetD;
+  } else if (showDialog === 'Yes') {
+    const extraTitle2 = ' - aceita meses decimais';
+    offsetWithUnit = getDurationInputWithUnit(invoiceCs, extraTitle1, extraTitle2);
+  }
+
+  // Parse offset input (e.g., "12d", "-2.5m")
+  const offsetUnit = offsetWithUnit.slice(-1);
+  const offset = Number(offsetWithUnit.slice(0, -1));
+
+  if (offsetUnit === 'd') {
+    var newDate = startDate.setDate(startDate.getDate() + offset);
+  } else if (offsetUnit === 'm') {
+    if (offset % 1 !== 0) {
+      // Convert fractional months to days (1 month ≈ 4.33 weeks x 7 days)
+      var newDate = startDate.setDate(startDate.getDate() + offset * 4.33 * 7);
+    } else {
+      var newDate = startDate.setMonth(startDate.getMonth() + offset);
+    }
+  } else {
+    alert('Parece que falhou unidade de tempo!', '');
+    return;
+  }
+
+  return {
+    newDate: new Date(Number(newDate.toString())),
+    newDateNumStr: newDate.toString(),
+    offset,
+    offsetUnit,
+  };
+}
+
+function timeElapsed(date1, date2) {
+  // / 1000 to convert from milissecoonds to seconds
+  var calcultedTimeElapsed = (date2 - date1) / 1000;
+
+  if (calcultedTimeElapsed >= 60) {
+    return formatNumber(calcultedTimeElapsed / 60, 1, 1) + ' min';
+
+    //return (calcultedTimeElapsed / 60)
+  } else {
+    return Math.round(calcultedTimeElapsed) + ' s';
+  }
+
+  // formatNumber(siteDimensionsItems[0], 2, 2)
+
+  //return Math.round()
+}

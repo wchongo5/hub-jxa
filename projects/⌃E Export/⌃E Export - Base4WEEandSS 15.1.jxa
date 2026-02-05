@@ -1,0 +1,322 @@
+
+
+// 5.1 - WFE15.1 & SS1.0 (SS Sign and Stamp)
+
+//Base "WF • Export 15.1" & "⌃S Sign & Stamp PDF 1.0"
+
+
+
+
+var displayLib = Library("displayLib")
+var finderLib = Library("finderLib")
+var iWorkLib = Library("iWorkLib")
+
+var authenticationLib = Library("authenticationLib")
+var cflLib = Library("cflLib")
+var menuLib = Library("menuLib")
+var documentLib = Library("documentLib")
+
+
+var currentApp = Application.currentApplication()
+var saApp = (currentApp.includeStandardAdditions = true, currentApp)
+var seApp = Application("System Events")
+
+var finderApp = Application("Finder")
+var previewApp = Application("Preview")
+
+var pagesApp   =  Application("Pages")
+var numbersApp   =  Application("Numbers")
+var numbersAppControllerP = seApp.processes["Numbers"]
+
+// --------------------------------------- DELAYS
+
+var d0p1 = 0.1
+var d0p3 = 0.3
+//var d0p5 = 0.5
+var d1 = 1
+var d1p5 = 1.5
+var d2 = 2
+var d3 = 3
+var d6 = 6
+//var d7 = 7
+//var d10 = 10
+
+displayLib.alert(`Não abre, Memórias e Specs, estes são abertos na operação de Merge\n\nNOTE QUE EM macOS 13\n"menuLib.doMenuBar(appName, "Window", docFrontName)"\nNÃO FUNCIONA`, ``)
+
+
+var frontmostApp = seApp.applicationProcesses.where({ frontmost: true })
+
+var frontmostAppName = frontmostApp.name()[0]
+
+var optionDoc2Export = ["---------------", "Activo", "Todos"]
+
+if (frontmostAppName == "Numbers") {
+
+	var options = cflLib.cfl(["Save As PDF by Tab", "---------------", "1. NUMBERS2CSV", "2. NUMBERS2EXCEL", "3. NUMBERS2PDF", "4. NUMBERS2PDF SIGN & STAMP"].concat(optionDoc2Export), "Export Numbers", ["3. NUMBERS2PDF", "Activo"], "m")
+
+	//var docFront = numbersApp.documents[0]
+	var docs = numbersApp.documents
+
+} else if (frontmostAppName == "Pages") {
+
+	var options = cflLib.cfl(["1. PAGES2PDF", "2. PAGES2PDF SIGN & STAMP", "3. PAGES2WORD", "4. PAGES2FINDERTOTAL"].concat(optionDoc2Export), "Export Pages", ["1. PAGES2PDF", "Activo"], "m")
+
+	//var docFront = pagesApp.documents[0]
+	var docs = pagesApp.documents
+}
+
+var option = options[0]
+
+var optionStr = option.toString()
+
+if (optionStr.includes("SIGN & STAMP")) {
+	var afterExportOption = authenticationLib.getAfterExportOption()
+}
+
+var docsL = docs.length
+
+if (options.toString().includes("Activo")) {
+	// CODE ABAIXO DÁ ERRO EM <...filter()>, MAS NÃO DEVIA
+
+
+	//var docFrontName = docs[0].name()
+	//var docs = docs.filter(doc => doc.name().includes(docFrontName))
+
+
+	var docsL = 1
+
+}
+
+for (var h = 0; h < docsL ; h++) {
+
+	var docFront = docs[h]
+	var docFrontName = docFront.name()
+
+	var docFrontPathStr	= docFront.file().toString()
+
+	var docFrontPathStrItems = docFrontPathStr.split("/")
+
+
+	// 🔴🔴🔴 File Extesnion As appName
+
+	var appName = documentLib.capitalizeText(iWorkLib.getFileExtensionFromNameOrUrl(docFrontPathStr), "NoExclusions")
+
+
+	delay(d0p3)
+
+	//menuLib.doMenuBar(appName, "Window", docFrontName)
+
+
+	delay(d0p3)
+
+	if (option == "Save As PDF by Tab") { // Export All Tabs In 1 PDF & Save As PDF by Tab
+
+		numbersApp.activate()
+
+		//var docFront = numbersApp.documents[h]
+
+		//var docFrontPathStrItems	= docFront.file().toString().split("/")
+		var fileName	= (docFrontPathStrItems.pop()).split(".numbers")[0]; // Name without extension
+
+		var destinyFolderStr = docFrontPathStrItems.join("/") + "/";
+
+		var sheetNames = docFront.sheets.name()
+
+
+		// Loop by Sheets ("01 EDIFICAÇÃO A")
+
+		for (var i = 0; i < sheetNames.length; i++) {
+
+			var sheetName = sheetNames[i]
+			var sheetNameTrack = sheetName.toLowerCase()
+
+			docFront.activeSheet.set(docFront.sheets[sheetName])
+
+			if (i == 0) {
+				doMenu("Numbers", "File", "Print…") // Print…
+				numbersAppControllerP.windows[0].radioGroups[1].radioButtons[0].click() // This Sheet
+
+				// Aba "00 COEFICIENTES" deve ser sempre a 1ª para funcionar correctamente o continue
+				if (sheetNameTrack.includes("coeficientes")) { continue; }
+			}
+
+			doMenu("Numbers", "File", "Print…") // Print…
+			delay(d1)
+
+			// Click PDF
+			numbersAppControllerP.windows[0].sheets[0].splitterGroups[0].menuButtons.byName("PDF").click()
+			delay(d0p3)
+
+			numbersAppControllerP.windows[0].sheets[0].splitterGroups[0].menuButtons.byName("PDF").menus.byName("PDF").menuItems.byName("Save as PDF").click() // Click PDF
+			delay(d2)
+
+			global5GoToFolder(destinyFolderStr)
+			delay(d3)
+
+			if (i == sheetNames.length - 1) {
+				seApp.keyCode(53); // Scape to Go to Normal View
+			}
+
+			finderApp.reveal(Path(destinyFolderStr + fileName + "-" + sheetName + ".pdf")).extensionHidden = true
+			delay(d0p3)
+		}
+
+	} else if (option == "4. PAGES2FINDERTOTAL") {
+
+		pagesApp.activate()
+		delay(d1)
+
+		seApp.keystroke("a", { using: "command down" })
+		delay(d0p3)
+
+		seApp.keystroke("c", { using: "command down" })
+		delay(d0p3)
+
+		var proposalTotal = saApp.theClipboard().match(/MZN(\d[,.0-9]*)/)[1]
+
+		// destinyFolder / Container
+		//var docFrontPathStrItems	= docFront.file().toString().split("/")
+		var fileName	= docFrontPathStrItems.pop();
+
+		var destinyFolderStr = docFrontPathStrItems.join("/") //+ "/";
+
+		var containerFolderAlias = seApp.folders.byName(destinyFolderStr)
+		var containerFolderName = containerFolderAlias.name()
+
+		containerFolderAlias.name = containerFolderName.replace(/C0,000.00|C\d[,.0-9]*/, "C" + proposalTotal)
+		delay(d0p3)
+
+		finderApp.activate()
+
+	} else {
+
+		var optionWithoutNum = option.split(". ")[1]
+
+		// destinyFolder / Container
+		//var docFrontPathStrItems	= docFront.file().toString().split("/")
+		var fileName	= docFrontPathStrItems.pop()
+
+
+		if (docFrontPathStrItems[docFrontPathStrItems.length -1].includes("ORIGINAIS")) {
+			// To use its container as destiny folder
+			var folderA5OriginaisName	= docFrontPathStrItems.pop()
+
+			var consultancyFolderPathStr = docFrontPathStrItems.join("/")
+
+			var contratFolderInfo = finderLib.getContratFolderInfo(consultancyFolderPathStr)
+
+			var invoiceCs = contratFolderInfo.contractNumber
+			// var customer4Folders = contratFolderInfo.entity4Folders
+			// var customerFolderName = contratFolderInfo.contractFolderName
+
+			var consultancyFolderPathStrs = finderLib.getPathStrsFromPathStr(consultancyFolderPathStr, "folders")
+			
+			var xx5FolderName = finderLib.getItemNamesFromPathStrs(consultancyFolderPathStrs, ["XX5 PROJECTO", "XX5 PLANO"])[0]
+
+			var xx5FolderPathStrs = finderLib.getPathStrsFromPathStr(consultancyFolderPathStr + "/" + xx5FolderName, "folders")
+
+			if (invoiceCs[4] == "A") {
+				var whereToExportFilters = ["PDF "]
+
+			} else if (invoiceCs[4] == "U") {
+				var whereToExportFilters = [" PARTE ESCRITA ", " PLANO "]
+			}
+
+			var whereToExportForlderName = finderLib.getItemNamesFromPathStrs(xx5FolderPathStrs, whereToExportFilters).slice(-1)[0]
+
+			var docFrontPathStrItems = (consultancyFolderPathStr + "/" + xx5FolderName + "/" + whereToExportForlderName).split("/")
+		}
+
+		if (optionWithoutNum.includes("CSV")) {
+			var docExtensionToExport = ".csv"
+			var expExtension = "CSV"
+
+		} else if (optionWithoutNum.includes("EXCEL")) {
+			var docExtensionToExport = ".xls"
+			var expExtension = "Microsoft Excel"
+
+		} else if (optionWithoutNum.includes("PDF")) {
+			var docExtensionToExport = ".pdf"
+			var expExtension = "PDF"
+
+		} else if (optionWithoutNum.includes("WORD")) {
+			var docExtensionToExport = ".docx"
+			var expExtension = "Microsoft Word"
+		}
+
+		var docFolderStr = docFrontPathStrItems.join("/") //+ "/"
+		var destinyFolderStr = finderLib.whereToExport(docFolderStr, expExtension)
+
+		var docFrontExtension = seApp.aliases.byName(docFront.file().toString()).nameExtension();
+
+		var docFrontName = docFront.name().split("." + docFrontExtension)[0]
+
+		var pathAndNameStr = destinyFolderStr + "/" + docFrontName + docExtensionToExport
+		var pathAndName = Path(pathAndNameStr)
+
+		iWorkLib.exportDoc(docFront, pathAndNameStr, expExtension)
+
+		delay(d1)
+
+		finderApp.reveal(pathAndName).extensionHidden = true
+		delay(d0p3)
+
+		if (expExtension == "PDF") {
+			previewApp.activate()
+			var pdf2SignAndStamp = previewApp.open(Path(pathAndNameStr))
+
+		} else {
+			finderApp.open(Path(pathAndNameStr))
+		}
+
+		if (optionWithoutNum.includes("SIGN & STAMP")) {
+			authenticationLib.signAndStamp(pathAndNameStr, afterExportOption)
+		}
+	}
+
+	// if (frontmostAppName == "Numbers") {
+	// 	numbersApp.activate()
+	// } else if (frontmostAppName == "Pages") {
+	// 	pagesApp.activate()
+	// }
+
+
+	//delay(d0p3)
+}
+
+
+
+
+
+
+
+
+
+// ------------------------------------------ FUNCTIONS
+
+function global5GoToFolder(filePathStr) {
+	saApp.setTheClipboardTo(filePathStr)
+	delay(d1)
+	seApp.keystroke("g", { using: [ "shift down", "command down" ] })
+	delay(d0p3)
+	seApp.keystroke("v", { using: "command down" })
+	delay(d0p3)
+	seApp.keyCode(76) // Go
+	delay(d1p5)
+	seApp.keyCode(76) // OK
+}
+
+
+function doMenu(appName, menuName, menuItem) {
+
+	var frontApp = Application(appName);
+
+	frontApp.activate();
+
+	var frontAppSE = seApp.processes.byName(appName);
+
+	var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+	delay(d0p3)
+
+	menuName.menus[0].menuItems.byName(menuItem).click();
+}

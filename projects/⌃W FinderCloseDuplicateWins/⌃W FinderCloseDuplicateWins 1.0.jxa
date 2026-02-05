@@ -1,0 +1,34 @@
+var finderLib = Library("finderLib")
+
+var finderApp = Application("Finder")
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3
+
+// ---------------------------------------
+
+
+var pathStrs = [];
+var duplicateWindowsByPathStr = [];
+
+for (var i = 0; i < finderApp.windows.length; i++) {
+   var pathStr = finderLib.getPathStrFromUrl(finderApp.windows[i].target().url())
+
+   if (pathStrs.includes(pathStr)) {
+      duplicateWindowsByPathStr.push(pathStr);
+   } else {
+      pathStrs.push(pathStr);
+   }
+}
+
+finderApp.activate()
+
+for (var i = 0; i < duplicateWindowsByPathStr.length; i++) {
+   var pathStr = duplicateWindowsByPathStr[i];
+   delay(d0p3)
+   finderApp.open(Path(pathStr))
+   delay(d0p3)
+   finderApp.windows[0].close()
+   delay(d0p3)
+}

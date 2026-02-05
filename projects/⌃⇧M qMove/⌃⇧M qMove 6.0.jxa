@@ -1,0 +1,39 @@
+// v6.0
+
+const finderLib = Library('finderLib');
+const { revealItem } = Library('xxNodejsJXALib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+
+// --------------------------------------- DELAYS
+
+const d0p3 = 0.3;
+const d1 = 1;
+//const d1p5 = 1.5
+//const d3 = 3
+
+// ---------------------------------------
+
+const finderSelectionToMove = finderApp.selection();
+
+// Previous tab
+// seApp.keyCode(48, { using: [ "shift down", "control down" ] })
+seApp.keyCode(48, { using: ['control down'] }); // Next Tab
+
+delay(d0p3); // Para ler sem erro a sefunda Tab
+
+finderApp.activate();
+
+const destinyFolderStr = finderLib.getFinderFolderPathSr();
+
+for (var i = 0; i < finderSelectionToMove.length; i++) {
+  var itemName = finderSelectionToMove[i].name();
+  var itemKind = finderSelectionToMove[i].kind();
+
+  finderApp.move(finderSelectionToMove[i], { to: Path(destinyFolderStr) });
+  revealItem(destinyFolderStr + '/' + itemName, 'reveal');
+}

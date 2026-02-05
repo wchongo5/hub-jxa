@@ -1,0 +1,312 @@
+// v19.0
+
+var { formatDateV3 } = Library('datetimeLib');
+const { alert, dialog } = Library('displayLib');
+var pathLib = Library('pathLib');
+const { getContratFolderInfo, getFinderFolderPathSr, getND, getPathStrsFromPathObjs, itemProperties } = Library('finderLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var numbersApp = Application('Numbers');
+
+alert(`Incluir este RENAME em Move5 usando identifiers para ser automático`, '');
+
+// ---------------
+const ND = getND();
+// ---------------
+
+var numXA5PathObj = Path(pathLib.getNumXA5PathStr());
+
+var projectDrawingPartStr = 'PARTE DESENHADA';
+
+var oneList = [
+  '0SEND',
+
+  '', // -----
+
+  'A. 00X00C CONTRATO',
+  'B. 00X00E ESTIMATIVA DE CUSTO',
+  'C. 00X00EQ MAPA DE QUANTIDADES',
+  'D. 00XP01 PARTE ESCRITA',
+  `E. 00XP02 ${projectDrawingPartStr}`,
+  'F. STUDY TERMO DE ENTREGA',
+  'G. STUDY TERMOS DE REFERÊNCIA',
+  'H. STUDY REQUERIMENTO X',
+  'I. STUDY PLANTA TOPOGRÁFICA',
+
+  '1', // -----
+
+  'A. 1PAI PAISAGISMO (FUTURE)',
+
+  '2', // -----
+
+  'A. 00T02-1 T. RESPONSABILIDADE',
+  'B. 00T02-2 CERTIFICADO',
+  'G. 00X02-1 MEMÓRIA',
+  'H. 00X02-2 ESPECIFICAÇÕES',
+  'I. 00XP02 ARQUITECTURA',
+
+  '3', // -----
+
+  'A. 00T01-1 T. RESPONSABILIDADE',
+  'B. 00T03-2 CERTIFICADO',
+  'G. 00X03-1 MEMÓRIA',
+  'H. 00X03-2 ESPECIFICAÇÕES',
+  'I. 00XP03 HIDRÁULICA',
+
+  '4', // -----
+  'A. 00T04-1 T. RESPONSABILIDADE',
+  'B. 00T04-2 CERTIFICADO',
+  'H. 00X04 MEMÓRIA',
+  'I. 00XP04 ESTRUTURA',
+
+  '5', // -----
+
+  'A. 00T05-1 T. RESPONSABILIDADE',
+  'B. 00T05-2 CERTIFICADO',
+  'C. 00T05-3 CARTÃO',
+  'D. 00X00E05 ESTIMATIVA DE CUSTO',
+  'E. 00X00EQ05 MAPA DE QUANTIDADES',
+  'F. 00X00EQ05 MAPA X',
+  'G. 00X05-1 MEMÓRIA',
+  'H. 00X05-2 ESPECIFICAÇÕES',
+  'I. 00XP05 ELECTROTECNIA',
+
+  '6', // -----
+
+  'A. 00T06-1 T. RESPONSABILIDADE',
+  'B. 00T06-2 CERTIFICADO',
+  'C. 00T05-3 CARTÃO',
+  'D. 00X00E06 ESTIMATIVA DE CUSTO',
+  'E. 00X00EQ06 MAPA DE QUANTIDADES',
+  'F. 00X00EQ06 MAPA X',
+  'G. 00X06-1 MEMÓRIA',
+  'H. 00X06-2 ESPECIFICAÇÕES',
+  'I. 00XP06 CLIMATIZAÇÃO',
+
+  '7', // -----
+
+  'A. 00T07-1 T. RESPONSABILIDADE',
+  'B. 00T07-2 CERTIFICADO',
+  'C. 00T05-3 CARTÃO',
+  'D. 00X00E07 ESTIMATIVA DE CUSTO',
+  'E. 00X00EQ07 MAPA DE QUANTIDADES',
+  'F. 00X00EQ07 MAPA X',
+  'G. 00X07-1 MEMÓRIA',
+  'H. 00X07-2 ESPECIFICAÇÕES',
+  'I. 00XP07 GAS',
+
+  'R', // -----
+
+  'A. 18MAT MATERIAL',
+
+  'F', // -----
+
+  'A. 00X00I IMAGENS',
+  'B. 00X00V VÍDEO PROJECTO',
+
+  'V', // -----
+
+  'A. 00LC APROVAÇÃO 02ARQ',
+  'B. 00LC ESTRUTURA (AUTO CONSTRUÇÃO)',
+  'C. 00LC SUBMISSÃO',
+  'D. 00LC RESPOSTA 02ARQ',
+  'E. 00LC RESPOSTA 02ARQ (A)',
+  'F. 00LM OBSERVAÇÕES DO MOPHRI',
+  'G. 00LM OBSERVAÇÕES DO MUNICÍPIO',
+];
+
+// ------------------------------------------------------------
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const {
+  components: {
+    year: { Y4: yearY4, Y4N: yearY4N },
+    month: { M1: monthM1, M2: monthM2, long: monthLong, short: monthShort },
+    day: { D2: dayD2 },
+  },
+  formats: { dateY4M2D2, dateY4M2D2__H2M2S2: _dateY4M2D2__H2M2S2, dateDotY4M2D2__H2M2S2, yearY4M2 },
+} = nowFormatted;
+
+let dateY4M2D2__H2M2S2 = _dateY4M2D2__H2M2S2;
+
+var finderSelection = finderApp.selection();
+
+var finderSelectionLength = finderSelection.length;
+
+var subjectListSelected = cfl(
+  oneList,
+  'Assunto para ' + finderSelectionLength + ' docuemntos\n—\nNo Finder, selecionar os documentos de cima para baixo.\n',
+  oneList[2],
+  'm'
+);
+
+var subjectListSelectedLength = subjectListSelected.length;
+var subjectSelectedAllInStr = subjectListSelected.toString();
+
+var containerPathStr = getFinderFolderPathSr();
+var contratFolderInfo = getContratFolderInfo(containerPathStr);
+
+var invoiceCs = contratFolderInfo.contractNumber;
+var customer4Folders = contratFolderInfo.entity4Folders;
+var customerFolderName = contratFolderInfo.contractFolderName;
+
+if (finderSelectionLength == subjectListSelectedLength) {
+  for (var i = 0; i < finderSelection.length; i++) {
+    var fileSelectedCurrent = finderSelection[i];
+    fileSelectedCurrent.extensionHidden = true;
+    var filePathStr = getPathStrsFromPathObjs([fileSelectedCurrent])[0];
+
+    var nameExtension = fileSelectedCurrent.nameExtension();
+
+    var subjectWithCode = subjectListSelected[i];
+
+    if (subjectWithCode[1] == '.') {
+      var subjectWithCode = subjectWithCode.slice(3);
+    }
+
+    // 00T02-2 CERTIFICADO DE ARQUITECTURA
+    if (subjectWithCode.includes('00T02-2')) {
+      //var subjectWithCode = subjectWithCode + " (ADICIONAR SEMPRE CERTIFICADOS 01W)"
+
+      dAlert(`SE TEM CERTIFICADO DO RESPECTIVO MUNICÍPIO, SUBSTITUIR O DE MOPHRH`, ``);
+    }
+
+    if (subjectWithCode.includes('IMAGENS')) {
+      var fileSize = itemProperties(filePathStr).size / 1024; // In Kilobytes
+
+      //var subjectWithCode = subjectWithCode + " " + cfl2Str(["1A4", "2A3"], 'Formato', "1A4")
+
+      if (fileSize < 1500) {
+        subjectWithCode += ' 1A4';
+      } else {
+        subjectWithCode += ' 2A3';
+      }
+    }
+
+    var subjectCode = subjectWithCode.split(' ')[0];
+    var subject = subjectWithCode.split(subjectCode + ' ')[1];
+
+    if (subjectCode.includes('0SEND')) {
+      var docNumXA5 = numbersApp.open(numXA5PathObj);
+
+      var projSheetNames = docNumXA5.sheets.whose({ name: { _contains: 'PROJ - ' } }).name();
+
+      projSheetNames.sort();
+
+      currentApp.activate();
+      var projSheetName = cfl2Str(projSheetNames, 'Selecione o(s) Projecto(s)', projSheetNames[0]);
+
+      var projSheet = docNumXA5.sheets[projSheetName];
+      var tableProjectInfo = projSheet.tables['Project Info'];
+
+      var object = tableProjectInfo.cells['B2'].value();
+
+      var object = changeCase(object, 'UPPER');
+      var docNameAndExtension = `${dateY4M2D2__H2M2S2}-V1 ${ND} ${object}.${nameExtension}`;
+    } else if (subjectCode.includes('00LC') || subjectCode.includes('00LM')) {
+      var docNameAndExtension = `${subjectCode} ${ND} ${dateY4M2D2__H2M2S2}-V1 ${ND} ${customer4Folders} ${ND} ${subject}.${nameExtension}`;
+    } else {
+      // 00X00C, 00X00E, ALL IN THIS SECTION
+      // "0XA5, 1PAI, 2ARQ, 3HID, 4EST, 5ELE, 6CLI, 7GAS", "18MAT, 00X00I, 00X00V"
+
+      if (subject.includes('CONTRATO')) {
+        var subject = `${subject} ${invoiceCs}`;
+
+        dateY4M2D2__H2M2S2 = dDialog(`Data de assinatura de contrato`, `${yearY4}${monthM2}dd-120000`);
+
+        // var dateY4M2D2__H2M2S2 = contratDateYyyyMmDd + "-120000"
+      }
+
+      if (subject.includes(projectDrawingPartStr)) {
+        var objectWithStoreNum = customerFolderName.split(` ${ND} `)[3];
+        var subject = `${objectWithStoreNum} ${invoiceCs}`;
+      }
+
+      var docNameAndExtension = `${subjectCode} ${ND} ${customer4Folders} ${ND} ${subject} ${ND} ${dateY4M2D2__H2M2S2}-V1.${nameExtension}`;
+    }
+
+    fileSelectedCurrent.name = docNameAndExtension;
+  }
+} else {
+  currentApp.displayAlert(
+    `Número de documentos (${finderSelectionLength}) deve ser igual ao número de assuntos (${subjectListSelectedLength}) selecionados!`
+  );
+}
+
+// --------------- FUNCTIONS
+
+function dAlert(theTitle, theMessage, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    currentApp.displayAlert(theTitle, { message: theMessage });
+  } else {
+    currentApp.displayAlert(theTitle, {
+      message: theMessage,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    });
+  }
+}
+
+function dDialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer }).textReturned;
+  } else {
+    return currentApp.displayDialog(theTitle, {
+      defaultAnswer: theDefaultAnswer,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    }).textReturned;
+  }
+}
+
+function cfl(theList, thePrompt, theDefaultItems, multipleStatus) {
+  if (multipleStatus == undefined) {
+    return currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems });
+  } else if (multipleStatus == 'm') {
+    return currentApp.chooseFromList(theList, {
+      withPrompt: thePrompt,
+      defaultItems: theDefaultItems,
+      multipleSelectionsAllowed: true,
+    });
+  }
+}
+
+function cfl2Str(theList, thePrompt, theDefaultItems, multipleStatus) {
+  if (multipleStatus == undefined) {
+    return currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems }).toString();
+  } else if (multipleStatus == 'm') {
+    return currentApp
+      .chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems, multipleSelectionsAllowed: true })
+      .toString();
+  }
+}
+
+function addSpecilityCodesToLists(listInput, specilityCode) {
+  var listOutput = [];
+
+  for (var i = 0; i < listInput.length; i++) {
+    listOutput.push(specilityCode + ' ' + listInput[i]);
+  }
+
+  return listOutput;
+}
+
+function changeCase(str, caseInput) {
+  if (caseInput == 'lower') {
+    var someStringCaseChanged = str.toLowerCase();
+  } else if (caseInput == 'UPPER') {
+    var someStringCaseChanged = str.toUpperCase();
+  }
+  return someStringCaseChanged;
+}

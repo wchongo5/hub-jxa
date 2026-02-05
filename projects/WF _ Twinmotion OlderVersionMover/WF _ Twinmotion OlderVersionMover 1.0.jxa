@@ -1,0 +1,70 @@
+// v1.0
+
+var pathLib = Library('pathLib');
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+const { getND, getPathStrsFromPathStr } = Library('finderLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var systemEventsApp = Application('System Events');
+
+var finderApp = Application('Finder');
+
+// ---------------------------------------
+const ND = getND();
+// --------------------------------------- DELAYS
+
+//var d0p3 = 0.3
+var d30 = 30;
+
+// ---------------------------------------
+
+var xa5TemporayOfflinePathStr = pathLib.getXa5OfflineFolderPathStr();
+
+function run(input, parameters) {
+  delay(d30);
+
+  var filePathStr = input[0].toString();
+  var filePathStrItems = filePathStr.split('/');
+  var fileName = filePathStrItems.pop();
+
+  const folderActionPathStr = filePathStrItems.join('/');
+  const folderActionName = filePathStrItems.pop();
+  const invoiceCs = folderActionName.split(` ${ND} `)[1];
+
+  // --------------- COLLECT PATHS OF TWIMMOTION FILES
+  const twinmotionFilePathStrsFiltered = getPathStrsFromPathStr(folderActionPathStr, 'files').filter(str => str.includes('.tm'));
+
+  // --------------- FIND OFFLINE PROJECT FOLDER
+  var offlineA5FolderPathObjs = systemEventsApp.folders.byName(xa5TemporayOfflinePathStr).folders;
+
+  for (var i = 0; i < offlineA5FolderPathObjs.length; i++) {
+    var folderName = offlineA5FolderPathObjs[i].name();
+
+    if (folderName.includes(invoiceCs)) {
+      var offlineA5FolderName = folderName;
+      break;
+    }
+  }
+
+  // --------------- MOVE OLDER TWINMOTION FILES TO OFFLINE PROJECT FOLDER
+  var twinmotionFilePathStrsFilteredL = twinmotionFilePathStrsFiltered.length;
+
+  for (var i = 0; i < twinmotionFilePathStrsFilteredL; i++) {
+    if (i != twinmotionFilePathStrsFilteredL - 1) {
+      finderApp.move(Path(twinmotionFilePathStrsFiltered[i]), {
+        to: Path(xa5TemporayOfflinePathStr + '/' + offlineA5FolderName),
+      });
+    }
+  }
+
+  /* 🔴 XREF01 DESACTIVADO POIS 1 SAVE ACTIVA DUAS VEZES O APP (LACUNA) & ÚLTIMA VEZ ENTRA ENQUANTO QUE PRIMEIRA PROCESSOU OS FILES
+	if (twinmotionFilePathStrsFilteredL <= 1) {
+
+		dAlert(`"WF • Twinmotion OlderVersionMover" não moveu nenhum ficheiro Twinmotion pois tem ${twinmotionFilePathStrsFilteredL} ficheiro Twinmotion❗️`, ``)
+	}
+	*/
+}

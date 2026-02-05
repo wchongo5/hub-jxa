@@ -1,0 +1,401 @@
+// v1.0
+// const {
+// 	// --------------------------------------------- DROPBOX
+// 	getFilesToDuplicateInFolder,
+// 	// --------------------------------------------- DROPBOX
+// 	getDropboxPathStr,
+// 	getContactsNotesPathStr,
+// 	getContactsPathStr,
+// 	getContractsPathStr,
+// 	getXa5XProdutionPathStr,
+
+// 	// --------------------------------------------- OFFLINE  + ICLOUD
+// 	// ------------------------------ OFFLINE
+// 	getOfflineFolderPathStr,
+// 	getXa5OfflineFolderPathStr,
+// 	getFolderActionsPathStr,
+// 	// ------------------------------ iCloud
+// 	getICloudPathStr,
+
+// 	// ------------------------------ iCloud IWORK
+// 	getNumbersIcloudPathStr,
+// 	getNumXG5PathStr,
+// 	getNumXA5PathStr,
+// 	getNumDesignAndSpecsPathStr,
+
+// 	// ------------------------------ P0
+// 	getPlataformsPathStr,
+// 	// --------------- DATACENTER
+// 	getDataCenterPathStr,
+// 	// ----- XDUP
+// 	getXDupPathStr,
+// 	// ----- XDUP DERIVADOS
+// 	getXWDupPathStr,
+// 	getXDup2xxxPathStr,
+// 	getXDupInsuranceAustralGaranteePathStr,
+// 	getXDupInsuranceAustralProInsurancePathStr,
+// 	getXDupEnzRentPathStr,
+// 	getXDupL100InssPathStr,
+// 	getXDupL100InssPaymentPathStr,
+// 	getXDupL100XPaymentPathStr,
+// 	getXDupTelephoneRechargePathStr,
+// 	getXDupTaxationPathStr,
+// 	getXDupTvcaboPathStr,
+// 	getXDupXGeneralPathStr,
+// 	// ----- FOR WATCHED FOLDERS
+// 	wfMovePathStrs,
+// 	wfR1FornecedoresPathStrs,
+// 	wfRevealAnd1Plus,
+
+// 	// --------------- Downloads
+// 	getDownloadsPathStr,
+// 	getIDownloadsPathStr,
+
+// 	// --------------- INBOX
+// 	getInboxPathStr,
+// 	getXa5TemporayPathStr,
+
+// 	// ------------------------------ P1
+// 	getP1PathStr,
+// 	// --------------- FORNECEDORES5
+// 	getSuppliersPathStr,
+// 	getBanksPathStr,
+// 	// --------------- LEGALIDADE
+// 	getLegalityPathStr,
+// 	getFinancesPathStr,
+// 	getTaxPathStr,
+
+// 	// ------------------------------ P2
+// 	getP2PathStr,
+
+// 	// ------------------------------ P3
+// 	getP3PathStr,
+
+// 	// ------------------------------ P4
+// 	getP4PathStr,
+// 	getP4SoftwarePathStr,
+// 	getP4SP5AApplePathStr,
+// 	getP4SP5AQGISPathStr,
+// 	getP4SP5DAutomatorPathStr,
+// 	getP4SP5DAutomatorFolderActionsPathStr,
+
+// 	// ------------------------------ P5
+// 	getP5PathStr,
+// 	getP5PathStrWithSuffixP5,
+// } = Library("pathLib")
+
+const { alert, dialog } = Library('displayLib');
+
+const { getND } = Library('finderLib');
+
+// ---------------------------------------------
+// 🔴 NEVER USE <const ND = getND();>, CALL (getND(1)) DIRECTLY TO AVOID KEEPS CALLING finderLib and pathLib INFINITELY, since both has line <const { getND } = Library('finderLib')> at top
+// const ND = getND();
+// alert('XXX3.1');
+
+// --------------------------------------------- INBOX
+function getFilesToDuplicateInFolder() {
+  return [
+    {
+      group: 'ap',
+      name: 'Estimativas',
+      path: '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P1/P1T TEMPLATES/P1T5P XA5 _ GCPUP/A555 _ ORÇAMENTOS & DERIVADOS/00X00E _ CLIENTE _ ESTIMATIVA DE CUSTO E DURAÇÃO XDXXXXXXXXXX _ 20XXXXXX-XXXXXX-V1.numbers',
+    },
+    {
+      group: 'ap',
+      name: 'Material',
+      path: '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P1/P1T TEMPLATES/P1T5P XA5 _ GCPUP/A555 _ ORÇAMENTOS & DERIVADOS/00X00EM _ CLIENTE _ MATERIAL XDXXXXXXXXXX _ 20XXXXXX-XXXXXX-V1.numbers',
+    },
+    {
+      group: 'ap',
+      name: 'QGIS PackageTemplateTerrain',
+      path: '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P4/P4S SOFTWARE/P4SP5A QGIS/SPACEXD5DB/P5TEMPLATE_TERRAIN.gpkg',
+    },
+    {
+      group: 'ap',
+      name: 'Vídeo',
+      path: '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P5/P5M MULTIMÉDIA/P552 VÍDEO/VIDEO PROJECTO/00X00V _ CLIENTE _ VÍDEO PROJECTO XDXXXXXXXXXX _ 20XXXXXX-XXXXXX-V1.motn',
+    },
+    {
+      group: 'ap',
+      name: 'XA5 XmlProjInfoTemplate',
+      path: '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P1/P1T TEMPLATES/P1T5P XA5 _ GCPUP/X5 - PROJECT INFO TEMPLATE.xml',
+    },
+    {
+      group: 'af',
+      name: 'Control Schedules',
+      path: '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P1/P1T TEMPLATES/P1T5P XO5 _ GCPUP/+ MAPAS DE CONTROLO/YYYYDDMM-HHMMSS-V1 _ MAPAS DE CONTROLO XDXXXXXXXXXX - XDXXXXXXXXXX.numbers',
+    },
+  ];
+}
+
+// --------------------------------------------- DROPBOX
+
+function getDropboxPathStr() {
+  // return `/Users/xd5-wmac/Dropbox`;
+  return `/Users/xd5-wmac/Library/CloudStorage/Dropbox`; // 20250818-205900
+}
+
+function getXa5XProdutionPathStr() {
+  return `${getDropboxPathStr()}/DATACENTERXD5/P5 X-PRODUÇÃO`;
+}
+
+function getContactsNotesPathStr() {
+  return `${getDropboxPathStr()}/DATA/Contactos/Contactos00Notas.json`;
+}
+
+function getContactsPathStr() {
+  return `${getDropboxPathStr()}/DATA/Contactos/Contactos01.json`;
+}
+
+function getContractsPathStr() {
+  return `${getDropboxPathStr()}/DATA/Contratos/Contratos01.json`;
+}
+
+// --------------------------------------------- OFFLINE  + ICLOUD
+
+// ------------------------------ OFFLINE
+
+function getOfflineFolderPathStr() {
+  return `/Users/xd5-wmac/P0 OFFLINE FOLDER`;
+}
+
+function getXa5OfflineFolderPathStr() {
+  return `/Users/xd5-wmac/P51A XA5-TEMPORARY5 OFFLINE`;
+}
+
+function getFolderActionsPathStr() {
+  return `/Library/Scripts/Folder Action Scripts`;
+}
+
+// ------------------------------ iCloud
+
+function getICloudPathStr() {
+  return `/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs`;
+}
+
+// ------------------------------ iCloud IWORK
+
+function getNumbersIcloudPathStr() {
+  return `/Users/xd5-wmac/Library/Mobile Documents/com~apple~Numbers/Documents`;
+}
+
+function getNumXG5PathStr() {
+  return `${getNumbersIcloudPathStr()}/#P4 ${getND(1)} TEXT XG5.numbers`;
+}
+
+function getNumXA5PathStr() {
+  return `${getNumbersIcloudPathStr()}/#P4 ${getND(1)} TEXT XA5.numbers`;
+}
+
+function getNumDesignAndSpecsPathStr() {
+  return `${getNumbersIcloudPathStr()}/#P51A ${getND(1)} DESENHO & ESPECIFICAÇÕES.numbers`;
+}
+
+// ------------------------------ P0
+
+function getPlataformsPathStr() {
+  return `${getICloudPathStr()}/Plataformas`;
+}
+
+// --------------- DATACENTER
+function getDataCenterPathStr() {
+  return `${getPlataformsPathStr()}/DATACENTERXD5`;
+}
+
+// ----- XDUP
+function getXDupPathStr() {
+  return `${getDataCenterPathStr()}/DUP X-DIM`;
+}
+
+// ----- XDUP DERIVADOS
+function getXWDupPathStr() {
+  return `${getXDupPathStr()}/+ DUPW`;
+}
+
+function getXDup2xxxPathStr() {
+  return `${getXDupPathStr()}/R0 | DUP2XXX`;
+}
+
+function getXDupInsuranceAustralGaranteePathStr() {
+  return `${getXDupPathStr()}/R1 | AUSTRAL SEGUROS ${getND(1)} GARANTIA`;
+}
+
+function getXDupInsuranceAustralProInsurancePathStr() {
+  return `${getXDupPathStr()}/R1 | AUSTRAL SEGUROS ${getND(1)} SEGURO PRO`;
+}
+
+function getXDupEdmCredelecPathStr() {
+  return `${getXDupPathStr()}/R1 | EDM _ CREDELEC`;
+}
+
+function getXDupEnzRentPathStr() {
+  return `${getXDupPathStr()}/R1 | ENZ ${getND(1)} RENDA`;
+}
+
+function getXDupL100InssPathStr() {
+  return `${getXDupPathStr()}/R1 | INSS ${getND(1)} L100`;
+}
+
+function getXDupL100InssPaymentPathStr() {
+  return `${getXDupPathStr()}/R1 | INSS ${getND(1)} L100 (PAYMENT)`;
+}
+
+function getXDupL100XPaymentPathStr() {
+  return `${getXDupPathStr()}/R1 | PAGAMENTO ${getND(1)} X`;
+}
+
+function getXDupTelephoneRechargePathStr() {
+  return `${getXDupPathStr()}/R1 | TELEFONIA ${getND(1)} RECARGA`;
+}
+
+function getXDupTaxationPathStr() {
+  return `${getXDupPathStr()}/R1 | TRIBUTAÇÃO`;
+}
+
+function getXDupTvcaboPathStr() {
+  return `${getXDupPathStr()}/R1 | TVCABO`;
+}
+
+function getXDupXGeneralPathStr() {
+  return `${getXDupPathStr()}/R1 | X-GERAL`;
+}
+
+// ----- FOR WATCHED FOLDERS
+
+function wfMovePathStrs() {
+  // Without <, getDropboxPathStr() + "/DownloadsDB"> because it uses "WF _ iScan Rename.workflow"
+  return [
+    getDownloadsPathStr(),
+    `${getDropboxPathStr()}/DownloadsDB`,
+    getIDownloadsPathStr(),
+    `${getPlataformsPathStr()}/iMove2Selection`,
+    `${getPlataformsPathStr()}/iMove2Selection&Open`,
+  ];
+}
+
+function wfR1FornecedoresPathStrs() {
+  return [
+    getXDupInsuranceAustralGaranteePathStr(),
+    getXDupInsuranceAustralProInsurancePathStr(),
+    getXDupEdmCredelecPathStr(),
+    getXDupEnzRentPathStr(),
+    getXDupL100InssPathStr(),
+    getXDupL100InssPaymentPathStr(),
+    getXDupL100XPaymentPathStr(),
+    getXDupTelephoneRechargePathStr(),
+    getXDupTaxationPathStr(),
+    getXDupTvcaboPathStr(),
+    getXDupXGeneralPathStr(),
+  ];
+}
+
+function wfRevealAnd1Plus() {
+  const inboxPathStr = getInboxPathStr();
+
+  return [
+    `${inboxPathStr}/ATTACHMENTS`,
+    `${inboxPathStr}/SCAN2BANK`,
+    `${inboxPathStr}/SCAN5 & TEMPORARY`,
+    getTaxPathStr(),
+    getXWDupPathStr(),
+    getXDup2xxxPathStr(),
+    `${getP2PathStr()}/CONHECIMENTO GERAL`,
+    `${getP2PathStr()}/MATRIX`,
+    `${getSuppliersPathStr()}/P1FS — PREÇOS5/# INBOX`,
+    `${getP2PathStr()}/PROFISSIONAIS/P2DG GESTÃO (G5)/QUITAÇÕES/REQUERIMENTOS`,
+    `${getP4SoftwarePathStr()}/P4SP5DJ JAVASCRIPT/+ KNOWLEDGE JS`,
+    `${getP4SoftwarePathStr()}/P4SP5DP PYTHON/+ KNOWLEDGE PY`,
+    `${getP4SoftwarePathStr()}/P4SP5DS SWIFT/+ KNOWLEDGE SW`,
+    '/Users/xd5-wmac/P0 OFFLINE FOLDER',
+  ];
+}
+
+// --------------- Downloads
+function getDownloadsPathStr() {
+  return `/Users/xd5-wmac/Downloads`;
+}
+
+function getIDownloadsPathStr() {
+  return `${getPlataformsPathStr()}/iDownloads`;
+}
+
+// --------------- INBOX
+function getInboxPathStr() {
+  return `${getPlataformsPathStr()}/INBOX`;
+}
+
+function getXa5TemporayPathStr() {
+  return `${getInboxPathStr()}/XA5-TEMPORARY5`;
+}
+
+// ------------------------------ P1
+function getP1PathStr() {
+  return `${getPlataformsPathStr()}/P1`;
+}
+
+// --------------- FORNECEDORES5
+function getSuppliersPathStr() {
+  return `${getP1PathStr()}/P1F FORNECEDORES5`;
+}
+
+function getBanksPathStr() {
+  return `${getSuppliersPathStr()}/P1FSB — BANCOS5`;
+}
+
+// --------------- LEGALIDADE
+function getLegalityPathStr() {
+  return `${getP1PathStr()}/P1L LEGALIDADE`;
+}
+
+function getFinancesPathStr() {
+  return `${getLegalityPathStr()}/P1L04 ${getND(1)} FINANÇAS5 (E&F)`;
+}
+
+function getTaxPathStr() {
+  return `${getFinancesPathStr()}/IMPOSTO20XX`;
+}
+
+// ------------------------------ P2
+function getP2PathStr() {
+  return `${getPlataformsPathStr()}/P2`;
+}
+
+// ------------------------------ P3
+function getP3PathStr() {
+  // NOT USED YET
+  return `${getPlataformsPathStr()}/P3`;
+}
+
+// ------------------------------ P4
+function getP4PathStr() {
+  return `${getPlataformsPathStr()}/P4`;
+}
+
+function getP4SoftwarePathStr() {
+  return `${getP4PathStr()}/P4S SOFTWARE`;
+}
+
+function getP4SP5AApplePathStr() {
+  return `${getP4SoftwarePathStr()}/P4SP5AA APPLE`;
+}
+
+function getP4SP5AQGISPathStr() {
+  return `${getP4SoftwarePathStr()}/P4SP5AQ QGIS`;
+}
+
+function getP4SP5DAutomatorPathStr() {
+  return `${getP4SoftwarePathStr()}/P4SP5DA AUTOMATOR`;
+}
+
+function getP4SP5DAutomatorFolderActionsPathStr() {
+  return `${getP4SoftwarePathStr()}/FOLDER ACTIONS`;
+}
+
+// ------------------------------ P5
+function getP5PathStr() {
+  return `${getPlataformsPathStr()}/P5`;
+}
+function getP5PathStrWithSuffixP5() {
+  return getP5PathStr() + '/P5';
+}

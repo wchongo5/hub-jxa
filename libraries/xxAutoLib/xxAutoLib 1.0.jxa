@@ -1,0 +1,1146 @@
+// No version because a complete Apps here. Versions a below same as in App file that uses the Library
+// const xxAutoLib = Library("xxAutoLib")
+
+ObjC.import('Contacts');
+ObjC.import('Foundation');
+
+const objCLib = Library('objCLib');
+
+const { saveLogAutoProcess } = Library('appLib');
+const documentLib = Library('documentLib');
+
+const { alert, dialog } = Library('displayLib');
+
+const pathLib = Library('pathLib');
+const systemLib = Library('systemLib');
+
+const { getPathStrsFromPathStr, makeFolder, renameItem } = Library('finderLib');
+
+const numberLib = Library('numberLib');
+const projectLib = Library('projectLib');
+const contactsApp = Application('Contacts');
+
+const notesLib = Library('notesLib');
+const paymentLib = Library('paymentLib');
+
+const currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+const finderApp = Application('Finder');
+const notesApp = Application('Notes');
+
+const { getContactsNotesPathStr, getContactsPathStr } = Library('pathLib');
+
+const { formatDateV3, timeElapsed } = Library('datetimeLib');
+
+const contactsPtahStr = getContactsPathStr();
+const contactsNotesPathStr = getContactsNotesPathStr();
+
+const backupCopyPastePathStr = '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/BACKUP-COPYPASTE';
+
+// --------------------------------------- DELAYS
+
+// const d0p1 = 0.1
+const d0p3 = 0.3;
+const d1 = 1;
+//const d1p5 = 1.5
+const d3 = 3;
+//const d5 = 5
+//const d7 = 7
+//const d10 = 10
+
+// --------------------------------------- Group
+
+/* function launchAgentsGroup() {
+  
+  autoUpdateContactsNotes('Auto');
+  delay(d3);
+  autoGetAndSaveContacts('Auto');
+  delay(d3);
+ 
+
+  autoBackup('AUTO');
+  autoDisplay();
+} */
+
+/*function launchAgentsGroup() {
+  // Start with autoGetAndSaveContacts. When that’s finished, call autoBackup; then when that’s done, call autoDisplay.
+  // autoGetAndSaveContacts('Auto', function () {
+  //   delay(d3);
+  autoBackup('AUTO', function () {
+    autoDisplay();
+  });
+  // });
+}*/
+
+/*// Wrap the chain and keep the process alive for a short period.
+// Main entry point: Chain the tasks and keep the run loop alive.
+function launchAgentsGroup() {
+  autoBackup('AUTO', function () {
+    // Use Finder to display the dialog (Finder is a GUI app)
+    Application('Finder').displayDialog('autoDisplay has run');
+    // Keep the run loop alive for 30 seconds to let asynchronous tasks complete.
+    $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(30));
+  });
+}
+  */
+
+/* 
+function launchAgentsGroup() {
+  autoBackup('AUTO', function () {
+    alert('Alert in callback');
+  });
+}
+
+ */
+
+function launchAgentsGroup() {
+  /*   autoUpdateContactsNotes('Auto');
+  // delay(d3);
+  autoGetAndSaveContacts('Auto');
+  // delay(d3); */
+  // autoDisplay();
+  // autoBackup('AUTO');
+
+  autoDisplay(function () {
+    autoBackup('AUTO');
+  });
+}
+
+// ---------------------------------------
+
+const p4SP5AApplePathStr = pathLib.getP4SP5AApplePathStr();
+
+// --------------- messagesMpesaProcess - v1.0
+
+function messagesEmolaProcess(filePathStr, groupBy) {
+  currentApp.displayAlert(
+    `Test importing "needsTextFormatter()" if is not slowing process. If is better keep it here, replace this alert with one that will alert to keep local "needsTextFormatter()" updated from original one in projectLib()`,
+    { buttons: ['Cance', 'OK'], defaultButton: 2, givingUpAfter: 5, withIcon: 1 }
+  );
+
+  var { dateY4M2D2__H2M2S2 } = formatDateV3(new Date()).formats;
+
+  var filePathStrItems = filePathStr.split('/');
+  var txtFileName = filePathStrItems.pop().split('.')[0];
+
+  var messagesPeriodMacthes = txtFileName.match(/\d{8}-\d{8}/);
+
+  if (messagesPeriodMacthes) {
+    var messagesPeriod = messagesPeriodMacthes[0];
+  } else {
+    return alert(`Erro`, `"messagesPeriod" não encontrado no nome "${txtFileName}"`);
+  }
+
+  var message_txt = objCLib.readFile(filePathStr);
+
+  var messages = message_txt.match(/\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\n\n.*/g);
+
+  var transactionTypeDic = {
+    Levantaste: 'Levantamento',
+    Recebeu: 'Depósito',
+    // Recebimento
+    'Acabou de receber': 'Recebimento',
+    transferiu: 'Recebimento',
+    // Transferência
+    'Acabou de transferir': 'Transferência',
+    Enviaste: 'Transferência', // Para contas bancárias
+    Transferiste: 'Transferência',
+  };
+
+  var messagesCollection = {};
+  var messagesNotProcessed = [];
+
+  for (var i = 0; i < messages.length; i++) {
+    var message = messages[i];
+
+    try {
+      var transactionIDs = message.match(
+        /(Acabou de receber|Acabou de transferir|Enviaste|Levantaste|Recebeu|transferiu|Transferiste)/
+      );
+
+      if (transactionIDs) {
+        var timestamp = message.match(/\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)[0];
+        var amount = paymentLib.getAmount(message, 0);
+
+        var transactionID = transactionIDs[0];
+
+        var transactionType = transactionTypeDic[transactionID];
+
+        if (transactionID == 'Levantaste') {
+          var otherPersonName = message.match(/Agente\s(.*)\. Taxa/)[1].replace(', nome', '');
+          var otherPerson = `${otherPersonName}`;
+        } else if (transactionID == 'Recebeu') {
+          var otherPersonName = message.match(/Agente.*\snome\s(.*)\sas/)[1];
+          var otherPerson = `${otherPersonName}`;
+
+          // ------------- Recebimento
+        } else if (transactionID == 'Acabou de receber') {
+          var otherPersonName = message.match(/Acabou de receber dinheiro\s(.*)\sas/)[1];
+          var otherPersonName = otherPersonName.split(' ').slice(-2).join(' ');
+          var otherPerson = `${otherPersonName}`;
+        } else if (transactionID == 'transferiu') {
+          // Recebimento
+
+          var otherPersonName = message.match(/nome:\s(.*)\stransferiu/)[1].trim();
+          var otherPerson = `${otherPersonName}`;
+
+          // ------------- Transferência
+        } else if (transactionID == 'Acabou de transferir') {
+          var otherPersonName = message.match(/Acabou de transferir dinheiro para\s(.*)\s\d{2}:\d{2}:\d{2}/)[1];
+          var otherPerson = `${otherPersonName}`;
+        } else if (transactionID == 'Enviaste') {
+          var otherPersonName = message.match(/Enviaste\s.*para(.*)\sas\s\d{2}/)[1];
+          var otherPerson = `${otherPersonName}`;
+        } else if (transactionID == 'Transferiste') {
+          // Recebimento
+          var telephoneNumber = message.match(/\d{9}/)[0];
+          var otherPersonName = message.match(/nome:\s(.*)\sas/)[1];
+          var otherPerson = `${otherPersonName} - ${telephoneNumber}`;
+        }
+
+        if (groupBy === 'otherPerson') {
+          var messageInfo = `${timestamp.replace(/-|:/g, '').split(' ').join('-')} ${transactionType} — ${amount}`;
+
+          if (messagesCollection[otherPerson] === undefined) {
+            messagesCollection[otherPerson] = messageInfo;
+          } else {
+            messagesCollection[otherPerson] += ` | ` + messageInfo;
+          }
+        } else if (groupBy === 'transactionType') {
+          var messageInfo = `${timestamp.replace(/-|:/g, '').split(' ').join('-')} ${otherPerson} — ${amount}`;
+
+          if (messagesCollection[transactionType] === undefined) {
+            messagesCollection[transactionType] = messageInfo;
+          } else {
+            messagesCollection[transactionType] += ` | ` + messageInfo;
+          }
+        }
+      } else {
+        messagesNotProcessed.push(message);
+      }
+    } catch (error) {}
+  }
+
+  var messagesCollectionArray = Object.entries(messagesCollection).map(item => {
+    var otherPerson = item[0];
+
+    var item2Items = item[1].split(' | ');
+    var item2ItemsProcessed = item2Items.map(item => '• ' + item).join('\n');
+
+    return `# ${otherPerson} (${item2Items.length})\n${item2ItemsProcessed}`;
+  }); //.join("\n---------------\n")
+
+  var messagesCollectionArrayL = messagesCollectionArray.length;
+  var messagesCollectionArrayText = messagesCollectionArray.sort().join('\n\n');
+
+  const messagesNotProcessedWithPrefixes = messagesNotProcessed.map(message => {
+    const messageParts = message.split('\n');
+    return `# ${messageParts[0]}\n• ${messageParts[2]}`;
+  });
+
+  const messagesNotProcessedBalance = messagesNotProcessedWithPrefixes.filter(item => item.includes('Saldo total:'));
+  const messagesNotProcessedBalanceL = messagesNotProcessedBalance.length;
+
+  const messagesNotProcessedRemaining = messagesNotProcessedWithPrefixes.filter(item => !item.includes('Saldo total:'));
+
+  const messagesNotProcessedRemainingL = messagesNotProcessedRemaining.length;
+
+  const messagesNotProcessedWithPrefixesGrouped = `\nnewLine\n---------- SALDO (${messagesNotProcessedBalanceL})\n\n${messagesNotProcessedBalance.join(
+    '\n\n'
+  )}\nnewLine\n---------- RESTO (${messagesNotProcessedRemainingL})\n\n${messagesNotProcessedRemaining.join('\n\n')}`;
+
+  // var messagesProcessedAndNotProcessedTxt = `${messagesCollectionArrayText}\nnewLine\n----------------------- MENSAGENS NÃO PROCESSADAS (${messagesNotProcessedWithPrefixes.length})\n\n${messagesNotProcessedWithPrefixes.join("\n\n")}`
+
+  var messagesProcessedAndNotProcessedTxt = `${messagesCollectionArrayText}\nnewLine\n----------------------- MENSAGENS NÃO PROCESSADAS (${
+    messagesNotProcessedBalanceL + messagesNotProcessedRemainingL
+  })\n\n${messagesNotProcessedWithPrefixesGrouped}`;
+
+  // var messagesCollectionArrayHtml = projectLib.needsTextFormatter(messagesProcessedAndNotProcessedTxt, "html")
+  var messagesCollectionArrayHtml = needsTextFormatter(messagesProcessedAndNotProcessedTxt, 'html');
+
+  var noteTitle = `P1PG 📌 Messages - Emola ${dateY4M2D2__H2M2S2} (${messagesPeriod}) - groupBy ${groupBy}`;
+
+  var newNote = notesLib.createNote('P1', noteTitle, messagesCollectionArrayHtml, ['#P0P1PG⌛️']);
+
+  delay(d1);
+
+  var messages_iMazingPathSr = `${p4SP5AApplePathStr}/T-MESSAGES/MESSAGES-IMAZING-PROCESSED`;
+
+  finderApp.move(Path(filePathStr), { to: Path(messages_iMazingPathSr) });
+  delay(d0p3);
+
+  renameItem(
+    `${messages_iMazingPathSr}/${txtFileName}.txt`,
+    `Messages - eMola - ${dateY4M2D2__H2M2S2} (${messagesPeriod}) - groupBy ${groupBy}`,
+    'reveal'
+  );
+}
+
+function messagesMpesaProcess(filePathStr, groupBy) {
+  currentApp.displayAlert(
+    `Test importing "needsTextFormatter()" if is not slowing process. If is better keep it here, replace this alert with one that will alert to keep local "needsTextFormatter()" updated from original one in projectLib()`,
+    { buttons: ['Cance', 'OK'], defaultButton: 2, givingUpAfter: 5, withIcon: 1 }
+  );
+
+  // var groupBy = `otherPerson`
+  // var groupBy = `transactionType`
+
+  var { dateY4M2D2__H2M2S2 } = formatDateV3(new Date());
+
+  var filePathStrItems = filePathStr.split('/');
+  var txtFileName = filePathStrItems.pop().split('.')[0];
+
+  var messagesPeriodMacthes = txtFileName.match(/\d{8}-\d{8}/);
+
+  if (messagesPeriodMacthes) {
+    var messagesPeriod = messagesPeriodMacthes[0];
+  } else {
+    return alert(`Erro`, `"messagesPeriod" não encontrado no nome "${txtFileName}"`);
+  }
+
+  var message_txt = objCLib.readFile(filePathStr);
+
+  var messages = message_txt.match(/\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\n\n.*/g);
+
+  var transactionTypeDic = {
+    Depositaste: 'Depósito',
+    levantaste: 'Levantamento',
+    Recebeste: 'Recebimento',
+    Transferiste: 'Transferência',
+  };
+
+  var messagesCollection = {};
+  var messagesNotProcessed = [];
+
+  for (var i = 0; i < messages.length; i++) {
+    var message = messages[i];
+
+    try {
+      // var messageExtracts = message.match(/(Depositaste|Recebeste|Transferiste)\s.*(AM|PM)/)
+      var transactionIDs = message.match(/(Depositaste|levantaste|Recebeste|Transferiste)/);
+
+      if (transactionIDs) {
+        var timestamp = message.match(/\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/)[0];
+        var amount = paymentLib.getAmount(message, 0);
+
+        // var messageExtract = messageExtracts[0]
+
+        var transactionID = transactionIDs[0];
+
+        // var messageExtractItems = messageExtract.split(" ")
+        // var transactionID = messageExtractItems[0]
+
+        var transactionType = transactionTypeDic[transactionID];
+
+        // alert(`${messageExtract}\n\n${transactionType}\n\n${amount}`, ``)
+
+        if (transactionID == 'levantaste') {
+          var otherPerson = message.match(/agente\s(.*)\. O novo saldo/)[1];
+        } else if (transactionID == 'Recebeste' || transactionID == 'Transferiste') {
+          var otherPersonInfo = message.match(/(\d{12}\s-\s.*\s)aos/)[1];
+          // 258 844148252
+          var telephoneNumber = otherPersonInfo.match(/\d{3}(\d{9})/)[1];
+
+          var otherPersonName = otherPersonInfo.split(telephoneNumber + ' - ')[1];
+
+          var otherPerson = `${otherPersonName} - ${telephoneNumber}`;
+        } else if (transactionID == 'Depositaste') {
+          var otherPerson = message.match(/agente\s(.*\s)aos/)[1];
+        }
+
+        if (groupBy === 'otherPerson') {
+          var messageInfo = `${timestamp.replace(/-|:/g, '').split(' ').join('-')} ${transactionType} — ${amount}`;
+
+          if (messagesCollection[otherPerson] === undefined) {
+            messagesCollection[otherPerson] = messageInfo;
+          } else {
+            messagesCollection[otherPerson] += ` | ` + messageInfo;
+          }
+        } else if (groupBy === 'transactionType') {
+          var messageInfo = `${timestamp.replace(/-|:/g, '').split(' ').join('-')} ${otherPerson} — ${amount}`;
+
+          if (messagesCollection[transactionType] === undefined) {
+            messagesCollection[transactionType] = messageInfo;
+          } else {
+            messagesCollection[transactionType] += ` | ` + messageInfo;
+          }
+        }
+      } else {
+        messagesNotProcessed.push(message);
+      }
+    } catch (error) {}
+  }
+
+  var messagesCollectionArray = Object.entries(messagesCollection).map(item => {
+    var otherPerson = item[0];
+
+    var item2Items = item[1].split(' | ');
+    var item2ItemsProcessed = item2Items.map(item => '• ' + item).join('\n');
+
+    return `# ${otherPerson} (${item2Items.length})\n${item2ItemsProcessed}`;
+  }); //.join("\n---------------\n")
+
+  var messagesCollectionArrayL = messagesCollectionArray.length;
+  var messagesCollectionArrayText = messagesCollectionArray.sort().join('\n\n');
+
+  const messagesNotProcessedWithPrefixes = messagesNotProcessed.map(message => {
+    const messageParts = message.split('\n');
+    return `# ${messageParts[0]}\n• ${messageParts[2]}`;
+  });
+
+  const messagesNotProcessedBuy = messagesNotProcessedWithPrefixes.filter(item =>
+    item.includes('Registamos uma operacao de compra')
+  );
+  const messagesNotProcessedBuyL = messagesNotProcessedBuy.length;
+
+  const messagesNotProcessedCredit = messagesNotProcessedWithPrefixes.filter(item => item.includes('de credito'));
+  const messagesNotProcessedCreditL = messagesNotProcessedCredit.length;
+
+  const messagesNotProcessedBalance = messagesNotProcessedWithPrefixes.filter(item => item.includes('O teu saldo'));
+  const messagesNotProcessedBalanceL = messagesNotProcessedBalance.length;
+
+  const messagesNotProcessedRemaining = messagesNotProcessedWithPrefixes.filter(
+    item => !item.includes('Registamos uma operacao de compra') && !item.includes('de credito') && !item.includes('O teu saldo')
+  );
+
+  const messagesNotProcessedRemainingL = messagesNotProcessedRemaining.length;
+
+  // const messagesNotProcessedWithPrefixesGrouped = `${messagesNotProcessedBuy}${messagesNotProcessedCredit}${messagesNotProcessedBalance}${messagesNotProcessedRemaining}`
+  const messagesNotProcessedWithPrefixesGrouped = `\nnewLine\n---------- COMPRAS (${messagesNotProcessedBuyL})\n\n${messagesNotProcessedBuy.join(
+    '\n\n'
+  )}\nnewLine\n---------- CRÉIDTO (${messagesNotProcessedCreditL})\n\n${messagesNotProcessedCredit.join(
+    '\n\n'
+  )}\nnewLine\n---------- SALDO (${messagesNotProcessedBalanceL})\n\n${messagesNotProcessedBalance.join(
+    '\n\n'
+  )}\nnewLine\n---------- RESTO (${messagesNotProcessedRemainingL})\n\n${messagesNotProcessedRemaining.join('\n\n')}`;
+
+  var messagesProcessedAndNotProcessedTxt = `${messagesCollectionArrayText}\nnewLine\n----------------------- MENSAGENS NÃO PROCESSADAS (${
+    messagesNotProcessedBuyL + messagesNotProcessedCreditL + messagesNotProcessedBalanceL + messagesNotProcessedRemainingL
+  })\n\n${messagesNotProcessedWithPrefixesGrouped}`;
+
+  // alert(`2`, ``)
+
+  // 🔴 ESTE PROCESSO FICA COMGELADO SE USRA "projectLib.needsTextFormatter" e não função AQUI neste ficheiro "needsTextFormatter"
+  // var messagesCollectionArrayHtml = projectLib.needsTextFormatter(messagesProcessedAndNotProcessedTxt, "html")
+  var messagesCollectionArrayHtml = needsTextFormatter(messagesProcessedAndNotProcessedTxt, 'html');
+
+  var noteTitle = `P1PG 📌 Messages - Mpesa ${dateY4M2D2__H2M2S2} (${messagesPeriod}) - groupBy ${groupBy}`;
+
+  var newNote = notesLib.createNote('P1', noteTitle, messagesCollectionArrayHtml, ['#P0P1PG⌛️']);
+
+  delay(d1);
+
+  var messages_iMazingPathSr = `${p4SP5AApplePathStr}/T-MESSAGES/MESSAGES-IMAZING-PROCESSED`;
+  // alert( `${filePathStr}\n\n${messages_iMazingPathSr}`, ``)
+  finderApp.move(Path(filePathStr), { to: Path(messages_iMazingPathSr) });
+  delay(d0p3);
+  // delay(3)
+
+  // alert( `${messages_iMazingPathSr}/${txtFileName}\n\n$Messages - M-Pesa - (${messagesPeriod})`, ``)
+
+  renameItem(
+    `${messages_iMazingPathSr}/${txtFileName}.txt`,
+    `Messages - M-Pesa - ${dateY4M2D2__H2M2S2} (${messagesPeriod}) - groupBy ${groupBy}`,
+    'reveal'
+  );
+}
+
+// --------------- Contacts - v1.0
+
+function autoGetAndSaveContacts(autoOrManualRun) {
+  var startTime = new Date();
+  console.log('Start Time:', startTime);
+
+  const contactsNotes = JSON.parse(objCLib.readFile(contactsNotesPathStr));
+
+  // Create a Map for faster lookup
+  const contactsNotesMap = new Map();
+  contactsNotes.forEach(note => contactsNotesMap.set(note.id, note));
+
+  var contactStore = $.CNContactStore.alloc.init;
+  console.log('CNContactStore initialized:', contactStore);
+
+  var authStatus = $.CNContactStore.authorizationStatusForEntityType($.CNEntityTypeContacts);
+  console.log('Authorization status:', authStatus);
+
+  if (authStatus === $.CNAuthorizationStatusNotDetermined) {
+    contactStore.requestAccessForEntityTypeCompletionHandler($.CNEntityTypeContacts, (granted, error) => {
+      if (granted) {
+        autoFetchContacts(contactStore, contactsNotesMap, startTime, autoOrManualRun);
+      } else {
+        console.log('Error requesting contact access:', error ? ObjC.unwrap(error.localizedDescription) : 'Authorization denied');
+      }
+    });
+  } else if (authStatus === $.CNAuthorizationStatusAuthorized) {
+    autoFetchContacts(contactStore, contactsNotesMap, startTime, autoOrManualRun);
+  } else if (authStatus === $.CNAuthorizationStatusDenied) {
+    console.log('Access denied');
+  } else if (authStatus === $.CNAuthorizationStatusRestricted) {
+    console.log('Access restricted');
+  }
+}
+
+/*
+function autoGetAndSaveContacts(autoOrManualRun) {
+  delay(3);
+
+  currentApp.displayDialog(`autoGetAndSaveContacts`, {
+    givingUpAfter: 5,
+    withIcon: 1,
+  });
+}
+  */
+
+function autoFetchContacts(contactStore, contactsNotesMap, startTime, autoOrManualRun) {
+  var keys = [
+    $.CNContactGivenNameKey,
+    $.CNContactFamilyNameKey,
+    $.CNContactPhoneNumbersKey,
+    $.CNContactBirthdayKey,
+    $.CNContactEmailAddressesKey,
+    $.CNContactUrlAddressesKey,
+    $.CNContactNoteKey,
+    $.CNContactPostalAddressesKey,
+  ];
+
+  var nsArray = $.NSMutableArray.alloc.init;
+  keys.forEach(function (item) {
+    nsArray.addObject(item);
+  });
+  var keysToFetch = nsArray;
+  console.log('Keys to fetch:', keysToFetch);
+
+  var contactsArray = [];
+  var contactCount = 0;
+
+  try {
+    console.log('Creating fetch request...');
+    var fetchRequest = $.CNContactFetchRequest.alloc.initWithKeysToFetch(keysToFetch);
+    console.log('Fetch request created:', fetchRequest);
+
+    console.log('Starting contact enumeration...');
+    var result = contactStore.enumerateContactsWithFetchRequestErrorUsingBlock(fetchRequest, null, function (contact, stop) {
+      // if (contactCount < 20) {
+      if (contactCount < 20000) {
+        // 1841 Contacts 2024.07.12
+        var phoneNumbers = ObjC.unwrap(contact.phoneNumbers).map(phone => {
+          if (phone.value && phone.value.stringValue) {
+            return {
+              label: ObjC.unwrap(phone.label),
+              number: ObjC.unwrap(phone.value.stringValue),
+            };
+          } else {
+            console.log('Phone object:', phone);
+            return { label: 'No label', number: 'No number' };
+          }
+        });
+
+        var emailAddresses = ObjC.unwrap(contact.emailAddresses).map(email => ({
+          label: ObjC.unwrap(email.label),
+          email: ObjC.unwrap(email.value),
+        }));
+
+        var urlAddresses = ObjC.unwrap(contact.urlAddresses).map(url => ({
+          label: ObjC.unwrap(url.label),
+          url: ObjC.unwrap(url.value),
+        }));
+
+        var addresses = ObjC.unwrap(contact.postalAddresses).map(address => ({
+          label: ObjC.unwrap(address.label),
+          street: ObjC.unwrap(address.value.street),
+          city: ObjC.unwrap(address.value.city),
+          state: ObjC.unwrap(address.value.state),
+          postalCode: ObjC.unwrap(address.value.postalCode),
+          country: ObjC.unwrap(address.value.country),
+        }));
+
+        var contactNoteObj = contactsNotesMap.get(ObjC.unwrap(contact.identifier));
+
+        //   console.log(JSON.stringify(contactNoteObj));
+
+        var note = contactNoteObj && contactNoteObj.note ? contactNoteObj.note : null;
+
+        var birthday = contact.birthday.year
+          ? {
+              year: contact.birthday.year,
+              month: contact.birthday.month,
+              day: contact.birthday.day,
+            }
+          : null;
+
+        var firstName = ObjC.unwrap(contact.givenName);
+        var lastName = ObjC.unwrap(contact.familyName);
+        var name = `${firstName} ${lastName}`;
+
+        var contactObj = {
+          id: ObjC.unwrap(contact.identifier),
+          firstName: firstName,
+          lastName: lastName,
+          name: name,
+          phones: phoneNumbers,
+          emails: emailAddresses,
+          urls: urlAddresses,
+          addresses: addresses,
+          note: note,
+          birthday: birthday,
+          code: '', // AppleContactExtended
+          photoUrl: '', // AppleContactExtended
+        };
+        contactsArray.push(contactObj);
+        contactCount++;
+        console.log(`Fetched contact ${contactCount}: ${contactObj.name}`);
+      } else {
+        stop[0] = true;
+      }
+    });
+
+    console.log('Finished contact enumeration.');
+    console.log('Result:', result);
+
+    if (contactCount === 0) {
+      console.log('No contacts found.');
+    } else {
+      /*
+      console.log('Number of contacts:', contactCount);
+      var jsonData = JSON.stringify(contactsArray, null, 2); // Format JSON with 2 spaces for indentation
+      var nsString = $.NSString.alloc.initWithUTF8String(jsonData);
+      var filePath = contactsPtahStr; // Use path from pathLib
+      var success = nsString.writeToFileAtomicallyEncodingError(filePath, true, $.NSUTF8StringEncoding, null);
+      if (success) {
+        console.log('Contacts saved to', filePath);
+      } else {
+        console.log('Failed to save contacts');
+      }
+      */
+
+      objCLib.writeToFile(contactsPtahStr, JSON.stringify(contactsArray, null, 2), false);
+    }
+  } catch (e) {
+    console.log('Exception during contact enumeration:', e);
+  }
+
+  var endTime = new Date();
+  console.log('End Time:', endTime);
+  // console.log('Total Execution Time:', (endTime - startTime) / 1000, 'seconds');
+
+  // console.log('timeElapsed:', timeElapsed(startTime, endTime));
+
+  // 🔴🔴🔴 DEACTIVATED HERE BEACUSE IT FREEZES HERE
+  saveLogAutoProcess(startTime, endTime, contactsPtahStr, autoOrManualRun);
+}
+
+function autoUpdateContactsNotes(autoOrManualRun) {
+  // Notas
+  // • First run of 1841 contacts 15 min;
+  // • Runs subsequentes de actualização de notas são 8 min;
+
+  const startTime = new Date();
+  console.log('For Loop Start Time:', startTime);
+
+  const contacts = contactsApp.people();
+
+  let contactsNotes = JSON.parse(objCLib.readFile(contactsNotesPathStr));
+
+  // for (let i = 0; i < contacts.slice(0, 20).length; i++) {
+  for (let i = 0; i < contacts.length; i++) {
+    const contact = contacts[i];
+    const id = contact.id();
+    const note = contact.note();
+    const modificationDate = contact.modificationDate().getTime().toString(); // Convert to string
+
+    const existingContactIndex = contactsNotes.findIndex(c => c.id === id);
+
+    if (existingContactIndex !== -1) {
+      if (parseInt(contactsNotes[existingContactIndex].modificationDate) < parseInt(modificationDate)) {
+        contactsNotes[existingContactIndex] = {
+          id,
+          modificationDate,
+          note,
+        };
+      }
+    } else {
+      contactsNotes.push({
+        id,
+        modificationDate,
+        note,
+      });
+    }
+  }
+
+  const contactsNotesStr = JSON.stringify(contactsNotes, null, 2);
+
+  objCLib.writeToFile(contactsNotesPathStr, contactsNotesStr, false);
+
+  const endTime = new Date();
+  console.log('For Loop End Time:', endTime);
+  // console.log('timeElapsed:', timeElapsed(startTime, endTime));
+
+  // 🔴🔴🔴 DEACTIVATED HERE BEACUSE IT FREEZES HERE
+  saveLogAutoProcess(startTime, endTime, contactsNotesPathStr, autoOrManualRun);
+
+  // return contactsNotes;
+}
+
+/*
+
+function autoUpdateContactsNotes(autoOrManualRun) {
+  delay(3);
+
+  currentApp.displayDialog(`autoUpdateContactsNotes`, {
+    givingUpAfter: 5,
+    withIcon: 1,
+  });
+}
+  */
+
+// --------------- autoBackup - v1.0
+
+// function autoBackup(autoOrManualRun) {
+function autoBackup(autoOrManualRun, callback) {
+  currentApp.displayDialog(`autoBackup started`, {
+    givingUpAfter: 5,
+    withIcon: 1,
+  });
+
+  let filesFolderName = 'filesFolderNameNotUpdated';
+
+  var startTime = new Date();
+
+  try {
+    var copyPasteAutoBackupPathStr = '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/BACKUP-COPYPASTE';
+
+    var processPathStrs = [
+      // 🔴🔴🔴 Instructions
+      // ["/Library/Scripts/Folder Action Scripts", ["WF _", "Image", "add"]]
+      // "/Library/Scripts/Folder Action Scripts" is copy from Folder
+      // ["WF _", "Image", "add"] Are filters for needed filea
+
+      // ----- Files
+      ['/Users', [''], 'files'],
+      ['/Users/xd5-wmac', ['.z'], 'files'], // Profiles ".zprofile", ".zshrc"
+      ['/Library/Scripts/Folder Action Scripts', ['WF _'], 'files'],
+      ['/Users/xd5-wmac/Library/Application Support/Code/User', [''], 'files'],
+      ['/Users/xd5-wmac/Library/Application Support/Code/User/snippets', [''], 'files'],
+      ['/Users/xd5-wmac/Library/Keybindings', [''], 'files'],
+      ['/Users/xd5-wmac/Library/LaunchAgents', ['xAuto'], 'files'],
+      ['/Users/xd5-wmac/Library/Services', [''], 'files'],
+      ['/Users/xd5-wmac/Library/Script Libraries', [''], 'files'],
+
+      // // Copy by files
+      // ['/Users/xd5-wmac/Dropbox/DATA/Contactos', [''], 'files'],
+      // ['/Users/xd5-wmac/Dropbox/DATA/Contratos', [''], 'files'],
+      // ['/Users/xd5-wmac/Dropbox/DATA/Xero', [''], 'files'],
+
+      // ----- Folders
+      // Copy all folders inside DATA
+      ['/Users/xd5-wmac/Dropbox/DATA', [''], 'folders'],
+
+      // ['/Users/xd5-wmac/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins', ['xd5_'], 'folders'],
+    ];
+
+    var { dateY4M2D2__H2M2S2 } = formatDateV3(new Date()).formats;
+
+    var folderNameDate = dateY4M2D2__H2M2S2; //"20230128-165305"
+
+    makeFolder(Path(copyPasteAutoBackupPathStr), folderNameDate);
+
+    var filesLenthCollection = [];
+
+    var processPathStrsL = processPathStrs.length;
+
+    for (var i = 0; i < processPathStrsL; i++) {
+      // var item = processPathStrs[i];
+      // var fromPathStr = item[0];
+      // var filters = item[1];
+
+      const [fromPathStr, filters, itemsType] = processPathStrs[i];
+
+      // var backupPathStrs = getPathStrsFromPathStr(fromPathStr, 'files');
+      const backupPathStrs = getPathStrsFromPathStr(fromPathStr, itemsType);
+      const backupPathStrsL = backupPathStrs.length;
+
+      //
+      // let filesFolderName = fromPathStr.split('/').slice(-1)[0];
+      filesFolderName = fromPathStr.split('/').slice(-1)[0];
+
+      if (filesFolderName === 'DATA' && fromPathStr.includes('Dropbox/DATA')) {
+        filesFolderName = 'Dropbox - ' + filesFolderName;
+      }
+
+      // if (filesFolderName === 'plugins') {
+      //   filesFolderName = 'QGIS - ' + filesFolderName;
+      // }
+
+      if (filesFolderName === 'snippets') {
+        filesFolderName = 'VS Code - ' + filesFolderName;
+      }
+
+      if (filesFolderName === 'User') {
+        filesFolderName = 'VS Code - ' + filesFolderName;
+      }
+
+      if (filesFolderName === 'xd5-wmac') {
+        filesFolderName = filesFolderName + ' - hidden-profiles';
+      }
+
+      var folderNameDatePathStr = `${copyPasteAutoBackupPathStr}/${folderNameDate}`;
+
+      // const folderNameDatePathObj = Path(folderNameDatePathStr);
+
+      makeFolder(Path(folderNameDatePathStr), filesFolderName);
+
+      let toPathStr;
+
+      for (var j = 0; j < backupPathStrsL; j++) {
+        var backupPathStr = backupPathStrs[j];
+        const backupFileName = backupPathStr.split('/').slice(-1)[0];
+
+        let backupThis = false;
+        let isProfileFile = false;
+
+        for (var k = 0; k < filters.length; k++) {
+          var filter = filters[k];
+
+          isProfileFile = backupPathStr.endsWith('/.zprofile') || backupPathStr.endsWith('/.zshrc');
+
+          // if (backupPathStr.includes(filter)) {
+          if (backupPathStr.includes(filter) || isProfileFile) {
+            backupThis = true;
+            break;
+          }
+        }
+
+        /* 
+          - (backupFileName[0] != '.' || isProfileFile) to exclude system files (.localized, …) but incude if is isProfileFile
+        */
+
+        // if ((filters[0] == '' || backupThis) && backupFileName[0] != '.') {
+        if ((filters[0] == '' || backupThis) && (backupFileName[0] != '.' || isProfileFile)) {
+          toPathStr = `${copyPasteAutoBackupPathStr}/${folderNameDate}/${filesFolderName}`;
+
+          // const backupPathObj = Path(backupPathStr);
+
+          // if (finderApp.exists(backupPathObj)) {
+
+          finderApp.duplicate(Path(backupPathStr), { to: Path(toPathStr) });
+          // }
+        }
+
+        // var backupThis = false;
+      }
+
+      // -------------- GET FOLDER QUANTITY AND RENAME - FOLDER BACKUPED FOLDER
+
+      if (!toPathStr) continue;
+
+      delay(d1); // Make all duplicates have been made
+
+      const filesBackupedPathStrs = getPathStrsFromPathStr(toPathStr, 'diskItems');
+
+      var filesBackupedPathStrsL = `${filesBackupedPathStrs.length}`;
+
+      renameItem(toPathStr, `${filesFolderName} (${filesBackupedPathStrsL})`, 'noReveal');
+
+      // ----- "renameItem" makes "reveal" folder, so close all except last one
+      //if (i != (processPathStrsL - 1)) {
+      //finderApp.windows[0].close()
+      //}
+
+      filesLenthCollection.push(Number(filesBackupedPathStrsL));
+    }
+
+    // -------------- GET FOLDER QUANTITY AND RENAME - FOLDER DATE NAME
+
+    var filesLenthCollectionSum = numberLib.sumAllByReduce(filesLenthCollection);
+
+    var foldersBackupedPathStrs = getPathStrsFromPathStr(folderNameDatePathStr, 'folders');
+
+    var foldersBackupedPathStrsL = `${foldersBackupedPathStrs.length}`;
+
+    renameItem(
+      folderNameDatePathStr,
+      `${folderNameDate} (${foldersBackupedPathStrsL}) (${filesLenthCollectionSum}) - ${autoOrManualRun}`,
+      'noReveal'
+    );
+  } catch (error) {
+    alert(`${error.name}`, `${error.message}\n\n—\nDeu erro processando a pasta "${filesFolderName}"❗️`);
+  }
+
+  var endTime = new Date();
+
+  // Passing backupCopyPaste without extension, will be found in function
+
+  // // 🔴🔴🔴 DEACTIVATED HERE BEACUSE IT FREEZES HERE
+  // saveLogAutoProcess(
+  //   startTime,
+  //   endTime,
+  //   `${backupCopyPastePathStr}/backupCopyPaste`,
+  //   documentLib.capitalizeText(autoOrManualRun, 'NoExclusions')
+  // );
+
+  callback && callback();
+}
+
+/* function autoBackup(autoOrManualRun) {
+  delay(3);
+
+  currentApp.displayDialog(`autoBackup`, {
+    givingUpAfter: 5,
+    withIcon: 1,
+  });
+}
+ */
+// --------------- autoDisplay - v7.0
+
+// function autoDisplay() {
+
+function autoDisplay(callback) {
+  // var pathLib = Library("pathLib")
+
+  var currentApp = Application.currentApplication();
+  var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+  var seApp = Application('System Events');
+
+  var finderApp = Application('Finder');
+
+  const theWatchFolderTotal = '7';
+
+  //itemClass = "files", "folders", "files&folders"
+  // itemFilter = "" / "#" / Any
+
+  // All folders in EMAILS LOG TRIGGER
+  var emailsProcessTriggerStr = pathLib.getPlataformsPathStr() + '/APPS WF/EMAILS LOG TRIGGER';
+  folderWacther('1', emailsProcessTriggerStr, 'folders', '');
+
+  // All files & folders in VAULT5 EDIT
+  folderWacther('2', pathLib.getInboxPathStr() + '/VAULT5 EDIT', 'files&folders', '');
+
+  // All files & folders in OFFLINE FOLDER
+  folderWacther('3', '/Users/xd5-wmac/P0 OFFLINE FOLDER', 'files&folders', '');
+
+  // All files & folders in XA5-TEMPORARY5 OFFLINE
+  folderWacther('4', '/Users/xd5-wmac/P51A XA5-TEMPORARY5 OFFLINE', 'files&folders', '##');
+
+  // All files & folders in SCAN5 & TEMPORARY
+  folderWacther(
+    '5',
+    '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/INBOX/SCAN5 & TEMPORARY',
+    'files&folders',
+    ''
+  );
+
+  // All files & folders in ATTACHMENTS
+  folderWacther(
+    '6',
+    '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/INBOX/ATTACHMENTS',
+    'files&folders',
+    ''
+  );
+
+  // All files in ICLOUD DOWNLOADS
+  folderWacther('7', '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Downloads', 'files', '');
+
+  // All folders Whose Names Conatins # in FORNECEDORES5
+  //folderWacther ("4", "/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P1/P1F FORNECEDORES5", "folders", "#")
+
+  function folderWacther(folderSequence, folderString, itemClass, itemFilter) {
+    var folderAlias = seApp.folders.byName(folderString);
+    var uploadsFolderName = folderAlias.name();
+
+    if (itemClass == 'files') {
+      var itemsList = folderAlias.files;
+    } else if (itemClass == 'folders') {
+      var itemsList = folderAlias.folders;
+    } else if (itemClass == 'files&folders') {
+      var itemsList = folderAlias.diskItems;
+    }
+
+    var itemsNamesWithoutDS_StoreFiles = [];
+    var itemsNamesWithoutDS_StoreFolders = [];
+
+    for (var i = 0; i < itemsList.length; i++) {
+      var itemName = itemsList[i].name();
+      var itemClassExtracted = itemsList[i].class();
+
+      if (!itemName.includes('.DS_Store')) {
+        if (itemClassExtracted == 'file') {
+          itemsNamesWithoutDS_StoreFiles.push('D' + itemName);
+        } else if (itemClassExtracted == 'folder') {
+          itemsNamesWithoutDS_StoreFolders.push('F' + itemName);
+        }
+      }
+    }
+
+    itemsNamesWithoutDS_StoreFiles.sort();
+    itemsNamesWithoutDS_StoreFolders.sort();
+
+    var itemsListWithoutDS_Store = itemsNamesWithoutDS_StoreFolders.concat(itemsNamesWithoutDS_StoreFiles);
+
+    var itemsListWithIndex = [];
+
+    // Numeração
+    for (var i = 0; i < itemsListWithoutDS_Store.length; i++) {
+      var itemNameClassPrefix = itemsListWithoutDS_Store[i][0];
+      var itemNameWithoutClassPrefix = itemsListWithoutDS_Store[i].substr(1);
+
+      if (itemsListWithoutDS_Store[i].includes(itemFilter)) {
+        itemsListWithIndex.push(numberLib.addZero(i + 1) + itemNameClassPrefix + '	' + itemNameWithoutClassPrefix);
+      }
+    }
+
+    var itemsListWithIndexLength = itemsListWithIndex.length;
+
+    if (itemsListWithIndexLength > 0) {
+      if (itemsListWithIndexLength > 1) {
+        if (itemClass == 'files&folders') {
+          var theWatchKindName = itemClass.replace('&', ' & ').toUpperCase();
+        } else {
+          var theWatchKindName = itemClass.split('s')[0].toUpperCase() + 'S';
+        }
+      } else {
+        var theWatchKindName = itemClass.split('s')[0].toUpperCase();
+      }
+
+      // --------------- Detele TRIGGER(s) Folder(s)
+
+      if (
+        uploadsFolderName.includes('TRIGGER') ||
+        uploadsFolderName.includes('VAULT5') ||
+        uploadsFolderName.includes('OFFLINE FOLDER') ||
+        uploadsFolderName.includes('XA5-TEMPORARY5 OFFLINE')
+      ) {
+        saApp.beep();
+
+        if (uploadsFolderName.includes('TRIGGER')) {
+          var emailsProcessTriggerFolders = seApp.folders.byName(emailsProcessTriggerStr).folders;
+
+          var thisFolderL = emailsProcessTriggerFolders.length;
+
+          for (var i = 0; i < thisFolderL; i++) {
+            var emailsProcessTriggerFolders = seApp.folders.byName(emailsProcessTriggerStr).folders;
+
+            emailsProcessTriggerFolders[0].delete();
+            delay(0.3);
+          }
+
+          var specialExtraAlert = `\n❌ As pastas abaixo foram apagadas!`;
+        } else if (uploadsFolderName.includes('VAULT5')) {
+          var specialExtraAlert = `\n❌ Mover a info abaixo ao Dropbox VAULT5!`;
+        } else if (uploadsFolderName.includes('OFFLINE FOLDER')) {
+          var specialExtraAlert = `\n❌ Clean this folder!`;
+        } else if (uploadsFolderName.includes('XA5-TEMPORARY5 OFFLINE')) {
+          var specialExtraAlert = `\n❌ Move useful info do Dropbox & deldel useless info!`;
+        }
+
+        delay(0.3);
+      } else {
+        var specialExtraAlert = '';
+      }
+
+      var theDisplay = currentApp.displayDialog(
+        itemsListWithIndexLength +
+          ' ' +
+          theWatchKindName +
+          ' (' +
+          uploadsFolderName +
+          ' ' +
+          folderSequence +
+          '/' +
+          theWatchFolderTotal +
+          ')' +
+          specialExtraAlert +
+          '\n—\n' +
+          itemsListWithIndex.join('\n') +
+          '\n\n\n\n',
+        { buttons: ['Show folder', 'Ok', 'Cancel'], defaultButton: 2, cancelButton: 3, givingUpAfter: 5, withIcon: 1 }
+      );
+
+      if (theDisplay.buttonReturned == 'Show folder') {
+        finderApp.activate();
+        finderApp.open(Path(folderString));
+      }
+    }
+  }
+
+  currentApp.displayDialog(`autoDisplay finished`, {
+    givingUpAfter: 5,
+    withIcon: 1,
+  });
+
+  callback && callback();
+}
+
+/* function autoDisplay() {
+  delay(3);
+
+  currentApp.displayDialog(`autoDisplay`, {
+    givingUpAfter: 5,
+    withIcon: 1,
+  });
+} */
+
+// -------------- FUNCTIONS HERE
+
+function needsTextFormatter(needsTextToFormat, outputFormat) {
+  var buildingName = needsTextToFormat.match(/#\s.*/)[0];
+
+  var needsTextToFormat = needsTextToFormat
+    .replace(/(••.*)/g, `<li>$1</li>`)
+    .replace(
+      /(^•\s\w*.*(\n<li>••\s.*)*)/gm,
+
+      // <To Get>
+      // • PISO 1 (5)
+      // •• Sala de Estar (1) (20.00 = 4.00x5.00x1)
+      // •• Cozinha Exterior (3) (60.00 = 4.00x5.00x3)
+
+      function (match) {
+        // var buildingName = needsTextToFormat.match(/#(\s.*)/)[1]
+
+        // var header = `
+        // <div><br></div>
+        // ${buildingName}
+        // `
+
+        var storyName = match.match(/(^•\s.*)/m)[0];
+        var matchItems = match.split(storyName);
+
+        var subItemsStr = matchItems[1];
+
+        if (outputFormat == 'html') {
+          // matchItems[1] - Sub items
+
+          if (subItemsStr) {
+            var needsTextOutput = `<ul>\n<li>${storyName}</li>\n<ul>${subItemsStr}\n</ul>\n</ul>\n`;
+          } else {
+            // var needsTextOutput = `<ul>\n<li>${storyName}</li>\n</ul><div><br></div>\n`
+
+            var needsTextOutput = `<ul>\n<li>${storyName}</li>\n</ul>`;
+          }
+
+          return needsTextOutput; //.replace(/#\s(.*)/g, `<div><br></div>\n# $1 /// `)
+        } else if (outputFormat == 'textXero') {
+          var subItemsStrItems = subItemsStr.split('\n');
+          var subItemsStrItemsL = subItemsStrItems.length;
+          // Removed first empty item
+          var subItemsStrItems = subItemsStrItems.slice(1, subItemsStrItemsL);
+
+          var needsTextOutput = `${storyName} — ${subItemsStrItems.join(', ')}`;
+
+          var needsTextOutput = needsTextOutput.replace(/<li>/g, '').replace(/<\/li>/g, '');
+
+          return needsTextOutput;
+        }
+      }
+    )
+    // Replace all "•" and "••" after because before I used •• as filters
+    .replace(/•• /g, ``) //.replace(/• /g, ``)
+    .replace(/newLine/g, `<div><br></div>`); // Used in MessagesProcessing
+
+  if (outputFormat == 'html') {
+    var needsTextToFormat = needsTextToFormat.replace(/• /g, ``).replace(/#\s(.*)/g, `<div><br></div>\n$1`);
+  }
+
+  return needsTextToFormat; //.replace(buildingName, header)
+}

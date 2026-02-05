@@ -1,0 +1,135 @@
+// v1.0
+// const {
+// 	cfl,
+// 	cfl2Str,
+// 	cflV2,
+// } = Library("cflLib")
+
+const { alert, dialog } = Library('displayLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+function cfl(list, prompt, defaultItems, multipleStatus) {
+  if (multipleStatus == 'm') {
+    return currentApp.chooseFromList(list, {
+      withPrompt: prompt + '\n',
+      defaultItems: defaultItems,
+      multipleSelectionsAllowed: true,
+    });
+  }
+
+  return currentApp.chooseFromList(list, { withPrompt: prompt + '\n', defaultItems: defaultItems });
+}
+
+/*
+function cfl(list, prompt, defaultItems, multipleStatus) {
+  const currentApp = Application.currentApplication();
+  currentApp.includeStandardAdditions = true;
+
+  // Create a map to handle duplicates in defaultItems
+  const defaultItemMap = new Map();
+  defaultItems.forEach((item, index) => {
+    if (!defaultItemMap.has(item)) {
+      defaultItemMap.set(item, []);
+    }
+    defaultItemMap.get(item).push(index);
+  });
+
+  // Create a list with unique placeholders using "~"
+  const placeholderList = list.map((item, index) => {
+    return defaultItemMap.has(item) ? `${item}~${defaultItemMap.get(item).shift()}` : item;
+  });
+
+  // Adjust defaultItems with unique placeholders
+  const uniqueDefaultItems = defaultItems.map((item, index) => `${item}~${index}`);
+
+  // Call chooseFromList with unique placeholders
+  const selectedItems = currentApp.chooseFromList(placeholderList, {
+    withPrompt: prompt + '\n',
+    defaultItems: uniqueDefaultItems,
+    multipleSelectionsAllowed: multipleStatus === 'm',
+  });
+
+  // Map selected items back to original items
+  const finalSelection = selectedItems.map(selectedItem => {
+    const [originalItem] = selectedItem.split('~');
+    return originalItem;
+  });
+
+  return finalSelection;
+}
+*/
+
+function cflV2(list, prompt, defaultItems, isMultipleSelectionsAllowed = false, isReturnArray = false) {
+  const currentApp = Application.currentApplication();
+  currentApp.includeStandardAdditions = true;
+
+  let options = {
+    withPrompt: prompt + '\n',
+  };
+
+  if (isMultipleSelectionsAllowed) {
+    options.multipleSelectionsAllowed = true;
+  }
+
+  if (typeof defaultItems === 'string') {
+    options.defaultItems = [defaultItems];
+  } else if (Array.isArray(defaultItems) && defaultItems.length === 1) {
+    options.defaultItems = defaultItems;
+  } else if (Array.isArray(defaultItems) && defaultItems.length > 1) {
+    // Create a map to handle duplicates in defaultItems
+    const defaultItemMap = new Map();
+    defaultItems.forEach((item, index) => {
+      if (!defaultItemMap.has(item)) {
+        defaultItemMap.set(item, []);
+      }
+      defaultItemMap.get(item).push(index);
+    });
+
+    // Create a list with unique placeholders using "~"
+    const placeholderList = list.map((item, index) => {
+      return defaultItemMap.has(item) ? `${item}~${defaultItemMap.get(item).shift()}` : item;
+    });
+
+    // Adjust defaultItems with unique placeholders
+    const uniqueDefaultItems = defaultItems.map((item, index) => `${item}~${index}`);
+    options.defaultItems = uniqueDefaultItems;
+
+    // Call chooseFromList with unique placeholders
+    const selectedItems = currentApp.chooseFromList(placeholderList, options);
+
+    // Map selected items back to original items
+    if (selectedItems) {
+      return selectedItems.map(selectedItem => {
+        const [originalItem] = selectedItem.split('~');
+        return originalItem;
+      });
+    } else {
+      return null;
+    }
+  }
+
+  //   else {
+  //     options.defaultItems = defaultItems;
+  //   }
+
+  // Call chooseFromList without unique placeholders
+  const selectedItems = currentApp.chooseFromList(list, options);
+
+  if (isReturnArray) {
+    return selectedItems;
+  }
+
+  return selectedItems.toString();
+}
+
+function cfl2Str(list, prompt, defaultItems, multipleStatus) {
+  if (multipleStatus == 'm') {
+    return currentApp
+      .chooseFromList(list, { withPrompt: prompt + '\n', defaultItems: defaultItems, multipleSelectionsAllowed: true })
+      .toString();
+  }
+
+  return currentApp.chooseFromList(list, { withPrompt: prompt + '\n', defaultItems: defaultItems }).toString();
+}

@@ -1,0 +1,10 @@
+
+
+// v1.0
+
+var currentApp = Application.currentApplication()
+var saApp = (currentApp.includeStandardAdditions = true, currentApp)
+var seApp = Application("System Events")
+
+
+currentApp.displayAlert(`Informação de Clipboard`, { message: saApp.theClipboard()})

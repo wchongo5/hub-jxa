@@ -1,0 +1,277 @@
+// v1.0
+// const {
+// 	appsRunningClose,
+// 	enter,
+// 	pressEscape,
+// 	f1,
+// 	f2,
+// 	f3,
+// 	f5,
+// 	pressDelete,
+// 	space,
+// 	tab,
+// 	unTab, // Change name to TabUn or similar and organize sequentially
+// 	keystrokeStr,
+// 	arrowLeft,
+// 	arrowRight,
+// 	arrowDown,
+// 	arrowUp,
+// } = Library("systemLib")
+
+// ---------------------------------------
+
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+const {
+  cfl,
+  // cfl2Str,
+} = Library('cflLib');
+
+// ---------------------------------------
+
+var seApp = Application('System Events');
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.1;
+// var d0p2 = 0.2
+var d0p3 = 0.3;
+//var d1 = 1
+//var d1p5 = 1.5
+
+// ---------------------------------------
+
+function appsRunningClose() {
+  const hasChangesIdentifier = ` *`;
+
+  const appsRunning = seApp.applicationProcesses.where({
+    backgroundOnly: false,
+  });
+
+  const appsRunningNames = [];
+
+  for (let i = 0; i < appsRunning.length; i++) {
+    const appRunningBySystemEvents = appsRunning[i];
+    const appRunningUrl = appRunningBySystemEvents.applicationFile().url();
+    const hasScriptingTerminology = appRunningBySystemEvents.hasScriptingTerminology();
+    const { appNameFromePath, hasUnsavedDocuments } = getAppInfo(appRunningUrl, hasScriptingTerminology);
+
+    if (appNameFromePath != 'Finder') {
+      appsRunningNames.push(`${appNameFromePath}${hasUnsavedDocuments ? hasChangesIdentifier : ``}`);
+    }
+  }
+
+  const appsRunningNamesSorted = appsRunningNames.sort();
+
+  const appsRunningSelected = cfl(
+    appsRunningNamesSorted,
+    `Applicativos para fechar\n—\n* Aplicativos que têm docs com edições não gravadas.\n\n-----\n🔴 Verifique se "modified()" já está consistente em "Numbers" - 1º run indica "true" e subsequentes "false", mesmo com "unsaved changes".`,
+    appsRunningNamesSorted.filter(appName => !appName.startsWith('Numbers')),
+    'm'
+  ).map(item => item.split(hasChangesIdentifier)[0]);
+
+  // let appleApps = [];
+  // let thirdPartyApps = [];
+
+  for (let i = 0; i < appsRunning.length; i++) {
+    const appRunningBySystemEvents = appsRunning[i];
+
+    const appProperties = appRunningBySystemEvents.properties();
+    const { hasScriptingTerminology, bundleIdentifier: bundleId, applicationFile: appFile } = appProperties;
+
+    const appRunningUrl = appFile.url();
+    const { appPath, appNameFromePath, hasUnsavedDocuments, canQuit } = getAppInfo(appRunningUrl, hasScriptingTerminology);
+
+    const appRunning = Application(appNameFromePath);
+
+    if (appsRunningSelected.includes(appNameFromePath) && canQuit) {
+      appRunning.quit();
+
+      // if (bundleId && bundleId.startsWith('com.apple.')) {
+      // 		appleApps.push([appNameFromePath, `hasUnsavedDocuments: ${hasUnsavedDocuments}`, `canQuit: ${canQuit}`, `hasScriptingTerminology: ${hasScriptingTerminology}`, appPath].join(" — "));
+      // } else {
+      // 		thirdPartyApps.push([appNameFromePath, `hasUnsavedDocuments: ${hasUnsavedDocuments}`, `canQuit: ${canQuit}`, `hasScriptingTerminology: ${hasScriptingTerminology}`, appPath].join(" — "));
+      // }
+    }
+  }
+
+  // // Output the results
+  // console.log("Apple Apps:\n", appleApps.join("\n"));
+  // console.log("Third Party Apps:\n", thirdPartyApps.join("\n"));
+
+  function getAppInfo(appRunningUrl, hasScriptingTerminology) {
+    const appsCanQuit = ['Mail', 'Notes', 'Safari', 'Visual Studio Code', 'WhatsApp'];
+    appPath = decodeURIComponent(appRunningUrl.replace('file://', ''));
+
+    const appPathItems = appPath.split('/');
+    // To get general name, not fromSystem Events which can be different
+    const appNameFromePath = appPathItems[appPathItems.length - 2].split('.')[0];
+
+    let hasUnsavedDocuments = false;
+    let canQuit = true;
+
+    const app = Application(appNameFromePath);
+    const documents = app.documents;
+
+    const documentsL = documents.length;
+
+    if (hasScriptingTerminology && documentsL > 0) {
+      for (let i = 0; i < documentsL; i++) {
+        const document = documents[i];
+        var docName = document.name();
+        const isModified = document.modified(); // If first time is true, next is "false" even if did not saved changes, maybe if this code is running from Script will not behave like this
+
+        if (isModified || docName.startsWith('Untitled')) {
+          hasUnsavedDocuments = true;
+          canQuit = false;
+          break;
+        }
+      }
+    } else if (appsCanQuit.includes(appNameFromePath)) {
+      // Do nothing. Skipt and use: canQuit = true
+    } else {
+      canQuit = false;
+    }
+
+    return {
+      appPath,
+      appNameFromePath,
+      hasUnsavedDocuments,
+      canQuit,
+    };
+  }
+}
+
+function enter(times = 1) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(76);
+    delay(d0p3);
+  }
+}
+
+function pressEscape(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(53);
+    delay(d0p3);
+  }
+}
+
+function f1() {
+  delay(d0p3);
+  seApp.keyCode(122);
+  delay(d0p3);
+}
+
+function f2() {
+  delay(d0p3);
+  seApp.keyCode(120);
+  delay(d0p3);
+}
+
+function f3() {
+  delay(d0p3);
+  seApp.keyCode(99);
+  delay(d0p3);
+}
+
+// function f4() {
+// 	delay(d0p3)
+// 	seApp.keyCode(118)
+// 	delay(d0p3)
+// }
+
+function f5() {
+  delay(d0p3);
+  seApp.keyCode(96);
+  delay(d0p3);
+}
+
+// ----- 🔴🔴🔴 REJECT SIMPLE NAMES BECAUSE ARE KEYWORDS
+// pressDeletedelete() considerer System not Menu
+// delete is keyword not accepted
+
+function pressDelete(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3); // Was d0p3
+    seApp.keyCode(51); // Delete
+    delay(d0p3); // Was d0p3
+  }
+}
+
+function space(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(49);
+    delay(d0p3);
+  }
+}
+
+function tab(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(48);
+    delay(d0p3);
+  }
+}
+
+function unTab(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(48, { using: 'shift down' }); // UnTab
+    delay(d0p3);
+  }
+}
+
+function scape() {
+  delay(d0p3);
+  seApp.keyCode(53); // Scape
+  delay(d0p3);
+}
+
+// --------------------------------------- KEYSTROKES
+
+function keystrokeStr(str) {
+  // 🔴🔴🔴 NOT USED YET
+  delay(d0p3);
+  seApp.keystroke(str);
+  delay(d0p3);
+}
+
+// --------------------------------------- ARROWS
+
+function arrowLeft(times) {
+  // 🔴🔴🔴 NOT USED YET
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(123);
+    delay(d0p3);
+  }
+}
+
+function arrowRight(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(124);
+    delay(d0p3);
+  }
+}
+
+function arrowDown(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(125);
+    delay(d0p3);
+  }
+}
+
+function arrowUp(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    seApp.keyCode(126);
+    delay(d0p3);
+  }
+}

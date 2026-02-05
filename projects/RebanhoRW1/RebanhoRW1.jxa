@@ -1,0 +1,42 @@
+// Define as datas de início da reprodução e a data final ajustada
+const dataInicioReproducao = new Date(2018, 0, 1); // Janeiro é 0 em JavaScript
+const dataFinalAjustada = new Date(2024, 1, 24); // Fevereiro é 1, 24 de fevereiro de 2024
+
+// Calcula a diferença em milissegundos
+const diferencaTempo = dataFinalAjustada - dataInicioReproducao;
+
+// Converte a diferença de tempo para anos
+const diferencaAnos = diferencaTempo / (1000 * 60 * 60 * 24 * 365.25);
+
+// Arredonda para o ano mais próximo
+const periodoAnosReproducaoNova = Math.round(diferencaAnos);
+
+// Valores iniciais das variáveis
+const vacasIniciais = 4;
+const taxaReproducaoPorVacaPorAno = 1;
+
+// Uma vaca geralmente atinge a maturidade sexual e está pronta para começar a reproduzir por volta dos 15 a 24 meses de idade. No entanto, muitos produtores optam por esperar até que a vaca tenha cerca de 24 meses (2 anos) para iniciar a reprodução, para garantir que ela esteja plenamente desenvolvida e apta a levar a gestação a termo de forma saudável. Portanto, para fins de cálculos e planejamento na gestão de uma criação, é comum considerar que uma vaca comece a reproduzir aos 2 anos de idade.
+const anosParaReproducao = 2;
+
+let totalAnimais = 1 + vacasIniciais; // Incluindo o boi inicial
+
+// Ajuste para considerar a distribuição 50/50 de fêmeas e machos
+// const fatorFemeas = 1.00; // Todas crias são fêmeas 
+// const fatorFemeas = 0.75; // 75% de crias são fêmeas
+const fatorFemeas = 0.60; // 50% de crias são fêmeas
+
+// Vacas reprodutivas ajustadas para considerar a distribuição de gênero
+let vacasReprodutivas = vacasIniciais;
+
+for (let ano = 1; ano <= periodoAnosReproducaoNova; ano++) {
+    // Adiciona novos bezerros, considerando a distribuição 50/50 de fêmeas e machos
+    const novasFemeas = vacasReprodutivas * taxaReproducaoPorVacaPorAno * fatorFemeas;
+    totalAnimais += vacasReprodutivas * taxaReproducaoPorVacaPorAno; // Total de bezerros, considerando ambos os gêneros
+
+    // Novas fêmeas adicionadas às reprodutivas após atingirem a idade de reprodução
+    if (ano >= anosParaReproducao) {
+        vacasReprodutivas += novasFemeas;
+    }
+}
+
+console.log(`Total de animais considerando uma distribuição 50/50 de fêmeas e machos: ${totalAnimais}`);

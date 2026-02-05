@@ -1,0 +1,672 @@
+// 22.4
+
+ObjC.import('PDFKit');
+
+const { getXWDupPathStr, getXDup2xxxPathStr, getTaxPathStr, getP5PathStrWithSuffixP5 } = Library('pathLib');
+const { getND, getND4CP, getPathStrsFromPathStr } = Library('finderLib');
+
+const { formatDateV3 } = Library('datetimeLib');
+const projectLib = Library('projectLib');
+const {
+  bimpdfGetDescrs,
+  bimpdfGetCompanyInfo,
+  bimGetRechargeDetails,
+  getAmount,
+  getCustomerFromInvoiceNumberWithF,
+  getEdmCredelecInfo,
+  getInssGuideInfo,
+  getInvoiceNumbersWithF,
+  getReceiptNumberWithR,
+  getSupplierPaymentsInfoFromPDF,
+  paymentDateItemsFromPDF,
+  tvcaboPayment,
+} = Library('paymentLib');
+const numberLib = Library('numberLib');
+var cflLib = Library('cflLib');
+const { alert, dialog } = Library('displayLib');
+
+const { capitalizeText, getFileInfo, readPdfText } = Library('documentLib');
+var menuLib = Library('menuLib');
+
+const safariLib = Library('safariLib');
+const safariApp = Application('Safari');
+
+//var currentApp = Application.currentApplication()
+//var saApp = (currentApp.includeStandardAdditions = true, currentApp)
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+
+// ---------------------------------------
+const ND = getND();
+const nD4CP = getND4CP();
+// --------------------------------------- DELAYS
+
+const d0p1 = 0.1;
+//const d0p3 = 0.3
+const d1 = 1;
+//const d1p5 = 1.5
+const d3 = 3;
+
+// ---------------------------------------
+
+const p5PathStrWithSuffixP5 = getP5PathStrWithSuffixP5();
+const xDup2xxxPathStr = getXDup2xxxPathStr(); // + '/R0 | DUP2XXX';
+const xWDupPathStr = getXWDupPathStr();
+const tax20XXPathStr = getTaxPathStr();
+
+const creditBeneficiaryList = ['Escrever', '01W', '04T', 'WB1R', '---------------', 'Castro 34C', 'Júlio 33J'];
+
+function run(input, parameters) {
+  try {
+    // 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 (20240307-112300 In this date, I don't have money, i'm zero zero - can't forget) IN FUTURE - Create more variables from repetitive folder names strings below
+
+    let infoToClipboardToMessage;
+    let extraTitle = '';
+    let isCollectInfoToClipboard = false;
+    let isWdup = false;
+    let invoicingType = '';
+    //   let infoToClipboardToManagerXD5 = '';
+
+    const telephoneRechargeStr = `TELEFONIA ${ND} RECARGA`;
+    const enzRentStr = `ENZ ${ND} RENDA`;
+
+    menuLib.setClipboard(''); // Reset Clipboard
+
+    const filePathStr = input[0].toString();
+    const filePathStrItems = filePathStr.split('/');
+    const inputFileName = filePathStrItems.pop();
+
+    const pathFolderAction = filePathStrItems.join('/');
+    const folderActionNameWithIdentifier = filePathStrItems.pop();
+    var folderActionName = folderActionNameWithIdentifier.split(' | ')[1];
+
+    const { dateCreation, dateModification } = getFileInfo(filePathStr);
+
+    const fileDateFormatted = formatDateV3(dateCreation);
+
+    var {
+      components: {
+        year: { Y4: yearY4, Y4N: yearY4N },
+        month: { M1: monthM1, M2: monthM2, long: monthLong },
+        // day: { D2: dayD2 },
+      },
+      formats: { dateY4M2D2, dateY4M2D2__H2M2S2, yearY4M2 },
+    } = fileDateFormatted;
+
+    const filePathAlias = seApp.aliases.byName(filePathStr);
+    const nameExtension = filePathAlias.nameExtension();
+
+    const pdfPage1Text = readPdfText(filePathStr);
+
+    let { companyIdentifier } = bimpdfGetCompanyInfo(pdfPage1Text);
+
+    if (!companyIdentifier) {
+      companyIdentifier = dialog(`"companyIdentifier" não encontrado automaticamente \n\n—\n"W ou X" para XDIMW/XDIMX`, 'W');
+    }
+
+    if (folderActionName.includes('INSS')) {
+      isCollectInfoToClipboard = true;
+      const aCTIVE_WORKERS_NUMBER = 3;
+
+      var mmMinus1 = numberLib.addZero(monthM1 - 1);
+
+      if (mmMinus1 == '00') {
+        var mmMinus1 = '12';
+        var yyyyInss = yearY4N - 1;
+      } else {
+        var yyyyInss = yearY4;
+      }
+
+      if (folderActionName.includes('PAYMENT')) {
+        var amount = getAmount(pdfPage1Text, 0);
+
+        var folderActionNamePart1 = folderActionName.split(' (PAYMENT)')[0];
+
+        var docNameAndExtension =
+          folderActionNamePart1 +
+          ` ${ND} ` +
+          (yyyyInss + mmMinus1) +
+          ` ${ND} ${dateY4M2D2__H2M2S2} (PAYMENT) (${aCTIVE_WORKERS_NUMBER}).${nameExtension}`;
+      } else {
+        // GUIA
+
+        var { inssGuideNumber, inssMmSlashYyyy, amount, amountFormatted } = getInssGuideInfo(pdfPage1Text);
+
+        const inssMmSlashYyyyItems = inssMmSlashYyyy.split('/');
+        const yyyyMmInss = inssMmSlashYyyyItems[1] + inssMmSlashYyyyItems[0];
+
+        var docNameAndExtension =
+          folderActionName +
+          ` ${ND} ${yyyyMmInss}` +
+          ` ${ND} ${dateY4M2D2__H2M2S2} ${ND} ${amountFormatted} (${aCTIVE_WORKERS_NUMBER}).${nameExtension}`;
+        delay(d1);
+
+        // menuLib.setClipboard(inssGuideNumber);
+
+        // extraTitle += `Copiado número da Guia para ManagerXD5\n"${inssGuideNumber}"\n\n\n`;
+      }
+    } else if (folderActionName == telephoneRechargeStr) {
+      isCollectInfoToClipboard = true;
+      var creditBeneficiaryDDictionary = { 500: '01W', 200: '04T', 100: 'WB1R' };
+
+      var { amount, rechargeCode, operator } = bimGetRechargeDetails(pdfPage1Text);
+
+      var amount = getAmount(pdfPage1Text, 0);
+      var rechargeAmount = parseInt(amount); // amount.split('.')[0];
+
+      /*     var rechargeCode = pdfPage1Text.match(/MT\s(\d{10}\d*)/)[1];
+      var operator = pdfPage1Text.match(/MCEL|MOVITEL|VODACOM/)[0]; */
+
+      var creditBeneficiaryD = creditBeneficiaryDDictionary[rechargeAmount];
+
+      if (creditBeneficiaryD == undefined) {
+        var creditBeneficiaryD = 'WB1R';
+      }
+
+      var creditBeneficiary = cflLib.cfl2Str(creditBeneficiaryList, 'Beneficiário', creditBeneficiaryD);
+
+      if (creditBeneficiary == 'Escrever') {
+        var creditBeneficiary = dialog('Beneficiário', '');
+      }
+
+      /*     var paymentDateItems = paymentDateItemsFromPDF(pdfPage1Text);
+      var dayD2 = paymentDateItems[0];
+      var monthM2 = paymentDateItems[1];
+      var yearY4 = paymentDateItems[2]; */
+
+      var docName =
+        operator +
+        ` ${ND} RECARGA ${ND} ${yearY4M2} ${ND} ${dateY4M2D2__H2M2S2} ${ND} ` +
+        rechargeAmount +
+        ' (' +
+        creditBeneficiary +
+        ')';
+
+      // --------------- NUMERAR
+
+      var dupPrintFolderFileNames = seApp.folders.byName(xDup2xxxPathStr).files.name();
+
+      // var dupPrintFolderFileNamesFiltered = dupPrintFolderFileNames.filter(fileName => fileName.includes(docName.split('-')[0])); // Split at "-" before time
+      const dupPrintFolderFileNamesFiltered = dupPrintFolderFileNames.filter(
+        fileName => fileName.includes(docName.split('-')[0]) && fileName.includes(creditBeneficiary)
+      ); // Split at "-" before time
+
+      var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+      dupPrintFolderFileNamesFiltered.sort(collator.compare);
+
+      var dupPrintFolderFileNamesFilteredL = dupPrintFolderFileNamesFiltered.length;
+
+      if (dupPrintFolderFileNamesFilteredL == 0) {
+        var numberOfRechargesByBeneficiaryByAmountByDate = 1;
+      } else if (dupPrintFolderFileNamesFilteredL > 0) {
+        var lastRechargeName = dupPrintFolderFileNamesFiltered[dupPrintFolderFileNamesFiltered.length - 1];
+
+        var numberOfRechargesByBeneficiaryByAmountByDate = Number(lastRechargeName.split(' - ')[1].slice(0, 1)) + 1;
+      }
+
+      var docNameAndExtension = docName + ' - ' + numberOfRechargesByBeneficiaryByAmountByDate + '.' + nameExtension;
+
+      if (operator == 'MCEL') {
+        var rechargeInfo = '*133*' + rechargeCode + '#';
+      } else if (operator == 'MOVITEL') {
+        var rechargeInfo = '*130*' + rechargeCode + '#';
+      } else if (operator == 'VODACOM') {
+        var rechargeInfo = '*100*01*' + rechargeCode + '#';
+      }
+
+      if (creditBeneficiary == '01W') {
+        infoToClipboardToMessage = rechargeInfo;
+      } else {
+        infoToClipboardToMessage = `${capitalizeText(operator, 'NoExclusions')} ${rechargeAmount}\n${rechargeInfo}`;
+      }
+    } else if (folderActionName == 'TRIBUTAÇÃO') {
+      var inputFileNameItems = inputFileName.split('-');
+      var fileIndentifier = inputFileNameItems[0];
+
+      if (fileIndentifier.includes('rtf')) {
+        var theSubject = 'F-FACTURA';
+      }
+      if (fileIndentifier.includes('rtr')) {
+        var theSubject = 'F-RECIBO';
+      }
+      if (fileIndentifier.includes('rtie')) {
+        var theSubject = `IRPC ${ND} ESPECIAL`;
+      }
+      if (fileIndentifier.includes('rtif')) {
+        var theSubject = `IRPC ${ND} FINAL`;
+      }
+      if (fileIndentifier.includes('rtip')) {
+        var theSubject = `IRPC ${ND} POR CONTA`;
+      }
+
+      if (theSubject == 'F-FACTURA' || theSubject == 'F-RECIBO') {
+        var invoiceOrReceiptAmount = numberLib.formatNumber(inputFileNameItems[1], 2, 2);
+
+        var pathStrs = getPathStrsFromPathStr(tax20XXPathStr, 'files');
+
+        if (theSubject == 'F-FACTURA') {
+          var company = 'X-DIM X';
+          var consultancyIDPartial = inputFileName.split('-')[2]; //.toUpperCase()
+          var filterInputStrs = consultancyIDPartial.split('.')[1];
+
+          var discipline = projectLib.getDisciplineByC1(consultancyIDPartial[0]);
+          var service = projectLib.getServiceByC1(consultancyIDPartial[1]);
+
+          var customersAndCs = projectLib.contractsDetails(
+            company,
+            `ReadFolderName`,
+            p5PathStrWithSuffixP5,
+            [discipline],
+            [service],
+            yearY4N,
+            `customerAndCsNoBullet`,
+            'F',
+            3,
+            filterInputStrs
+          ); //.split(", ")
+
+          // "first" Only one available always
+          var invoiceNumberWithF = getInvoiceNumbersWithF(inputFileName, 'first');
+
+          var docNameAndExtension = `${invoiceNumberWithF} ${ND} ${dateY4M2D2__H2M2S2} ${ND} ${customersAndCs} ${ND} ${invoiceOrReceiptAmount} ${ND} OPEN.${nameExtension}`;
+        } else if (theSubject == 'F-RECIBO') {
+          var receiptNumberWithStr = getReceiptNumberWithR(inputFileName);
+          var invoiceNumbersWithStr4Name = getInvoiceNumbersWithF(inputFileName, 'all');
+
+          var firstInvoiceNumber = getInvoiceNumbersWithF(invoiceNumbersWithStr4Name, 'first');
+
+          var customer = getCustomerFromInvoiceNumberWithF(firstInvoiceNumber);
+
+          var docNameAndExtension =
+            invoiceNumbersWithStr4Name +
+            ' | ' +
+            receiptNumberWithStr +
+            ` ${ND} ${dateY4M2D2__H2M2S2} ${ND} ` +
+            customer +
+            ` ${ND} ` +
+            invoiceOrReceiptAmount +
+            '.' +
+            nameExtension;
+        }
+      } else if (theSubject.includes('IRPC') || theSubject.includes('IVA')) {
+        var codeSpeciality = theSubject.split(` ${ND} `)[0];
+        var docName = theSubject.split(` ${ND} `)[1].replace('00-', '');
+
+        if (theSubject.includes('FINAL')) {
+          var yearY4M2 = yearY4 + '00';
+        } else if (theSubject.includes('IVA')) {
+          var yearY4M2 = yearY4 + numberLib.addZero(monthM1 - 1);
+        } else {
+          // ESPECIAL, POR CONTA, RELATÓRIO
+          var yearY4M2 = yearY4M2;
+        }
+
+        if (theSubject.includes('FINAL') || theSubject.includes('GUIA') || theSubject.includes('POR CONTA')) {
+          if (theSubject.includes('FOTO')) {
+            var theAmount = '';
+          } else {
+            var theAmount = numberLib.formatNumber(dialog('Valor | ' + theSubject, ''), 2, 2);
+          }
+        } else if (theSubject.includes('ESPECIAL')) {
+          var theAmount = '10,000.00';
+        } else {
+          // RELATÓRIO
+          var theAmount = '';
+        }
+
+        if (theAmount == '') {
+          var theAmount = '';
+        } else {
+          var theAmount = ' (' + theAmount + ')';
+        }
+
+        var docNameAndExtension =
+          codeSpeciality + yearY4M2 + ` ${ND} ` + docName + theAmount + ` ${ND} ${dateY4M2D2__H2M2S2}.${nameExtension}`;
+      }
+
+      var docNameAndExtension = `XD5 ${ND} ${docNameAndExtension}`;
+    } else if (folderActionName == 'EDM _ CREDELEC') {
+      let propertyId;
+      isCollectInfoToClipboard = true;
+      isWdup = true;
+      var { credelecRechargeCode, credelecNumber, amountKwhFormatted, amount, amountFormatted } =
+        getEdmCredelecInfo(pdfPage1Text);
+
+      if (credelecNumber === '07123148590') {
+        propertyId = 'IW1';
+      } else if (credelecNumber === '01321606111') {
+        propertyId = 'IW6';
+      }
+
+      const nDyyyMm = ` ${ND} ${yearY4M2}`;
+
+      var docNameAndExtension = `${folderActionName} _ ${propertyId} ${nDyyyMm} ${ND} ${dateY4M2D2__H2M2S2} ${ND} ${amountFormatted} _ ${amountKwhFormatted} kWh.${nameExtension}`;
+
+      infoToClipboardToMessage = `Energia ${amountFormatted}\n${credelecRechargeCode}`;
+    } else if (folderActionName == 'X-GERAL') {
+      isCollectInfoToClipboard = true;
+      // try {
+      var amount = getAmount(pdfPage1Text, 0);
+      var amountFormatted = numberLib.formatNumber(amount, 2, 2);
+      // } catch {
+      //   //
+      // }
+
+      const nDyyyMm = ` ${ND} ${yearY4M2}`;
+
+      // const debitDescription = dialog('Beneficiário e aplicação', 'BENEFICIÁRIO _ APLICAÇÃO');
+
+      const { debitDescription } = bimpdfGetDescrs(pdfPage1Text);
+
+      // const debitDescriptionItems = debitDescription.split(' _ ');
+
+      // const companyIdentifier = debitDescriptionItems.pop();
+
+      if (companyIdentifier === 'W') {
+        isWdup = true;
+      }
+      var docNameAndExtension = `${folderActionName} - ${
+        debitDescription.toUpperCase() || 'DESCRIP_NOTFOUND'
+      }${nDyyyMm} ${ND} ${dateY4M2D2__H2M2S2} ${ND} ${amountFormatted}.${nameExtension}`;
+    } else if (folderActionName.includes(`PAGAMENTO ${ND} X`)) {
+      var invoiceReceiptStatus = chooseInvoiceReceipt();
+
+      var recipient = dialog('Destinatário - Letras maiúsculas', '');
+      var assunto = dialog('Assunto - Letras maiúsculas', '');
+
+      // 🔴🔴🔴 Exemplo de uso: "XG5 _ MOPHRH _ PAGAMENTO ALVARÁ C3 2021 _ 20211007"
+
+      var docNameAndExtension =
+        `XG5 ${ND} ` +
+        recipient +
+        ` ${ND} ` +
+        assunto +
+        ` ${ND} ${dateY4M2D2__H2M2S2}` +
+        invoiceReceiptStatus +
+        '.' +
+        nameExtension;
+    } else if (
+      folderActionName.includes('AUSTRAL SEGUROS') ||
+      folderActionName.includes(enzRentStr) ||
+      folderActionName.includes('TVCABO')
+    ) {
+      isCollectInfoToClipboard = true;
+
+      if (folderActionName.includes(` ${ND} GARANTIA`)) {
+        alert(`CUSTOMER & CS BRING FROM FINDER FOLDERS USE take Function FROM Subscrições`, '');
+
+        var insuaranceCategoryGaranteeType = cflLib.cfl2Str(['Definitiva', 'Provisória'], 'Tipo da garantia', 'Provisória');
+
+        var folderActionName =
+          folderActionName + ' ' + insuaranceCategoryGaranteeType.toUpperCase() + ' ' + dialog('Proponente & CS', '');
+
+        var nDyyyMm = '';
+      } else if (folderActionName.includes(` ${ND} SEGURO PRO`)) {
+        var folderActionName = dialog('Actualizar AnoMês do Seguro', folderActionName + ' ' + yearY4M2);
+
+        var nDyyyMm = '';
+      } else {
+        if (folderActionName.includes(enzRentStr) || folderActionName.includes('TVCABO')) {
+          try {
+            // Try because this will create error if is INVOICE or RECEIPT from TVCABO
+            var amount = getAmount(pdfPage1Text, 0);
+            var amountFormatted = numberLib.formatNumber(amount, 2, 2);
+          } catch {
+            //
+          }
+
+          try {
+            var [dayD2, monthM2, yearY4] = paymentDateItemsFromPDF(pdfPage1Text);
+          } catch {
+            //
+          }
+
+          if (folderActionName.includes(enzRentStr)) {
+            const { payPeriod } = getSupplierPaymentsInfoFromPDF(pdfPage1Text);
+
+            var nDyyyMm = ` ${ND} ` + payPeriod;
+          } else if (folderActionName.includes('TVCABO')) {
+            try {
+              invoicingType = pdfPage1Text.match(/FACTURA|RECIBO/g)[0];
+            } catch {
+              // PAYMENT
+            }
+
+            if (invoicingType == 'RECIBO' || invoicingType == 'FACTURA') {
+              var tvcaboShowAltertIfInvoice = false;
+              isCollectInfoToClipboard = false;
+
+              // var amount = getAmount(pdfPage1Text, 0);
+
+              var [tvcaboPaymentType] = tvcaboPayment(amount).split(' | ');
+
+              var tvcaboPaymentType = tvcaboPaymentType.toUpperCase();
+
+              var dupPrintFolderFileNames = seApp.folders.byName(xDup2xxxPathStr).files.name();
+
+              var dupPrintFolderFileNamesFiltered = dupPrintFolderFileNames.filter(fileName =>
+                fileName.includes(tvcaboPaymentType)
+              );
+
+              var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+              dupPrintFolderFileNamesFiltered.sort(collator.compare);
+
+              var docToProcessName = dupPrintFolderFileNamesFiltered[dupPrintFolderFileNamesFiltered.length - 1];
+
+              // PDF1
+              var docToProcessNamePathStr = xDup2xxxPathStr + '/' + docToProcessName;
+
+              var pdf1URL = $.NSURL.fileURLWithPath(docToProcessNamePathStr);
+              var pdf1Doc = $.PDFDocument.alloc.initWithURL(pdf1URL);
+              var pdf1DocNumPages = pdf1Doc.pageCount;
+
+              // PDF2
+              var pdf2URL = $.NSURL.fileURLWithPath(filePathStr);
+              var pdf2Doc = $.PDFDocument.alloc.initWithURL(pdf2URL);
+              //var pdf2DocNumPages = pdf2Doc.pageCount
+              var page = pdf2Doc.pageAtIndex(0);
+
+              if (invoicingType == 'RECIBO' && pdf1DocNumPages == 1) {
+                pdf1Doc.insertPageAtIndex(page, 1);
+              } else if (invoicingType == 'FACTURA' && pdf1DocNumPages == 2) {
+                pdf1Doc.insertPageAtIndex(page, 0);
+
+                var tvcaboShowAltertIfInvoice = true;
+              } else {
+                if (pdf1DocNumPages == 3) {
+                  extraTitle += `já tem os 3 documentos de compra.`;
+                } else if (invoicingType == 'RECIBO' && pdf1DocNumPages == 2) {
+                  extraTitle += `já tem recibo.`;
+                } else if (invoicingType == 'FACTURA' && pdf1DocNumPages == 1) {
+                  extraTitle += `a sequência não está correcta, para TVCabo primeiro é RECIBO e depois FACTURA.`;
+                }
+
+                alert(`O PDF não foi modificado porque ${extraTitle}\n\n"${docToProcessName.split('.pdf')[0]}"`, '');
+              }
+
+              pdf1Doc.writeToURL(pdf1URL);
+
+              filePathAlias.delete();
+
+              finderApp.reveal(Path(docToProcessNamePathStr));
+
+              var filePathAliasOfDocToProcess = seApp.aliases.byName(docToProcessNamePathStr);
+
+              if (invoicingType == 'RECIBO') {
+                // New Name
+                var fileNewNameDocToProcess = filePathAliasOfDocToProcess.name().replace(/R\)/, `)`);
+                filePathAliasOfDocToProcess.name = fileNewNameDocToProcess;
+              } else if (invoicingType == 'FACTURA' && tvcaboShowAltertIfInvoice) {
+                // New Name
+                var fileNewNameDocToProcess = filePathAliasOfDocToProcess.name().replace(/\s_\sA \(F\)/, ``);
+                filePathAliasOfDocToProcess.name = fileNewNameDocToProcess;
+
+                finderApp.activate();
+
+                delay(d1);
+
+                alert(
+                  `Substituir no Xero, PDF de Pagamento - já tem os 3 documentos de compra (Factura, Pagamento e Recibo)!\n\n"${
+                    fileNewNameDocToProcess.split('.pdf')[0]
+                  }"`,
+                  ''
+                );
+              }
+            } else if (invoicingType == '') {
+              // IS PAYMENT
+
+              /*
+              // [0] é número da conta da X-DIM
+              var amountWithUnit = pdfPage1Text.match(/\d[0-9,.]*\sMZN/g)[1]
+              //var amount = amountWithUnit.replace(/\./g, "").replace(",", ".").split(" ")[0]
+              var amount = amountWithUnit.replace(/\./g, "#").replace(",", ".").replace(/#/g, ",").split(" ")[0]
+              */
+
+              var [tvcaboPaymentType, tvcaboPaymentTrack] = tvcaboPayment(amountFormatted).split(' | ');
+
+              if (tvcaboPaymentTrack == 'internetRecharge') {
+                var folderActionName = folderActionName + ` ${ND} ` + tvcaboPaymentType.toUpperCase();
+
+                var nDyyyMm = ` ${ND} ${yearY4M2}`;
+              } else if (tvcaboPaymentTrack == 'subscriptionOneMonth' || tvcaboPaymentTrack == 'subscriptionMoreThanOneMonth') {
+                var folderActionName = folderActionName + ` ${ND} ` + tvcaboPaymentType.toUpperCase();
+
+                if (tvcaboPaymentTrack == 'subscriptionOneMonth') {
+                  var nDyyyMm = ` ${ND} ${yearY4M2}`;
+                } else if (tvcaboPaymentTrack == 'subscriptionMoreThanOneMonth') {
+                  var startDate = new Date(monthM2 + '/' + dayD2 + '/' + yearY4);
+                  var endDateNum = startDate.setMonth(startDate.getMonth() + 11);
+                  var endDate = new Date(endDateNum);
+
+                  var endMm = numberLib.addZero(endDate.getMonth() + 1);
+                  //var endDd = numberLib.addZero(endDate.getDate())
+                  var endYyyy = endDate.getFullYear();
+
+                  var nDyyyMm = ` ${ND} ${yearY4M2}` + '-' + (endYyyy + endMm);
+                }
+              }
+            }
+          }
+        } else {
+          var nDyyyMm = ` ${ND} ${yearY4M2}`;
+        }
+      }
+
+      var invoiceReceiptStatus = ' __ A (FR).';
+
+      var docNameAndExtension =
+        folderActionName +
+        nDyyyMm +
+        ` ${ND} ${dateY4M2D2__H2M2S2} ${ND} ` +
+        amountFormatted +
+        invoiceReceiptStatus +
+        nameExtension;
+    }
+
+    if (invoicingType === '') {
+      // New Name
+      filePathAlias.name = docNameAndExtension;
+
+      // Move Start Here
+      //var theFileNewPathString = pathFolderAction + "/" + docNameAndExtension // J123 DELDEL
+
+      var fileNewPath = Path(pathFolderAction + '/' + docNameAndExtension);
+      delay(d0p1);
+
+      //seApp.keyCode(53); // É escape — Cancela a activação da Watched Folder pela segunda vez depois de save do novo nome.
+
+      if (isWdup) {
+        var destinyFolderStr = xWDupPathStr;
+      } else if (folderActionName == 'TRIBUTAÇÃO') {
+        var destinyFolderStr = tax20XXPathStr;
+      } else {
+        var destinyFolderStr = xDup2xxxPathStr;
+      }
+
+      finderApp.move(fileNewPath, { to: Path(destinyFolderStr) });
+      delay(d1);
+
+      var docNameWithoutExtension = docNameAndExtension.split('.' + nameExtension)[0];
+
+      if (isCollectInfoToClipboard) {
+        let availablePlaceholder = `AVAILABLE`;
+        const amountStr = amount ? amount : 'AMOUNT_NOT_CODED';
+
+        if (inssGuideNumber) {
+          availablePlaceholder = inssGuideNumber;
+        } else if (amountKwhFormatted) {
+          availablePlaceholder = amountKwhFormatted;
+        }
+
+        const filePathStr = `${destinyFolderStr}/${docNameAndExtension}`;
+        const infoToClipboardToManagerXD5 = `${yearY4M2} ${nD4CP} ${amountStr} ${nD4CP} ${availablePlaceholder} ${nD4CP} ${filePathStr}`;
+
+        menuLib.setClipboard(infoToClipboardToManagerXD5);
+
+        if (inssGuideNumber) {
+          extraTitle += `Copiado número da Guia para ManagerXD5 no Clipboard Pattern\n"${infoToClipboardToManagerXD5}"\n\n\n`;
+        }
+
+        if (infoToClipboardToMessage) {
+          delay(d3); // Delay until ManagerXD5 App access the Clipboard before setClipboard(infoToClipboardToMessage
+
+          menuLib.setClipboard(infoToClipboardToMessage);
+          delay(d1);
+
+          extraTitle += `Copiado\n"${infoToClipboardToMessage}"\n\n\n`;
+        }
+
+        if (safariApp.running()) {
+          const pageURL = safariLib.getURL();
+
+          if (pageURL.startsWith('https://ib.millenniumbim.co.mz')) {
+            safariApp.activate();
+            delay(d1);
+          }
+        }
+      }
+
+      if (folderActionName.includes('INSS')) {
+        alert(
+          `🔴🔴🔴\n..........\naCTIVE_WORKERS_NUMBER must come from Xero Bill to INSS Guide - Maybe use copy - INSS PAYMENT reads aCTIVE_WORKERS_NUMBER from INSS Guide`
+        );
+      }
+
+      alert(
+        extraTitle +
+          `Se for Factura (Cliente ou Fornecedor), anexar o ficheiro manualmente visto que XeroAPI não anexa em Payment.\n\n**************\n\nE se for outro ficheiro, xerar.`,
+        docNameWithoutExtension
+      );
+
+      if (folderActionName.includes(enzRentStr)) {
+        alert(
+          `🔴🔴🔴\nDEL5 AFTER STUDY\n\nCOMPARAR DATA TRANSACAO IN PDF & DATA NOME PDF\n\nEM PAGAMENTOS DE 20210120 & 20210602 HOUVE DIFERENÇAS QUE NÃO PERCEBI`,
+          ''
+        );
+      }
+    }
+  } catch (error) {
+    alert(error.name, error.message);
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function chooseInvoiceReceipt() {
+  var invoiceReceiptStatus = cflLib.cfl2Str(['', ' _ A'], 'A - Adicionar (Factura / Pagamento / Recibo) depois', ' _ A');
+
+  if (invoiceReceiptStatus == ' _ A') {
+    var paymentDocuemntStatus = cflLib.cfl2Str(
+      ['F', 'P', 'R'],
+      'A - Adicionar (Factura / Pagamento / Recibo) depois',
+      ['R', 'F'],
+      'm'
+    );
+
+    var invoiceReceipt = invoiceReceiptStatus + ' (' + paymentDocuemntStatus.replace(/,/g, '') + ')';
+  } else {
+    var invoiceReceipt = invoiceReceiptStatus;
+  }
+  return invoiceReceipt;
+}

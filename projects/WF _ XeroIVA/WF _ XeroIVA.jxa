@@ -1,0 +1,324 @@
+// v1.0?? This version while comes from Tributação
+
+const objCLib = Library('objCLib');
+
+const { getND, getND4CP, getPathStrsFromPathObjs } = Library('finderLib');
+
+// const systemLib = Library("systemLib")
+const pathLib = Library('pathLib');
+const iWorkLib = Library('iWorkLib');
+
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+const { formatDateV3, getDelays, mmEnglishToPortuguese } = Library('datetimeLib');
+const menuLib = Library('menuLib');
+const appLib = Library('appLib');
+const { extractDecimalNumbers, getMoneyInText, formatNumber } = Library('numberLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const systemEventsApp = Application('System Events');
+
+const finderApp = Application('Finder');
+const numbersApp = Application('Numbers');
+const numbersAppControllerP = systemEventsApp.processes['Numbers'];
+
+// ---------------------------------------
+const ND = getND();
+const nD4CP = getND4CP();
+// --------------------------------------- DELAYS
+
+const { d0p3, d0p5, d1, d1p5, d2, d3, d5, d7, d10, d13 } = getDelays();
+
+// ---------------------------------------------------------
+
+const sheetTaxSummaryName = 'IMPOSTO_RESUMO';
+const tableVatSummaryName = 'tableVatSummary';
+const sheetIvaApuramentoName = 'IVA_APURAMENTO';
+
+const financesPathStr = pathLib.getFinancesPathStr();
+
+const vatProcessFilePathStr = financesPathStr + '/F0000 PROCESSO/P20XX.numbers';
+const taxPathStr = pathLib.getTaxPathStr();
+
+function run(input, parameters) {
+  try {
+    delay(d1p5);
+    alert('🔴🔴🔴🔴🔴🔴🔴🔴🔴 TEST IF WORKS. goToFolderCopyPaste foi desactivado devido indiferença 🔴🔴🔴🔴🔴🔴🔴🔴🔴');
+    delay(d1p5);
+
+    // theClipboard operationDateFromManagerXD5VatProcess
+    const operationDateObj = new Date(menuLib.theClipboard());
+    const vatDateFormatted = formatDateV3(operationDateObj);
+
+    const { dateY4M2D2__H2M2S2, dateDotY4M2D2__H2M2S2 } = vatDateFormatted.formats;
+
+    const filePathStr = input[0].toString();
+    const filePathStrItems = filePathStr.split('/');
+    const fileName = filePathStrItems.pop();
+    const folderActionName = filePathStrItems.pop();
+
+    if (!filePathStr.endsWith('.txt')) {
+      return; // If does not end with ".txt" stop processing
+    }
+
+    const [vatReportCsv, vatReportPageText] = objCLib.readFile(filePathStr).split('\n-----\n');
+
+    const vatReportCsvRows = vatReportCsv.split('\n');
+
+    vatReportCsvRows.splice(0, 2); // Remove the first two rows
+    vatReportCsvRows.splice(-2, 2); // Remove the last two rows
+
+    const vatReportCsvRowsCleaned = vatReportCsvRows.join('\n');
+    const vatReportCsvRowsL = vatReportCsvRows.length;
+
+    const periodStr = vatReportPageText.match(/For the period (.*)/)[1];
+    const [dateStart, dateEndStr] = periodStr.split(' to ');
+    const [, dateMmStartStr, dateYyyyStart] = dateStart.split(' ');
+    const [, dateMmEndStr, dateYyyyEnd] = dateEndStr.split(' ');
+
+    var dateEndObj = formatDateV3(new Date(dateEndStr));
+
+    const { M1: monthM1, M2: monthM2 } = dateEndObj.components.month;
+
+    if (dateMmStartStr === dateMmEndStr) {
+      var vatMmStrYyyyInPT = mmEnglishToPortuguese(dateMmStartStr) + ' ' + dateYyyyStart;
+    } else {
+      var vatMmStrYyyyInPT =
+        mmEnglishToPortuguese(dateMmStartStr) +
+        ' ' +
+        dateYyyyStart +
+        ' – ' +
+        mmEnglishToPortuguese(dateMmEndStr) +
+        ' ' +
+        dateYyyyEnd;
+    }
+
+    try {
+      var invoicesNumbers = vatReportCsv.match(/XD5F\d*/g).map(invoiceNumber => invoiceNumber.slice(4));
+
+      var invoicesNumbers = appLib.sortArray(invoicesNumbers);
+    } catch {
+      var invoicesNumbers = [];
+    }
+
+    invoicesNumbers = [...new Set(invoicesNumbers)]; // Convert Set back to Array
+
+    var invoicesNumbersL = invoicesNumbers.length;
+
+    var invoicesNumbersStr = invoicesNumbers.join(', ');
+    var invoicesNumbersStrWithPrefixF = invoicesNumbers.map(item => `F${item}`).join(', ');
+
+    delay(d2);
+
+    // alert('1');
+    // alert(invoicesNumbersStr, invoicesNumbersStrWithPrefixF);
+    // alert('2');
+
+    var grossAndTotalStrAndDebitItems = vatReportPageText.match(/.*\nTotal\n.*/)[0].split('\n');
+    var grossTotalAmount = grossAndTotalStrAndDebitItems[0];
+    var debitTotalAmount = grossAndTotalStrAndDebitItems[2];
+    // => [grossTotalAmount, TotalStr, debitTotalAmount]
+    // ["7,604.12", "Total", "7,604.12"] // Sem facturação
+    // ["(1,376.15)", "Total", "833.72"] // Com facturação
+    // ["6,227.97", "Total", "8,437.84"] // Com facturação e Valor ao nosso favor
+
+    delay(d0p3); // Era d1p5
+
+    // --------------- TRANSACTIONSLINES
+
+    // var transactionsLinesItems = vatReportPageText.match(
+    //   /\d\d*\s\w{3}\s\d{4}\n.*\n.*\n-\n[0-9,.]*\n[0-9,.()]*|\d\d*\s\w{3}\s\d{4}\n.*\n.*\n[0-9,.]*\n-\n[0-9,.()]*/g
+    // );
+    // var transactionsLinesItemsL = transactionsLinesItems.length;
+
+    // var transactionsLines = transactionsLinesItems.map(item => item.split('\n').join('\t')).join('\n');
+    /* 
+    var vatResultFromWebStr = vatReportPageText.match(/(\(*\d[0-9,.)]*)\nInsert content/)[1]; */
+
+    // Call the function to extract decimal numbers
+    var decimalNumbers = extractDecimalNumbers(vatReportPageText);
+
+    // Extract the last decimal number
+    var vatResultFromWebStr = decimalNumbers[decimalNumbers.length - 1];
+
+    if (vatResultFromWebStr.includes('(')) {
+      // Negativo
+      var vatResultFromWebStr = vatResultFromWebStr.replace('(', '-').replace(')', '');
+    }
+
+    var vatResultFromWeb = Number(vatResultFromWebStr.replace(/,/g, ''));
+    delay(d0p3);
+
+    // --------------- ACCOUNTING BASIS
+    var vatTaxBasisTrack = vatReportPageText.match(/Cash Basis/);
+
+    if (vatTaxBasisTrack == undefined) {
+      var vatTaxBasis = 'Accrual';
+    } else {
+      var vatTaxBasis = vatTaxBasisTrack[0]; // Cash Basis
+    }
+
+    // ---------------
+    numbersApp.activate();
+    numbersApp.open(Path(vatProcessFilePathStr));
+    delay(d0p3);
+    var docNumProcessXXXX = numbersApp.documents[0]; // P20XX.numbers
+
+    var docNumProcessVatSheetsNames = docNumProcessXXXX.sheets.name();
+
+    delay(d1);
+
+    // --------------- NEW POSITION
+
+    menuLib.setClipboard(vatReportCsvRowsCleaned);
+
+    var sheetIvaApuramento = docNumProcessXXXX.sheets[sheetIvaApuramentoName];
+    var tableIvaApuramento = sheetIvaApuramento.tables[0];
+
+    docNumProcessXXXX.activeSheet.set(sheetIvaApuramento);
+    delay(d0p3);
+    tableIvaApuramento.cells['A3'].value = 'Período: ' + vatMmStrYyyyInPT;
+
+    var invoiceStr = invoicesNumbersL <= 1 ? 'Factura: ' : 'Facturas: ';
+    tableIvaApuramento.cells['C3'].value = invoiceStr + invoicesNumbersStr;
+
+    // var numOfRowsToAdd = transactionsLinesItemsL - 1; // - 1 porque tem uma fila na tabela
+    var numOfRowsToAdd = vatReportCsvRowsL - 1; // - 1 porque tem uma fila na tabela
+    iWorkLib.addRows(tableIvaApuramento, numOfRowsToAdd, 8, 'addRowBelow');
+
+    iWorkLib.selectionRange(tableIvaApuramento, 'A9:A9');
+    delay(d0p3);
+    menuLib.paste();
+    delay(d1);
+
+    // DESACTIVADO POR QUE O PASTE JÁ NÃO VEM COM OUTLINE (ERA BUG)
+    //iWorkLib.tableOutlineNone(numbersAppControllerP, tableIvaApuramento, "A9:A9")
+
+    var tableIvaApuramentoRowsLAfterPaste = tableIvaApuramento.rowCount();
+    delay(3);
+
+    iWorkLib.textWrap(numbersAppControllerP, tableIvaApuramento, `A9:F` + (tableIvaApuramentoRowsLAfterPaste - 3));
+    delay(d0p3);
+    var vatDebitAmount = tableIvaApuramento.cells['D' + tableIvaApuramentoRowsLAfterPaste].value();
+    delay(d0p3);
+    var vatCreditAmount = tableIvaApuramento.cells['E' + tableIvaApuramentoRowsLAfterPaste].value();
+    delay(d0p3);
+
+    var vatResultFromNumbers = tableIvaApuramento.cells['F' + tableIvaApuramentoRowsLAfterPaste].value();
+
+    var vatResultFromNumbersStr = vatResultFromNumbers.toString();
+    var vatResultFromNumbersStrFormatted = formatNumber(vatResultFromNumbersStr, 2, 2);
+
+    delay(d0p3);
+
+    if (vatResultFromNumbers != vatResultFromWeb) {
+      alert(`Erro`, `vatResultFromNumbers: ${vatResultFromNumbers}\né diferente de\nvatResultFromWeb: ${vatResultFromWeb}`);
+    }
+    delay(d0p3);
+    // alert(`3`);
+
+    var vatMonthStr = 'IVA' + dateYyyyEnd + monthM2;
+    var vatMonthAndDate = vatMonthStr + ` ${ND} ` + dateY4M2D2__H2M2S2;
+
+    var textRELATORIOAndAmount = 'RELATÓRIO ' + vatResultFromNumbersStrFormatted;
+    var pdfReportName = vatMonthAndDate + ` ${ND} ` + textRELATORIOAndAmount;
+
+    // alert(`4`);
+    delay(d1);
+
+    // --------------- WRITE REPORT INFO
+
+    var sheetTaxSummary = docNumProcessXXXX.sheets[sheetTaxSummaryName];
+    var tableVatSummary = sheetTaxSummary.tables[tableVatSummaryName];
+    docNumProcessXXXX.activeSheet.set(sheetTaxSummary);
+    delay(d7);
+
+    const cellInfoNumber = 10 + monthM1;
+
+    // 🔴🔴🔴 NO MORE NECESSARY, GETS INSIDE NUMBERS
+    tableVatSummary.cells['C' + cellInfoNumber].value = vatTaxBasis; // vatTaxBasis
+    tableVatSummary.cells['D' + cellInfoNumber].value = dateDotY4M2D2__H2M2S2; // Issue Date
+
+    tableVatSummary.cells['I' + cellInfoNumber].value = vatCreditAmount.toString();
+    tableVatSummary.cells['J' + cellInfoNumber].value = vatDebitAmount.toString();
+
+    var vatGuideSheetCurrent = vatMonthStr;
+    var vatAmount = tableVatSummary.cells['N' + cellInfoNumber].value();
+
+    if (vatAmount > 0) {
+      var vatAmountForDocs = '-' + vatAmount;
+    } else if (vatAmount == 0) {
+      var vatAmountForDocs = tableVatSummary.cells['M' + cellInfoNumber].value();
+    }
+
+    var textGUIAAndAmount = 'GUIA ' + formatNumber(vatAmountForDocs, 2, 2);
+    delay(d3);
+
+    if (invoicesNumbersL > 0) {
+      textGUIAAndAmount += ` ${ND} ${invoicesNumbersStrWithPrefixF}`;
+      tableVatSummary.cells['P' + cellInfoNumber].value = invoicesNumbersStrWithPrefixF;
+      // Tax amount in text
+      const vatAmountInText = getMoneyInText(vatAmount);
+      tableVatSummary.cells['Q' + cellInfoNumber].value = vatAmountInText;
+    }
+
+    var vatDocName = vatMonthAndDate + ` ${ND} ` + textGUIAAndAmount;
+
+    var sheetNamesOptions = ['IVA_APURAMENTO | ' + pdfReportName, vatGuideSheetCurrent + ' | ' + vatDocName];
+
+    for (var i = 0; i < sheetNamesOptions.length; i++) {
+      var sheetNamesOptionItems = sheetNamesOptions[i].split(' | ');
+      var sheetName = sheetNamesOptionItems[0];
+
+      if (docNumProcessVatSheetsNames.includes(sheetName)) {
+        iWorkLib.numbersSaveAsPDF(
+          numbersAppControllerP,
+          docNumProcessXXXX,
+          i,
+          sheetNamesOptions,
+          sheetName,
+          taxPathStr,
+          sheetNamesOptionItems[1]
+        );
+      } else {
+        alert(`Não tem Sheet com nome "${sheetName}"!`);
+      }
+    }
+
+    // (tableIvaApuramentoRowsLAfterPaste - 12) para RESET rows number
+    iWorkLib.deleteRows(tableIvaApuramento, tableIvaApuramentoRowsLAfterPaste - 12, 9);
+    delay(d0p3);
+
+    docNumProcessXXXX.activeSheet.set(sheetTaxSummary);
+    delay(d1p5);
+
+    docNumProcessXXXX.save();
+    delay(d0p3);
+
+    finderApp.activate();
+    delay(d0p5);
+
+    /*
+    const vatGuideDocSelected = finderApp.selection()[0];
+    const vatGuideFileStr = decodeURI(vatGuideDocSelected.url()).slice(7);
+    */
+
+    const vatGuideFileStr = getPathStrsFromPathObjs(finderApp.selection())[0];
+    delay(d1);
+
+    const vatReportXeroArchiveName = vatMonthAndDate + ` ${ND} ` + textRELATORIOAndAmount + ` ${ND} ` + textGUIAAndAmount;
+
+    const infoToClipboardToManagerXD5 = `${vatMonthStr} ${nD4CP} ${vatAmount} ${nD4CP} ${vatReportXeroArchiveName} ${nD4CP} ${vatGuideFileStr}`;
+
+    menuLib.setClipboard(infoToClipboardToManagerXD5);
+  } catch (error) {
+    // throw new Error("A custom error message."); // Custom message
+
+    // throw error; // Actual error message
+
+    alert(`${error.message}`);
+  }
+}

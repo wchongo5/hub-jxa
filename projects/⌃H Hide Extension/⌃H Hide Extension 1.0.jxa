@@ -1,0 +1,15 @@
+
+
+// v1.0
+
+
+var finderApp = Application("Finder");
+
+var finderSelectionList = finderApp.selection()
+
+for(var i=0; i < finderSelectionList.length; i++) {
+
+	if (finderSelectionList[i].kind() != "Folder") {
+		finderSelectionList[i].extensionHidden = true
+	}
+}

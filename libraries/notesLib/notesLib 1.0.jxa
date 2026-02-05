@@ -1,0 +1,773 @@
+// v1.0
+// const notesLib = Library("notesLib")
+
+const { cfl, cfl2Str } = Library('cflLib');
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+const { copyPaste, doMenu, paste, selectNextParagraph } = Library('menuLib');
+const { getObjectsAndCss, isCs, removeLocationID_fromSelectedObjectsAndCss } = Library('projectLib');
+
+const { enter, pressDelete, space, tab, arrowDown, arrowRight, arrowUp } = Library('systemLib');
+
+// const notesApp = Application('Notes');
+
+const noteAppNameAsIdentifier = 'com.apple.Notes';
+
+const noteAppNameToUse = noteAppNameAsIdentifier; // 'Notes'
+
+const notesApp = Application(noteAppNameToUse);
+
+// --------------------------------------- DELAYS
+
+//const d0p1 = 0.1
+const d0p3 = 0.3;
+// const d0p5 = 0.5;
+var d1 = 1;
+//const d1p5 = 1.5
+const d3 = 3;
+//const d5 = 5
+//const d7 = 7
+//const d10 = 10
+
+const xd5Email = 'xdimag@gmail.com';
+const newLineDelimiter = '&n';
+
+// --------------------------------------- INBOX
+// ---------------------------------------
+// ---------------------------------------
+
+/*
+function getNoteTextAtFolderLevel1ByTitle(folderName, titleFilter) {
+	var notes = notesApp.folders[folderName].notes()
+
+	for (var i=0; i < notes.length; i++) {
+		var noteText = notes[i].plaintext()
+		var noteTitle = noteText.split("\n")[0]
+
+		if (noteTitle.includes(titleFilter)) {
+			return noteText
+		} // undefined
+	}
+}
+*/
+
+function getXd5MemberInfo(authorId) {
+  if (!authorId) {
+    throw new Error(`"authorId" inválido`);
+  }
+
+  return {
+    isXd5Group: authorId.startsWith('1.'),
+    isXd5Member: authorId.startsWith('1.1.'),
+  };
+}
+
+function noteOpenInNewWindow(note) {
+  note.show();
+  delay(d0p3);
+  // doMenu(noteAppNameToUse, 'Window', 'Open Note in New Window');
+  doMenu('Notes', 'Window', 'Open Note in New Window');
+  delay(d0p3);
+}
+
+function applyLinkInSelectionFromClipboard() {
+  delay(d0p1);
+  seApp.keystroke('k', { using: 'command down' });
+  paste();
+  enter(1);
+  arrowRight(1);
+  //enter(1)
+}
+
+function processCorrespondeceNoteText(
+  production,
+  customer4Folders,
+  invoiceCSs,
+  recipientContractorOrCustomerOrSupplierOrSupervisor,
+  interationWay,
+  interactionDirection,
+  hubParentFolderSubject
+) {
+  function filterObjectsAndCss(items, filters) {
+    return items.filter(item => filters.some(filter => item.includes(filter)));
+  }
+
+  const invoiceCs = invoiceCSs[0];
+
+  /*   if (isCs(invoiceCs)) {
+    var correspondeceNoteText = getNoteTextAtFolderLevel1ByTitle('P5', invoiceCSs);
+  } else {
+    var correspondeceNoteText = getNoteTextAtFolderLevel1ByTitle('P1', invoiceCSs);
+  }
+
+  const [authorsLinesInfo, objectsAndCssInfo, letterInfo] = correspondeceNoteText
+    .match(/——————\n(.*(\n.*)*)\n——————/)[1]
+    .split('\n———\n');
+
+  var authorsLines = authorsLinesInfo
+    .split('\n')
+    // To exclude are 5 because of " | No"
+    .filter(authorLine => authorLine.split(' | ').length == 4); */
+
+  const {
+    correspondeceNoteText,
+    objectsAndCssInfo,
+    letterInfo,
+
+    authorsLinesFull,
+    authorsLinesClean,
+    authorsLinesFullXd5Excluded,
+    authorsLinesCleanXd5Excluded,
+
+    author1LinesFull,
+    author1LinesFullXd5Excluded,
+    author1LinesClean,
+    author1LinesCleanXd5Excluded,
+
+    author2LinesFull,
+    author2LinesClean,
+
+    author3LinesFull,
+    author3LinesClean,
+
+    author1HeadersInfo,
+    author2HeadersInfo,
+    author3HeadersInfo,
+  } = getAuthorsInfo(invoiceCSs);
+
+  const {
+    // authorHeader: author3Header,
+    // authorName: author3Name,
+    authorNameShort: author3NameShort,
+  } = getAuthorHeaderInfo(author3HeadersInfo[0], customer4Folders);
+
+  if (
+    recipientContractorOrCustomerOrSupplierOrSupervisor === 'Empreiteiro' ||
+    recipientContractorOrCustomerOrSupplierOrSupervisor === 'Fiscal'
+  ) {
+    const authorHeaderInfoSelected = getAuthorHeaderInfoSelected(author3HeadersInfo);
+
+    var { authorHeader: headerSelected, authorNameShort: shortNameSelected } = getAuthorHeaderInfo(
+      authorHeaderInfoSelected,
+      customer4Folders
+    );
+  } else if (recipientContractorOrCustomerOrSupplierOrSupervisor === 'Fiscal Residente') {
+    const authorHeaderInfoSelected = getAuthorHeaderInfoSelected(author1HeadersInfo.filter(item => item.includes(invoiceCs)));
+
+    var { authorHeader: headerSelected, authorNameShort: shortNameSelected } = getAuthorHeaderInfo(
+      authorHeaderInfoSelected,
+      customer4Folders
+    );
+  } else if (
+    recipientContractorOrCustomerOrSupplierOrSupervisor === 'Fornecedor' ||
+    recipientContractorOrCustomerOrSupplierOrSupervisor === 'Cliente' ||
+    recipientContractorOrCustomerOrSupplierOrSupervisor === 'CriarPasta'
+  ) {
+    var { authorHeader: author2Header1, authorNameShort: shortNameSelected } = getAuthorHeaderInfo(
+      author2HeadersInfo[0],
+      customer4Folders
+    );
+
+    if (
+      recipientContractorOrCustomerOrSupplierOrSupervisor != 'CriarPasta' &&
+      (author2HeadersInfo.length === 1 || production === 'Solicitação Pagamento' || production === 'Propostas')
+    ) {
+      var headerSelected = author2Header1;
+    } else {
+      if (recipientContractorOrCustomerOrSupplierOrSupervisor === 'CriarPasta') {
+        authorsLinesCleanXd5Excluded.push('---------------', 'Escrever');
+      } else {
+        const author2Names = getAuthorNames(author2HeadersInfo);
+
+        var headerOption = cfl2Str(author2Names, `Destinatário — tem mais que um (${author2Names.length})`, author2Names[0]);
+
+        const authorHeaderInfoSelected = author2HeadersInfo.find(item => item.includes(headerOption));
+
+        var { authorHeader: headerSelected, authorNameShort: shortNameSelected } = getAuthorHeaderInfo(
+          authorHeaderInfoSelected,
+          customer4Folders
+        );
+      }
+    }
+  }
+
+  const objectsAndCss = getObjectsAndCss(objectsAndCssInfo.split('\n'));
+  const objectsAndCssL = objectsAndCss.length;
+
+  if (objectsAndCssL == 1) {
+    var selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs = objectsAndCss[0];
+
+    if (isCs(invoiceCs)) {
+      var selectedObjectsAndCssStr = removeLocationID_fromSelectedObjectsAndCss(objectsAndCss)[0];
+    } else {
+      // GESTÃO
+      var selectedObjectsAndCssStr = objectsAndCss[0];
+    }
+
+    var selectedObjectsAndCss = objectsAndCss;
+  } else {
+    if (tableObjectAndCsD == undefined) {
+      var tableObjectAndCsD = objectsAndCss[0];
+    } else {
+      var tableObjectAndCsD = objectsAndCss.filter(item => item.includes(invoiceCs))[0];
+    }
+
+    let selectedObjectsAndCssLocal;
+
+    if (recipientContractorOrCustomerOrSupplierOrSupervisor === 'CriarPasta') {
+      if (hubParentFolderSubject) {
+        selectedObjectsAndCssLocal = filterObjectsAndCss(objectsAndCss, invoiceCSs);
+      } else {
+        selectedObjectsAndCssLocal = cfl(
+          objectsAndCss,
+          `"${customer4Folders}" tem mais de um objecto (${objectsAndCssL}).\nSelecione o(s) necessário(s).\n\n\n—\n• Em caso de Fiscalização é eliminada a parte de "Fiscalização da "` +
+            '\n',
+          tableObjectAndCsD,
+          'm'
+        );
+      }
+    } else {
+      selectedObjectsAndCssLocal = filterObjectsAndCss(objectsAndCss, invoiceCSs);
+    }
+
+    var selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs = selectedObjectsAndCssLocal.join(' & ');
+
+    if (isCs(invoiceCs)) {
+      selectedObjectsAndCssLocal = removeLocationID_fromSelectedObjectsAndCss(selectedObjectsAndCssLocal);
+    }
+
+    var selectedObjectsAndCssStr = selectedObjectsAndCssLocal.join(' & ');
+
+    var selectedObjectsAndCss = selectedObjectsAndCssLocal;
+  }
+
+  // -------------
+  const [subjectsInfo, letterBodyInfo] = letterInfo.split('—\n');
+
+  const subjects = subjectsInfo.replace(/Assunto: /g, '');
+
+  const subjectsItems = subjects.split('\n').filter(item => item != '' && !item.includes(' | No'));
+
+  const hasUseThisSubject = subjectsItems.find(item => item.includes(' | UseThis'));
+
+  // if (interationWay === 'Email' && interactionDirection === 'Entrada') {
+  //   var subject = undefined;
+  // } else {
+  if (hasUseThisSubject) {
+    var subject = hasUseThisSubject.split(' | ')[0];
+  } else if (!hubParentFolderSubject) {
+    if (subjectsItems.length === 1) {
+      var subject = subjectsItems[0];
+    } else {
+      var subject = cfl2Str(subjectsItems, 'Escolhe assunto', subjectsItems[0]);
+    }
+    // }
+  }
+
+  const selectedObjects = selectedObjectsAndCss.map(item => item.split(' (')[0]);
+
+  return {
+    correspondeceNoteText,
+    headerSelected,
+    shortNameSelected,
+    letterBodyInfo,
+    subject,
+    hasUseThisSubject,
+    selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs,
+    selectedObjects,
+    selectedObjectsAndCssStr,
+    selectedObjectsAndCss,
+    authorsLinesFull,
+    authorsLinesFullXd5Excluded,
+    authorsLinesClean,
+    authorsLinesCleanXd5Excluded,
+
+    author1LinesFull, // Not used even in Text XD5
+    author2LinesFull,
+    author2LinesClean,
+    author3LinesFull,
+    author3LinesClean,
+    author3NameShort,
+  };
+}
+
+function getAuthorLineInfo(authorLine) {
+  const authorLineItems = authorLine.split(' | ');
+  if (authorLineItems.length < 4) {
+    console.error('Invalid data format', authorLine);
+    return;
+  }
+
+  const [authorId, authorHeaderOrName, authorRole, authorEmail] = authorLineItems;
+
+  return {
+    authorId,
+    authorHeaderOrName,
+    authorRole,
+    authorEmail,
+  };
+}
+
+function getAuthorsInfo(invoiceCSs) {
+  const invoiceCs = invoiceCSs[0];
+
+  if (isCs(invoiceCs)) {
+    var correspondeceNoteText = getNoteTextAtFolderLevel1ByTitle('P5', invoiceCSs);
+  } else {
+    var correspondeceNoteText = getNoteTextAtFolderLevel1ByTitle('P1', invoiceCSs);
+  }
+
+  const [authorsLinesInfo, objectsAndCssInfo, letterInfo] = correspondeceNoteText
+    .match(/——————\n(.*(\n.*)*)\n——————/)[1]
+    .split('\n———\n');
+
+  var authorsLines = authorsLinesInfo
+    .split('\n')
+    // To exclude are 5 because of " | No"
+    .filter(authorLine => authorLine.split(' | ').length == 4);
+
+  const authorsLinesFull = [];
+  const authorsLinesClean = [];
+  const authorsLinesFullXd5Excluded = [];
+  const authorsLinesCleanXd5Excluded = [];
+
+  const author1LinesFull = [];
+  const author1LinesClean = [];
+  const author1LinesFullXd5Excluded = [];
+  const author1LinesCleanXd5Excluded = [];
+
+  const author2LinesFull = [];
+  const author2LinesClean = [];
+
+  const author3LinesFull = [];
+  const author3LinesClean = [];
+
+  const authorsCentralNamesExclduingMainAuthor = [];
+
+  authorsLines.forEach(authorLine => {
+    /*   const authorLineItems = authorLine.split(' | ');
+    if (authorLineItems.length < 4) {
+      console.error('Invalid data format', authorLine);
+      return;
+    }
+
+    const [authorId, authorHeaderOrName, authorRole, authorEmail] = authorLineItems; */
+
+    const { authorId, authorHeaderOrName, authorRole, authorEmail } = getAuthorLineInfo(authorLine);
+
+    if (authorId !== '2.1.1' && authorRole === 'Central') {
+      authorsCentralNamesExclduingMainAuthor.push(authorHeaderOrName.split(' _ ')[1]);
+    }
+
+    const cleanName = authorHeaderOrName.split(` ${newLineDelimiter} `)[0];
+
+    const lineFull = `${authorHeaderOrName} (${authorRole}) / ${authorEmail} / ${authorId}`;
+    const lineClean = `${cleanName} (${authorRole}) / ${authorEmail} / ${authorId}`;
+
+    authorsLinesFull.push(lineFull);
+
+    authorsLinesClean.push(lineClean);
+
+    if (authorEmail != xd5Email) {
+      authorsLinesFullXd5Excluded.push(lineFull);
+      authorsLinesCleanXd5Excluded.push(lineClean);
+    }
+
+    if (authorId.startsWith('1')) {
+      author1LinesFull.push(lineFull);
+      author1LinesClean.push(lineClean);
+
+      if (authorEmail != xd5Email) {
+        author1LinesFullXd5Excluded.push(lineFull);
+        author1LinesCleanXd5Excluded.push(lineClean);
+      }
+    }
+
+    if (authorId.startsWith('2')) {
+      author2LinesFull.push(lineFull);
+      author2LinesClean.push(lineClean);
+    }
+
+    if (authorId.startsWith('3')) {
+      author3LinesFull.push(lineFull);
+      author3LinesClean.push(lineClean);
+    }
+  });
+
+  // ----------- EmailAndExtrasInfo
+  // const authorsLinesFullXd5Excluded = authorsLinesFull.filter(item => !item.includes(xd5Email));
+
+  // const author1LinesFull = authorsLinesFull.filter(item => /\/ 1\.\d+\.\d+$/.test(item));
+  // const author1LinesFullXd5Excluded = author1LinesFull.filter(item => !item.includes(xd5Email));
+
+  // const author2LinesFull = authorsLinesFull.filter(item => /\/ 2\.\d+\.\d+$/.test(item));
+  // const author3LinesFull = authorsLinesFull.filter(item => /\/ 3\.\d+\.\d+$/.test(item));
+
+  // ----------------------
+
+  // ".map(line => line.split(' (')[0])" removes role from Header
+  const author1HeadersInfo = getAuthorHeadersInfo(author1LinesFullXd5Excluded).map(line => line.split(' (')[0]);
+  const author2HeadersInfo = getAuthorHeadersInfo(author2LinesFull).map(line => line.split(' (')[0]);
+  const author3HeadersInfo = getAuthorHeadersInfo(author3LinesFull).map(line => line.split(' (')[0]);
+
+  return {
+    correspondeceNoteText,
+    objectsAndCssInfo,
+    letterInfo,
+
+    authorsLinesFull,
+    authorsLinesClean,
+    authorsLinesFullXd5Excluded,
+    authorsLinesCleanXd5Excluded,
+
+    authorsCentralNamesExclduingMainAuthor,
+
+    author1LinesFull,
+    author1LinesFullXd5Excluded,
+    author1LinesClean,
+    author1LinesCleanXd5Excluded,
+
+    author2LinesFull,
+    author2LinesClean,
+
+    author3LinesFull,
+    author3LinesClean,
+
+    author1HeadersInfo,
+    author2HeadersInfo,
+    author3HeadersInfo,
+  };
+}
+
+function getAuthorNames(authorHeadersInfo) {
+  return authorHeadersInfo.map(item => item.split(' / ')[0].split(` ${newLineDelimiter} `)[0]);
+}
+
+function getAuthorNamesShort(authorHeadersInfo) {
+  return authorHeadersInfo.filter(item => item.includes(' _ ')).map(item => item.split(' / ')[0].split(' _ ')[1]);
+}
+
+function getAuthorHeaderInfoSelected(authorHeadersInfo) {
+  if (authorHeadersInfo.length === 1) {
+    return authorHeadersInfo[0];
+  } else {
+    return cfl2Str(authorHeadersInfo, 'Seleccione', authorHeadersInfo[0]);
+  }
+}
+
+function getAuthorHeadersInfo(authorsLinesInfo) {
+  return authorsLinesInfo.filter((item, i) => {
+    if (i === 0) {
+      return true;
+    }
+    return item.includes(' _ ');
+  });
+}
+
+function getAuthorHeaderInfo(authorLine, customer4Folders) {
+  if (!authorLine) {
+    return {
+      authorHeader: undefined,
+      authorName: undefined,
+      authorNameShort: undefined,
+    };
+  }
+
+  let authorNameShort = undefined;
+
+  const nameInfoItems = authorLine.split(' / ');
+  const authorHeaderAndNameShotItems = nameInfoItems[0].split(' _ ');
+
+  const authorHeaderItems = authorHeaderAndNameShotItems[0].split(` ${newLineDelimiter} `);
+
+  if (authorHeaderAndNameShotItems[1] === undefined) {
+    authorNameShort = customer4Folders;
+  } else {
+    authorNameShort = authorHeaderAndNameShotItems[1].split(' (')[0];
+  }
+
+  const authorHeader = authorHeaderItems.join('\n');
+  const authorName = authorHeaderItems[0];
+
+  return {
+    authorHeader,
+    authorName,
+    authorNameShort,
+  };
+}
+
+function workerNameProcess(workerName, upperCase = false, returnFirstAndLastNames = false) {
+  if (upperCase) {
+    workerName = workerName.toUpperCase();
+  }
+
+  if (returnFirstAndLastNames) {
+    const workerNameItems = workerName.split(' ');
+    workerName = workerNameItems.length > 1 ? `${workerNameItems[0]} ${workerNameItems[workerNameItems.length - 1]}` : workerName;
+  }
+
+  return workerName;
+}
+
+function getAuthorNameFromAuthorLine(authorLine) {
+  const regex = new RegExp(`^(.*?)(?: ${newLineDelimiter} | \\()`);
+  const match = regex.exec(authorLine);
+  return match ? match[1] : '';
+}
+
+// function processAuthorNameIfIsCompanyWithMoreThanOneEmail(workerName, companyShortName) {
+//   alert(`2: ${workerName}`, companyShortName);
+
+//   if (workerName == companyShortName) {
+//     alert(workerName, companyShortName);
+//   }
+
+//   return workerName;
+// }
+
+function getCompanyAndPersonInfo(authorsLinesFull, authorId, customer4Folders, returnCompanyName = false) {
+  let isCompany = false;
+
+  const authorLineFull = authorsLinesFull.find(item => item.includes(authorId));
+
+  const [authorHeaderOrNameAndRole] = authorLineFull.split(' / ');
+
+  if (!authorId) {
+    return {
+      companyShortName: undefined,
+      workerName: undefined,
+    };
+  }
+
+  const authorIdGroupId = authorId.slice(0, 4);
+  const authorLinesGroup = authorsLinesFull.filter(author => author.includes(authorIdGroupId));
+
+  let workerName = undefined;
+
+  // if (authorHeaderOrNameAndRole.includes('(Central)')) {
+  //   isCompany = true;
+  //   var authorLinesGroupWorkers = authorLinesGroup.slice(1, authorLinesGroup.length);
+  // } else {
+  //   workerName = getAuthorNameFromAuthorLine(authorHeaderOrNameAndRole);
+  // }
+
+  if (authorHeaderOrNameAndRole.includes('(Central)')) {
+    if (authorHeaderOrNameAndRole.includes(' _ ')) {
+      var companyShortName = authorHeaderOrNameAndRole.split(' _ ')[1].split(' (')[0];
+    } else {
+      var companyShortName = customer4Folders;
+    }
+  } else {
+    if (authorId.includes('1.1.')) {
+      var companyShortName = 'X-DIM';
+    } else {
+      const [authorHeader] = authorLinesGroup[0].split(' / ');
+
+      if (authorHeader.includes(' _ ')) {
+        var companyShortName = authorHeader.split(' _ ')[1].split(' (')[0];
+      } else {
+        var companyShortName = customer4Folders;
+      }
+    }
+  }
+
+  if (authorHeaderOrNameAndRole.includes('(Central)')) {
+    isCompany = true;
+    var authorLinesGroupWorkers = authorLinesGroup.slice(1, authorLinesGroup.length);
+    // workerName = 'Central';
+
+    if (returnCompanyName) {
+      workerName = getAuthorNameFromAuthorLine(authorHeaderOrNameAndRole);
+    } else {
+      workerName = 'Central';
+    }
+  } else {
+    workerName = getAuthorNameFromAuthorLine(authorHeaderOrNameAndRole);
+  }
+
+  // workerName = getAuthorNameFromAuthorLine(authorHeaderOrNameAndRole);
+
+  if (workerName === companyShortName) {
+    // A partir de segundo email do email do cliente, workerName é igual a companyShortName> Ex. "Comercial" depois de "Central"
+    workerName = authorHeaderOrNameAndRole.match(/\(([^)]+)\)/)[1];
+  }
+
+  let role;
+  if (authorHeaderOrNameAndRole.includes('(')) {
+    role = authorHeaderOrNameAndRole.match(/\(([^)]+)\)/)[1];
+  }
+
+  return {
+    // authorHeaderOrNameAndRole,
+    // authorLinesGroup,
+    isCompany,
+    authorLinesGroupWorkers,
+    companyShortName,
+    workerName,
+    role,
+  };
+}
+
+/*
+function getNoteTextAtFolderLevel1ByTitle(folderName, titleFilter) {
+	var notes = notesApp.folders[folderName].notes.whose({ name: { _contains: titleFilter } });
+
+	const notesText = []
+
+	for (var i=0; i < notes.length; i++) {
+		var noteText = notes[i].plaintext()
+		notesText.push(noteText)
+	}
+
+	if (notesText.length === 0) {
+		alert(`Não encontro "nota" com título contendo "${titleFilter}"`, ``)
+	
+	} else if (notesText.length === 1) {
+		return notesText[0]
+
+	} else {
+		var selectedNoteTitle = cfl2Str(
+			
+				notesText.map(note => note.split("\n")[0])
+
+			, `Seleccione a nota - tem mais de uma nota (${notesText.length})`, notesText.map(note => note.split("\n")[0])[0])
+		
+		return notesText.find(note => note.split("\n")[0] === selectedNoteTitle)
+	}
+}
+*/
+
+function getNoteTextAtFolderLevel1ByTitle(folderName, titleFilters) {
+  const titleFilter1 = titleFilters[0];
+  var notes = notesApp.folders[folderName].notes.whose({ name: { _contains: titleFilter1 } });
+
+  const notesText = [];
+
+  for (var i = 0; i < notes.length; i++) {
+    var noteText = notes[i].plaintext();
+    notesText.push(noteText);
+  }
+
+  if (notesText.length === 0) {
+    alert(`Não encontrou "nota" com título contendo "${titleFilter1}"`, ``);
+  } else if (notesText.length === 1) {
+    return notesText[0];
+  } else {
+    return notesText.find(note => {
+      // Check if the note's name contains all titles
+      return titleFilters.every(filter => note.split('\n')[0].includes(filter));
+    });
+  }
+}
+
+// ---------------------------------------
+
+function writeTags(tags) {
+  for (var i = 0; i < tags.length; i++) {
+    copyPaste(tags[i]);
+    delay(d1);
+    // delay(d0p5);
+    space(1);
+  }
+}
+
+function updateNote(noteName, noteBody, tags) {
+  const note = notesApp.folders['P5'].notes.whose({ name: { _contains: noteName } })[0];
+
+  //note.name = noteName
+  note.plaintext = noteBody;
+
+  formatNoteName(newNote);
+
+  writeTags(['#P0XY⌛️', tags]);
+  enter(2);
+}
+
+function createNote(folderName, noteTitle, noteBody, tags) {
+  var atFolder = notesApp.folders[folderName];
+
+  var newNote = notesApp.make({ new: 'note', at: atFolder, withProperties: { name: noteTitle, body: noteBody } });
+
+  formatNoteName(newNote);
+
+  writeTags(tags);
+
+  return newNote;
+}
+
+function createServiceNote(cs, customer4SheetOrBimCloudOrNote, object4Note, noteBody) {
+  // XDWFAP220901 // XDWFR1220901
+  var disciplineC1ServiceC1 = cs.slice(4, 6);
+
+  if (disciplineC1ServiceC1 === 'AP') {
+    var icon = '📕';
+  } else if (
+    disciplineC1ServiceC1 === 'AA' ||
+    disciplineC1ServiceC1 === 'AC' ||
+    disciplineC1ServiceC1 === 'AE' ||
+    disciplineC1ServiceC1 === 'AF'
+  ) {
+    var icon = '📘';
+  } else if (disciplineC1ServiceC1 === 'DP') {
+    var icon = '✏️';
+  } else if (disciplineC1ServiceC1.startsWith('R')) {
+    var icon = '🐄';
+  } else if (disciplineC1ServiceC1 === 'UP') {
+    var icon = '📗';
+  } else {
+    var icon = 'CodeIcon';
+  }
+
+  var noteTitle = `P5${disciplineC1ServiceC1} ${icon} ${cs} ${customer4SheetOrBimCloudOrNote} (${object4Note.toUpperCase()})`;
+
+  var extraTagsToWrite = '';
+
+  if (cs[3] == 'C') {
+    var noteTitle = `X-${noteTitle}`;
+    extraTagsToWrite += '#P0X00⌛️';
+  } else {
+    // F // XDWFAP221002
+
+    if (cs[5] == 'P') {
+      extraTagsToWrite += '#P0XP5⌛️';
+    } else if (cs[5] == 'A' || cs[5] == 'C' || cs[5] == 'E' || cs[5] == 'F') {
+      extraTagsToWrite += '#P0XO5⌛️';
+    }
+  }
+
+  // 🔴 This applies h1 but the text is recognized as body not title
+  // So its better keep title as plain small text and manually apple Title
+  // noteBody = `<div><h1>${noteTitle}</h1></div>` + noteBody;
+
+  var newNote = createNote('P5', noteTitle, noteBody, ['#P0XY⌛️', extraTagsToWrite]);
+}
+
+function formatNoteName(newNote) {
+  // ---------- TEMPORARY UNTIL Apple fix to use "Notes"
+  const isformatNoteName = noteAppNameToUse !== 'com.apple.Notes';
+
+  if (!isformatNoteName) {
+    alert(`Title will not be formatted, because "Notes" App come as "${noteAppNameAsIdentifier}"`);
+  }
+  delay(d1);
+  // ----------
+
+  notesApp.activate();
+  delay(d3);
+  notesApp.show(newNote);
+  delay(d0p3); // More time to prevent TAB title // 🔴🔴🔴 Parece que o erro continua
+  //tab(1) // Este Tab parece já não ser necessário
+  delay(d1);
+  selectNextParagraph();
+
+  if (isformatNoteName) {
+    doMenu('Notes', 'Format', 'Title');
+    // doMenu(noteAppNameToUse, 'Format', 'Title');
+  }
+
+  arrowRight(1);
+  enter(2);
+  arrowUp(1);
+}

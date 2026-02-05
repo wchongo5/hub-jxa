@@ -1,0 +1,11 @@
+
+
+// v1.0
+
+
+var authenticationLib = Library("authenticationLib")
+
+var previewApp = Application("Preview")
+
+var afterExportOption = authenticationLib.getAfterExportOption()
+authenticationLib.signAndStamp(previewApp.documents[0].path(), afterExportOption)

@@ -1,0 +1,1196 @@
+// v1.0
+// const {
+// 	addColumns,
+// 	addRows,
+// 	alignHorizontal,
+// 	alignVertical,
+// 	alignHorizontalAndVertical,
+// 	applyBackgroundColor,
+// 	applyFontSize,
+// 	applyFormulaResults,
+// 	applyTextColor,
+// 	bold,
+// 	checkRowAvailabilityAndAddIfNotFound,
+// 	clearRange,
+// 	deleteColumns,
+// 	deleteRows,
+// 	deleteTablesByName,
+// 	exportDoc,
+// 	getCellNamePartColumnOrRow,
+// 	getFileExtensionFromNameOrUrl,
+// 	getTableInfo,
+// 	getTableInfoVertixCoordTable,
+// 	hideColumns,
+// 	hideRows,
+// 	hideRowsRange,
+// 	mergeCells,
+// 	rowPopulateItems,
+// 	rowsSelectionNumInColumn,
+// 	selectionRange,
+// 	setDecimals,
+// 	sumFromSelectionRange,
+// 	tableDelimeterUpdate,
+// 	tableOutlineNone,
+// 	tableTitleAlign,
+// 	textWrap,
+// 	thousandsSeparator,
+// 	thousandsSeparatorWithCopyPaste,
+// 	unMergeCells,
+// 	writeInRowAvailable,
+
+// 	// Numbers
+// 	numbersActivateFormatIndex,
+// 	numbersDateAndReference,
+// 	numbersDocIsArchived,
+// 	numbersDocIsTextXA5,
+// 	numbersDocIsTextXG5,
+// 	numbersExportNumbersCSV2CSV,
+// 	numbersProjectInProcessInfoPopulate,
+// 	numbersReferenceTableName,
+// 	numbersSaveAsPDF,
+// 	numbersSheetDuplicate,
+// 	numbersSheetDuplicateAndUpdatePrefixNumber,
+// 	numbersSheetGetFilterAndNameReference,
+// 	numbersSheetsUpdatePrefixNumbers,
+// 	numbersQuoteChargedPercentage,
+// 	numbersWriteReference,
+
+// 	// Pages
+// 	pagesApplyLetterHeader,
+// } = Library("iWorkLib")
+
+// DEL5
+const { cfl2Str } = Library('cflLib');
+
+const { getDelays } = Library('datetimeLib');
+
+var projectLib = Library('projectLib');
+var systemLib = Library('systemLib');
+var appLib = Library('appLib');
+var { goToFolderCopyPaste } = Library('finderLib');
+
+const { addZero, formatNumber, getNextNumberOrLetter, sumAllByReduce } = Library('numberLib');
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+var menuLib = Library('menuLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var pagesApp = Application('Pages');
+// const numbersApp = Application('Numbers');
+
+//const numbersAppControllerP = seApp.processes["Numbers"]
+
+// --------------------------------------- DELAYS
+
+const { d0p3, d1, d1p5, d2, d3 } = getDelays();
+
+// ---------------------------------------
+const templateProjAndPropGeneralPartName = '0 PRO';
+
+// --------------------------------------- iWork
+
+// 🔴🔴🔴 NOT USED YET
+function addColumns(table, numOfColumnsToAdd, referenceColumnNum, position) {
+  for (var i = 0; i < numOfColumnsToAdd; i++) {
+    if (position == 'addColumnAfter') {
+      table.columns[referenceColumnNum].addColumnAfter();
+    } else if (position == 'addColumnBefore') {
+      table.columns[referenceColumnNum].addColumnBefore();
+    }
+  }
+}
+
+function addRows(table, numOfRowsToAdd, referenceRownNum, position) {
+  for (var i = 0; i < numOfRowsToAdd; i++) {
+    if (position == 'addRowAbove') {
+      table.rows[referenceRownNum].addRowAbove();
+    } else if (position == 'addRowBelow') {
+      table.rows[referenceRownNum].addRowBelow();
+    }
+  }
+}
+
+function alignHorizontal(table, rangeName, alignOption) {
+  // "auto align"/‌"center"/‌"justify"/‌"left"/‌"right"
+  table.ranges[rangeName].alignment = alignOption;
+}
+
+function alignVertical(table, rangeName, alignOption) {
+  // "bottom"/‌"center"/‌"top
+  table.ranges[rangeName].verticalAlignment = alignOption;
+}
+
+function alignHorizontalAndVertical(table, rangeName, horizontalAlignOption, verticalAlignOption) {
+  table.ranges[rangeName].alignment = horizontalAlignOption;
+  delay(d0p3);
+  table.ranges[rangeName].verticalAlignment = verticalAlignOption;
+}
+
+function applyBackgroundColor(table, rangeName, color) {
+  //delay(d0p3)
+  table.ranges[rangeName].backgroundColor = color;
+  //delay(d0p3)
+}
+
+function applyFontSize(table, rangeName, fontSizeNum) {
+  //delay(d0p3)
+  table.ranges[rangeName].fontSize = fontSizeNum;
+  //delay(d0p3)
+}
+
+function applyFormulaResults(table, rangeName) {
+  selectionRange(table, rangeName);
+  menuLib.copy();
+  menuLib.doMenu('Numbers', 'Edit', 'Paste Formula Results');
+  systemLib.scape();
+}
+
+function applyTextColor(table, rangeName, color) {
+  //delay(d0p3)
+  table.ranges[rangeName].textColor = color;
+  //delay(d0p3)
+}
+
+function bold(table, rangeName) {
+  // numbersActivateFormatIndex(numbersAppControllerP, "Text")
+  // delay(d0p3)
+  // selectionRange(table, rangeName)
+  // numbersAppControllerP.windows[0].scrollAreas[3].groups[0].checkboxes[0].click()
+
+  //numbersActivateFormatIndex(numbersAppControllerP, "Text")
+  delay(d0p3);
+  selectionRange(table, rangeName);
+  //numbersAppControllerP.windows[0].scrollAreas[3].groups[0].checkboxes[0].click()
+
+  seApp.keystroke('b', { using: 'command down' });
+  delay(d0p3);
+}
+
+function checkRowAvailabilityAndAddIfNotFound(table, belowRowsNumToExclude, [textToWriteIfAvailable, columnWhereToWrite]) {
+  var tableRowsL = table.rowCount() - belowRowsNumToExclude;
+
+  for (var i = 5; i < tableRowsL; i++) {
+    var iSum = i + 1;
+    var columnA_Identifier = table.cells['A' + iSum].value();
+
+    if (columnA_Identifier == null) {
+      writeInRowAvailable(table, iSum, [textToWriteIfAvailable, columnWhereToWrite]);
+      break;
+    } else {
+      if (i == tableRowsL - 1) {
+        table.cells['A' + iSum].addRowBelow();
+
+        writeInRowAvailable(table, iSum + 1, [textToWriteIfAvailable, columnWhereToWrite]);
+      }
+    }
+  }
+}
+
+function clearRange(table, rangeName) {
+  delay(d0p3);
+  selectionRange(table, rangeName);
+  delay(d0p3);
+  systemLib.pressDelete(1);
+}
+
+function deleteColumns(table, numOfRowsToDelete, referenceColumnNum) {
+  for (var i = 0; i < numOfRowsToDelete; i++) {
+    table.columns[referenceColumnNum].delete();
+  }
+}
+
+function deleteRows(table, numOfRowsToDelete, referenceRownNum) {
+  for (var i = 0; i < numOfRowsToDelete; i++) {
+    table.rows[referenceRownNum].delete();
+  }
+}
+
+function deleteTablesByName(sheet, tablesNamesToDelete) {
+  for (var i = 0; i < tablesNamesToDelete.length; i++) {
+    sheet.tables[tablesNamesToDelete[i]].delete();
+  }
+}
+
+function exportDoc(iWorkApp, pathStr, expExtension) {
+  if (expExtension.toLowerCase().includes('excel')) {
+    iWorkApp.export({ to: Path(pathStr), as: expExtension, withProperties: { excludeSummaryWorksheet: true } });
+  } else {
+    iWorkApp.export({ to: Path(pathStr), as: expExtension });
+  }
+}
+
+function getCellNamePartColumnOrRow(cellName, columnOrRow) {
+  if (columnOrRow == 'columnName') {
+    return cellName.match(/[A-Z]*/)[0];
+  } else if (columnOrRow == 'rowName') {
+    return Number(cellName.match(/\d{1}\d*/)[0]);
+  }
+}
+
+function getFileExtensionFromNameOrUrl(fileName) {
+  try {
+    return fileName.match(/\.(\w*$)/)[1];
+  } catch {
+    return null;
+  }
+}
+
+function getTableInfo(table) {
+  // 🔴🔴🔴  NOT USED
+
+  var tableRowsL = table.rowCount();
+  var tableColumnsL = table.columnCount();
+
+  // Get Rows with information
+  for (var i = 0; i < tableRowsL; i++) {
+    var iSum = i + 1;
+    var aValue = table.cells['A' + iSum].value();
+
+    if (aValue == null) {
+      var numberOfRowsWithInfo = i; //+ 1
+      break;
+    }
+  }
+
+  var reportSection3Items = [];
+  var rowValues = [];
+
+  for (var i = 0; i < numberOfRowsWithInfo; i++) {
+    for (var j = 0; j < tableColumnsL; j++) {
+      var cellValue = table.rows[i].cells[j].value();
+
+      if (cellValue != null || (cellValue == null && j > 0)) {
+        if (cellValue == null) {
+          rowValues.push('');
+        } else {
+          rowValues.push(cellValue);
+        }
+      }
+    }
+
+    reportSection3Items.push(rowValues.join('\t'));
+    var rowValues = []; // Reset
+  }
+
+  return reportSection3Items.join('\n');
+}
+
+function getTableInfoVertixCoordTable(table) {
+  var tableRowsL = table.rowCount();
+  var tableColumnsL = table.columnCount();
+
+  // Get Rows with information
+  for (var i = 0; i < tableRowsL; i++) {
+    var iSum = i + 1;
+    var aValue = table.cells['A' + iSum].value();
+
+    if (aValue == null) {
+      var numberOfRowsWithInfo = i; //+ 1
+      break;
+    }
+  }
+
+  var reportSection3Items = [];
+  var rowValues = [];
+
+  for (var i = 0; i < numberOfRowsWithInfo; i++) {
+    for (var j = 0; j < tableColumnsL; j++) {
+      var cellValue = table.rows[i].cells[j].value();
+
+      if (cellValue != null || (cellValue == null && j > 0)) {
+        if (cellValue == null) {
+          rowValues.push('');
+        } else {
+          // i > 0 After header
+          if (i > 0) {
+            if (j == 1 || j == 2) {
+              var cellValue = formatNumber(cellValue, 9, 9);
+            } else if (j == 3) {
+              var cellValue = formatNumber(cellValue, 1, 1);
+            }
+          }
+
+          rowValues.push(cellValue);
+        }
+      }
+    }
+
+    reportSection3Items.push(rowValues.join('\t'));
+    var rowValues = []; // Reset
+  }
+
+  return reportSection3Items.join('\n');
+}
+
+function hideColumns(table, columnsLetters) {
+  for (var i = 0; i < columnsLetters.length; i++) {
+    // var columnLetter = columnsLetters[i]
+    // selectionRange(table, columnLetter + "1")
+    selectionRange(table, columnsLetters[i] + '1');
+    menuLib.doMenu('Numbers', 'Table', 'Hide Column');
+  }
+}
+
+function hideRows(table, numOfRowsToHide, referenceRownNum) {
+  for (var i = 0; i < numOfRowsToHide; i++) {
+    // var columnLetter = columnsLetters[i]
+    // selectionRange(table, columnLetter + "1")
+
+    selectionRange(table, 'A' + (referenceRownNum + i));
+    menuLib.doMenu('Numbers', 'Table', 'Hide Row');
+  }
+}
+
+function hideRowsRange(table, numOfRowsToHide, rangeName) {
+  selectionRange(table, rangeName);
+
+  if (numOfRowsToHide == 1) {
+    menuLib.doMenu('Numbers', 'Table', 'Hide Row');
+  } else {
+    //menuLib.doMenu("Numbers", "Table", "Hide '" + numOfRowsToHide + "' Rows")
+    menuLib.doMenu('Numbers', 'Table', 'Hide ' + numOfRowsToHide + ' Rows');
+  }
+}
+
+function mergeCells(table, rangeName) {
+  delay(d0p3);
+  table.ranges[rangeName].merge();
+  delay(d0p3);
+}
+
+function rowPopulateItems(table, itemsToPopulate, rowIndex) {
+  for (var i = 0; i < itemsToPopulate.length; i++) {
+    table.rows[rowIndex].cells[i].value = itemsToPopulate[i];
+  }
+}
+
+function rowsSelectionNumInColumn(table, range) {
+  selectionRange(table, range);
+  delay(d0p3);
+  menuLib.copy();
+  delay(d0p3);
+
+  /*
+   return menuLib.theClipboard().split("\r")
+		.map(item => item != "")
+		.length - 3
+		*/
+
+  const clipboardItemsL = menuLib.theClipboard().split('\r').length;
+
+  if (clipboardItemsL === 1) {
+    // ["Varão 12"]
+    // Copying one cell does not include extra items
+    return clipboardItemsL;
+  } else {
+    // ["", "Varão 12 (Pilares 2)", "Varão 12", "", ""]
+    // ("") at start and at end (, "", "") are extra items when copying two cells
+    return clipboardItemsL - 3;
+  }
+}
+
+function selectionRange(table, rangeName) {
+  delay(d0p3);
+  table.selectionRange = table.ranges[rangeName];
+  delay(d0p3);
+}
+
+function setDecimals(numbersAppControllerP, table, rangeName, increment, incrementOption) {
+  delay(d0p3);
+
+  // ---- NEW
+  numbersActivateFormatIndex(numbersAppControllerP, 1); // "Cell"
+  delay(d0p3); // 🔴🔴🔴 Testar d0p3
+  selectionRange(table, rangeName);
+  delay(d0p3); // 🔴🔴🔴 Testar d0p3
+  // -----
+
+  for (var i = 0; i < increment; i++) {
+    delay(d0p3);
+
+    if (incrementOption == 'Up') {
+      //numbersAppControllerP.windows[0].scrollAreas[3].incrementors[0].buttons[0].click()
+
+      // Numbers v12.2 // 20221117
+      numbersAppControllerP.windows[0].scrollAreas[2].incrementors[0].buttons[0].click();
+
+      //.scrollAreas.at(2).incrementors.at(0).buttons.at(0)
+    } else if (incrementOption == 'Down') {
+      numbersAppControllerP.windows[0].scrollAreas[2].incrementors[0].buttons[1].click();
+    }
+  }
+
+  delay(d0p3);
+}
+
+function sumFromSelectionRange(table, range) {
+  selectionRange(table, range);
+  delay(d0p3);
+  menuLib.copy();
+  delay(d0p3);
+
+  var arryOfNumbers = menuLib.theClipboard().split('\r');
+
+  return sumAllByReduce(arryOfNumbers);
+}
+
+function tableDelimeterUpdate(numbersAppControllerP, table) {
+  numbersActivateFormatIndex(numbersAppControllerP, 0); // Activate table
+
+  selectionRange(table, 'A7');
+
+  numbersAppControllerP.windows[0].scrollAreas[2].buttons.byName('Adjust Import Settings…').click();
+  delay(d0p3);
+
+  numbersAppControllerP.windows[0].sheets[0].radioGroups[0].radioButtons[0].click();
+  delay(d0p3);
+
+  numbersAppControllerP.windows[0].sheets[0].groups[0].scrollAreas[0].groups[0].checkboxes[0].click(); // select "tab"
+  delay(d0p3);
+
+  numbersAppControllerP.windows[0].sheets[0].groups[0].scrollAreas[0].groups[0].checkboxes[1].click(); // deselet ","
+  delay(d0p3);
+
+  numbersAppControllerP.windows[0].sheets[0].buttons.byName('Update Table').click();
+  delay(d0p3);
+}
+
+function tableOutlineNone(numbersAppControllerP, table, rangeName) {
+  delay(d0p3);
+  selectionRange(table, rangeName);
+  delay(d0p3);
+  numbersActivateFormatIndex(numbersAppControllerP, 0); // "Table"
+  delay(d0p3);
+  numbersAppControllerP.windows[0].scrollAreas[3].popUpButtons[3].click();
+  delay(d0p3);
+  numbersAppControllerP.windows[0].scrollAreas[3].popUpButtons[3].menus[0].menuItems['None'].click();
+}
+
+function tableTitleAlign(numbersAppControllerP, alignPosition) {
+  var alignPositionDict = { Left: 0, Center: 1, Right: 2, Justify: 3 };
+
+  // Alighn Title left
+  // Before version 12.X
+  //numbersAppControllerP.windows[0].scrollAreas[2].groups[1].checkboxes[0].click()
+
+  numbersAppControllerP.windows[0].scrollAreas[1].groups[1].checkboxes[alignPositionDict[alignPosition]].click();
+}
+
+function textWrap(numbersAppControllerP, table, rangeName) {
+  delay(d0p3);
+  numbersActivateFormatIndex(numbersAppControllerP, 2); // "Text"
+  delay(d0p3);
+  table.ranges[rangeName].textWrap = true;
+  delay(d0p3);
+}
+
+function thousandsSeparator(numbersAppControllerP, table, rangeName, rangeFormat) {
+  selectionRange(table, rangeName);
+  numbersActivateFormatIndex(numbersAppControllerP, 1); // "Cell"
+
+  // Numbers 12.2 não aceita Thousands se for "Automatic" por isso mudei para "Number"
+  // 🔴🔴🔴🔴 "Automatic" não será usado, se continuar no futuro pode eliminar "rangeFormat" pois será sempre "Number". Em "thousandsSeparatorWithCopyPaste" já eliminei.
+  if (rangeFormat == 'Automatic') {
+    numbersAppControllerP.windows[0].scrollAreas[1].popUpButtons[0].click();
+    delay(d0p3);
+    systemLib.arrowDown(1);
+    systemLib.enter(1);
+  } else if (rangeFormat == 'Number') {
+    table.ranges[rangeName].format = 'number';
+  }
+
+  delay(d0p3);
+  //numbersAppControllerP.windows[0].scrollAreas[3].checkboxes.byName(" Thousands Separator").click()
+
+  // Numbers v12.2 // 20221117
+  numbersAppControllerP.windows[0].scrollAreas[2].checkboxes[' Thousands Separator'].click();
+  delay(d0p3);
+}
+
+function thousandsSeparatorWithCopyPaste(numbersAppControllerP, table, rangeName, decimalsClicks) {
+  selectionRange(table, rangeName);
+
+  numbersActivateFormatIndex(numbersAppControllerP, 1); // "Cell"
+
+  menuLib.copy();
+  systemLib.pressDelete(1);
+  table.ranges[rangeName].format = 'number';
+  delay(d0p3);
+
+  numbersAppControllerP.windows[0].scrollAreas[2].checkboxes[' Thousands Separator'].click();
+  delay(d0p3);
+
+  setDecimals(numbersAppControllerP, table, rangeName, decimalsClicks, 'Up');
+
+  menuLib.doMenu('Numbers', 'Edit', 'Paste and Match Style');
+}
+
+// 🔴🔴 NOT USED YET
+function unMergeCells(table, rangeName) {
+  delay(d0p3);
+  table.ranges[rangeName].unmerge();
+  delay(d0p3);
+}
+
+function writeInRowAvailable(table, referenceRownNum, [textToWriteIfAvailable, columnWhereToWrite]) {
+  if (textToWriteIfAvailable != '') {
+    if (columnWhereToWrite == '') {
+      var textToWriteIfAvailableItems = textToWriteIfAvailable.split(' | ');
+
+      // for (var i = 0; i < textToWriteIfAvailableItems.length; i++) {
+      // 	//seApp.keyCode(125)
+
+      // 	table.rows[referenceRownNum - 1].cells[i].value = textToWriteIfAvailableItems[i]
+      // }
+
+      rowPopulateItems(table, textToWriteIfAvailableItems, referenceRownNum);
+    } else {
+      // Uses columnWhereToWrite
+      table.cells[columnWhereToWrite + referenceRownNum].value = textToWriteIfAvailable;
+    }
+  }
+}
+
+// --------------------------------------- Numbers
+
+function numbersActivateFormatIndex(numbersAppControllerP, formatIndex) {
+  /*
+	// It's not necessary because if you click second time it closes inspector. Just keep instector open and "format" panel active to avoid error
+	delay(d0p3)
+	// ------------ NEW 20240221
+	// Click "Format" to prevent error if "Organze" is active
+	numbersAppControllerP.windows[0].toolbars[0].groups[0].radioButtons[0].click()
+	// ------------
+	*/
+
+  delay(d0p3);
+
+  // Before macos Ventura
+  //numbersAppControllerP.windows[0].radioGroups[0].radioButtons[formatOption].click()
+  numbersAppControllerP.windows[0].radioGroups[0].radioButtons[formatIndex].click();
+  delay(d0p3);
+}
+
+function numbersDateAndReference(docNumbers, productionTypeCode, yyyy_mm_dd__hh_mm_ss, companyIdentifier) {
+  const yyyy_mm_dd = yyyy_mm_dd__hh_mm_ss.split('-')[0];
+
+  const yyyy = yyyy_mm_dd.slice(0, 4);
+
+  const tableReference = docNumbers.sheets['CUSTOMERS&SUPPLIERS'].tables['OneTableForReference'];
+
+  const referencePrevious = tableReference.cells['D2'].value();
+
+  const previousDate = tableReference.cells['A2'].value();
+  const previousYyyy = previousDate.toString().slice(0, 4);
+
+  const referenceCurrentYy = yyyy.slice(-2);
+  const referencePreviousYy = previousYyyy.slice(-2);
+
+  const isFirstReferenceOfYear = referenceCurrentYy != referencePreviousYy;
+
+  var referenceNumberPreviousWithDate = `${referencePrevious} | ${previousDate}`;
+
+  var referenceNumberPrevious = isFirstReferenceOfYear ? 0 : Number(tableReference.cells['B2'].value());
+
+  const referenceNumberIncrement1 = addZero(Number(referenceNumberPrevious) + 1);
+  const referenceNumberIncrement2 = addZero(Number(referenceNumberPrevious) + 2);
+
+  var referenceItemWitcompanyIdentifier = `${companyIdentifier}D${referenceCurrentYy}`;
+
+  var referenceNumber1 = referenceItemWitcompanyIdentifier + productionTypeCode + referenceNumberIncrement1;
+
+  var referenceNumber2 = referenceItemWitcompanyIdentifier + productionTypeCode + referenceNumberIncrement2;
+
+  var referenceNumber1WithDate = referenceNumber1 + ' | ' + yyyy_mm_dd__hh_mm_ss;
+
+  var referenceNumber2WithDate = referenceNumber2 + ' | ' + yyyy_mm_dd__hh_mm_ss;
+
+  var dateDotDdMmYyyy = yyyy_mm_dd.slice(6, 8) + '.' + yyyy_mm_dd.slice(4, 6) + '.' + yyyy;
+
+  if (isFirstReferenceOfYear) {
+    alert(
+      `Primeira referência de ${yyyy}.\n Será registada na tabela "OneTableForReference" de ${previousYyyy}, arquive a tabela e separe a referência.`,
+      `Referência anterior: ${referenceNumberPreviousWithDate}`
+    );
+  }
+
+  return {
+    referenceNumber1WithDate,
+    referenceNumber2WithDate,
+    dateDotDdMmYyyy,
+    referenceNumberIncrement1,
+    referenceNumberIncrement2,
+    referenceNumber1,
+    referenceNumber2,
+    referenceNumberPreviousWithDate,
+    referencePreviousYy,
+    referenceCurrentYy,
+  };
+}
+
+function numbersDocIsArchived(docNum) {
+  return docNum.name().includes('ARCHIVED');
+}
+
+function numbersDocIsTextXA5(docNum) {
+  return docNum.name().includes('TEXT XA5');
+}
+
+function numbersDocIsTextXG5(docNum) {
+  return docNum.name().includes('TEXT XG5');
+}
+
+function numbersExportNumbersCSV2CSV(numbersApp, docNumCsvWritten, pathStr, expExtension) {
+  numbersApp.export(docNumCsvWritten, { to: Path(pathStr), as: expExtension });
+}
+
+function numbersProjectInProcessInfoPopulate(docNumXA5, invoiceCs) {
+  const { sheetFilterName } = numbersSheetGetFilterAndNameReference(docNumXA5);
+
+  const projSheets = docNumXA5.sheets.whose({
+    _and: [{ name: { _contains: sheetFilterName } }, { _not: [{ name: { _beginsWith: templateProjAndPropGeneralPartName } }] }],
+  });
+
+  let projectInProcessInfoToPopulate = [];
+
+  for (let i = 0; i < projSheets.length; i++) {
+    const projSheet = projSheets[i];
+    const projSheetName = projSheet.name();
+    const projSheetNumber = projSheetName.split(' ')[0];
+
+    const customerCellName = "'" + projSheetName + "'::Project Info::C1";
+    const csCellName = "'" + projSheetName + "'::Project Info::C2";
+
+    projectInProcessInfoToPopulate.push({
+      projSheetNumber,
+      customerCellName,
+      csCellName,
+    });
+  }
+
+  const projectInProcessInfoToPopulateL = projectInProcessInfoToPopulate.length;
+
+  const projectInProcessTable = docNumXA5.sheets['PROJECT IN PROCESS'].tables[0];
+  const projectInProcessTableRowsL = projectInProcessTable.rowCount();
+  const rowsL_forProjects = projectInProcessTableRowsL - 1;
+
+  let csActive = '';
+
+  if (!invoiceCs) {
+    for (let i = 1; i < projectInProcessTableRowsL; i++) {
+      var iSum = i + 1;
+      const projectCheck = projectInProcessTable.cells['E' + iSum].value();
+
+      if (projectCheck == 1) {
+        projectInProcessTable.cells['E' + iSum].value = 0;
+
+        if (csActive === '') {
+          csActive = projectInProcessTable.cells['C' + iSum].value();
+        }
+      }
+    }
+  }
+
+  clearRange(projectInProcessTable, `A2:C${projectInProcessTableRowsL}`);
+
+  // alert(`rowsL_forProjects: ${rowsL_forProjects}`, `projectInProcessInfoToPopulateL: ${projectInProcessInfoToPopulateL}`);
+
+  if (projectInProcessInfoToPopulateL > rowsL_forProjects) {
+    // projectInProcessTable.rows[projectInProcessInfoToPopulateL - 1].addRowBelow();
+
+    const numOfRowsToAdd = projectInProcessInfoToPopulateL - rowsL_forProjects;
+    const referenceRownNum = projectInProcessTableRowsL - 1;
+
+    addRows(projectInProcessTable, numOfRowsToAdd, referenceRownNum, 'addRowBelow');
+  }
+
+  for (var i = 0; i < projectInProcessInfoToPopulateL; i++) {
+    var iSum = i + 2;
+
+    const projectInfo = projectInProcessInfoToPopulate[i];
+
+    projectInProcessTable.cells['A' + iSum].value = `${projectInfo.projSheetNumber}`;
+    projectInProcessTable.cells['B' + iSum].value = `=${projectInfo.customerCellName}`;
+    projectInProcessTable.cells['C' + iSum].value = `=${projectInfo.csCellName}`;
+
+    const cs = projectInProcessTable.cells['C' + iSum].value();
+
+    if ((!invoiceCs && cs === csActive) || (invoiceCs && cs === invoiceCs)) {
+      projectInProcessTable.cells['E' + iSum].value = 1;
+    }
+  }
+
+  if (invoiceCs) {
+    projectInProcessTable.cells['L2'].value = invoiceCs[2] == 'W' ? 1 : 0;
+    projectInProcessTable.cells['L3'].value = 0;
+    projectInProcessTable.cells['L4'].value = invoiceCs[2] == 'W' ? 0 : 1;
+    projectInProcessTable.cells['L6'].value = '';
+    // São 8 TXT Estimate files, mas Cobertura não é frequente
+    projectInProcessTable.cells['L7'].value = 7;
+    projectInProcessTable.cells['L17'].value = 0;
+  }
+}
+
+function numbersReferenceTableName(productionTypeCode) {
+  var tableNamesDict = {
+    C: 'Construção (XC5)',
+    E: 'Empreitada (XE5)',
+    F: 'Fiscalização (XF5)',
+    P: 'Projecto (XP5)',
+    G: 'Gestão (XG5)',
+  };
+
+  return tableNamesDict[productionTypeCode[2]];
+}
+
+function numbersSaveAsPDF(numbersAppControllerP, docFront, i, sheetNames, sheetName, docPathStr, formatedPdfNewName) {
+  docFront.activeSheet.set(docFront.sheets[sheetName]);
+
+  if (i == 0) {
+    menuLib.print('Numbers');
+
+    //numbersAppControllerP.windows[0].radioGroups[1].radioButtons[0].click() // This Sheet
+
+    // Numbers v12.2 // 20221117
+    // This Sheet
+    numbersAppControllerP.windows[0].radioGroups[1].radioButtons['This Sheet'].click();
+    delay(d0p3); // NEW
+  }
+
+  appLib.printSaveAsPDF('Numbers');
+  delay(d2);
+  saApp.setTheClipboardTo(formatedPdfNewName);
+  delay(d0p3);
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+
+  // alert("X1")
+
+  // goToFolderCopyPaste(docPathStr);
+
+  // --------- 🔴🔴🔴 TEMPORARY, replace "goToFolderCopyPaste"
+  //delay(d1) // Fica no App
+  seApp.keystroke('g', { using: ['shift down', 'command down'] });
+  delay(d1); // Era d0p3
+  menuLib.copyPaste(docPathStr);
+  delay(d0p3);
+  seApp.keyCode(76); // Go // Era 76
+  // systemLib.enter(1)
+  delay(d1p5);
+  seApp.keyCode(76); // OK // Era 76
+  // systemLib.enter(1)
+  delay(d0p3);
+  // ---------
+
+  delay(d3);
+
+  if (i == sheetNames.length - 1) {
+    delay(d3); // Time to Scape not cancel if PDF has many pages
+    seApp.keyCode(53); // Scape to Go to Normal View
+  }
+
+  finderApp.reveal(Path(docPathStr + '/' + formatedPdfNewName + '.pdf')).extensionHidden = true;
+  delay(d0p3);
+}
+
+/*
+function numbersSheetDuplicate(numbersAppControllerP, docNumbers, sheetNameReference, sheetName) {
+	delay(d0p3)
+	docNumbers.activeSheet.set(docNumbers.sheets[sheetNameReference])
+	delay(d0p3)
+	numbersAppControllerP.windows[0].buttons["Duplicate Sheet"].click()
+	delay(d0p3)
+
+	// 00X00E SUPERFÍCIES 305-1
+	// ----- CHANGE NAME
+	//var sheetName = sheetNameReference.replace(/\d{3}/,buildingNum)
+
+	docNumbers.sheets[`${sheetNameReference}-1`].name = sheetName
+	delay(d0p3)
+}
+*/
+
+function numbersSheetDuplicate(numbersAppControllerP, docNumbers, sheetNameReference, sheetName) {
+  delay(d0p3);
+  docNumbers.activeSheet.set(docNumbers.sheets[sheetNameReference]);
+  delay(d0p3);
+
+  try {
+    numbersAppControllerP.windows[0].buttons['Duplicate Sheet'].click();
+  } catch (error) {
+    // SCAPE HERE
+
+    systemLib.scape();
+    // delay(d0p3)
+    numbersAppControllerP.windows[0].buttons['Duplicate Sheet'].click();
+  }
+  delay(d0p3);
+
+  // 00X00E SUPERFÍCIES 305-1
+  // ----- CHANGE NAME
+  //var sheetName = sheetNameReference.replace(/\d{3}/,buildingNum)
+
+  docNumbers.sheets[`${sheetNameReference}-1`].name = sheetName;
+  delay(d0p3);
+}
+
+function numbersSheetDuplicateAndUpdatePrefixNumber(numbersAppControllerP, docNum, customer4Folders) {
+  // const docNumName = docNum.name()
+  // const nextNumberIsNumber = docNumName.includes("ARCHIVED");
+  const nextNumberIsNumber = numbersDocIsArchived(docNum);
+
+  const { sheetFilterName, sheetTemplateName } = numbersSheetGetFilterAndNameReference(docNum);
+
+  const proposalSheetNames = docNum.sheets
+    .whose({
+      _and: [{ name: { _contains: sheetFilterName } }, { _not: [{ name: { _beginsWith: templateProjAndPropGeneralPartName } }] }],
+    })
+    .name();
+
+  const sheetNumbers = proposalSheetNames.map(sheet => sheet.split(' ')[0]);
+  sheetNumbers;
+
+  // Separate letters and numbers into two arrays
+  const letters = sheetNumbers.filter(num => isNaN(Number(num)));
+  const numbers = sheetNumbers.filter(num => !isNaN(Number(num)));
+
+  // Sort each array in descending order
+  letters.sort((a, b) => b.localeCompare(a));
+  numbers.sort((a, b) => Number(b) - Number(a));
+
+  // Determine the current sheetNumber
+  const currentSheetNumber = letters.length > 0 ? letters[0] : numbers[0];
+
+  const nextSheetNumber = getNextNumberOrLetter(currentSheetNumber, nextNumberIsNumber);
+
+  // console.log(nextSheetNumber); // This will log '2' for the given example
+
+  const sheetName = `${nextSheetNumber} ${sheetFilterName} ${customer4Folders}`;
+
+  numbersSheetDuplicate(numbersAppControllerP, docNum, sheetTemplateName, sheetName);
+
+  return sheetName;
+}
+
+/*
+function numbersSheetGetFilterAndNameReference(docNum) {
+	const projSheetFilterName = "PROJ -";
+	const propSheetFilterName = "PROP -";
+	// let sheetFilterName = null;
+
+	const docNumName = docNum.name()
+
+	if (docNumName.includes("TEXT XA5")) {
+		return projSheetFilterName
+		
+	} else if (docNumName.includes("TEXT XG5")) {
+		return propSheetFilterName
+	}
+
+	return alert(`Erro. O nome "${docNumName}" deve incluir "${projSheetFilterName}" ou "${propSheetFilterName}"`, ``)
+}
+*/
+
+/*
+function numbersSheetGetFilterAndNameReference(docNum) {
+	const projSheetFilterName = "PROJ -";
+	const propSheetFilterName = "PROP -";
+	// let sheetFilterName = null;
+
+	let sheetFilterName = "";
+	let sheetTemplateName = "";
+
+	const docNumName = docNum.name()
+
+	if (docNumName.includes("TEXT XA5") || docNumName.includes("TEXT XG5")) {
+		if (docNumName.includes("TEXT XA5")) {
+			// return projSheetFilterName
+			sheetFilterName = projSheetFilterName
+			sheetTemplateName = "0 PROJ - TEMPLATE"
+			
+		} else if (docNumName.includes("TEXT XG5")) {
+			// return propSheetFilterName
+			sheetFilterName = propSheetFilterName
+			sheetTemplateName = "0 PROP - TEMPLATE"
+		}
+
+		return {
+			sheetFilterName,
+			sheetTemplateName,
+		}
+	}
+
+	return alert(`Erro. O nome "${docNumName}" deve incluir "${projSheetFilterName}" ou "${propSheetFilterName}"`, ``)
+}
+*/
+
+function numbersSheetGetFilterAndNameReference(docNum) {
+  const PROJ_SHEET_FILTER_NAME = 'PROJ -';
+  const PROP_SHEET_FILTER_NAME = 'PROP -';
+  const PROJ_TEMPLATE_NAME = '0 PROJ - TEMPLATE';
+  const PROP_TEMPLATE_NAME = '0 PROP - TEMPLATE';
+  // const docNumName = docNum.name();
+
+  let sheetInfo = {};
+
+  // if (docNumName.includes("TEXT XA5")) {
+  if (numbersDocIsTextXA5(docNum)) {
+    sheetInfo = {
+      sheetFilterName: PROJ_SHEET_FILTER_NAME,
+      sheetTemplateName: PROJ_TEMPLATE_NAME,
+    };
+    // } else if (docNumName.includes("TEXT XG5")) {
+  } else if (numbersDocIsTextXG5(docNum)) {
+    sheetInfo = {
+      sheetFilterName: PROP_SHEET_FILTER_NAME,
+      sheetTemplateName: PROP_TEMPLATE_NAME,
+    };
+  } else {
+    return alert(`Erro. O nome "${docNum.name()}" deve incluir "${PROJ_SHEET_FILTER_NAME}" ou "${PROP_SHEET_FILTER_NAME}"`, ``);
+  }
+
+  return sheetInfo;
+}
+
+function numbersSheetsUpdatePrefixNumbers(docNumXG5) {
+  const docNumName = docNumXG5.name();
+  const nextNumberIsNumber = docNumName.includes('ARCHIVED');
+
+  const { sheetFilterName } = numbersSheetGetFilterAndNameReference(docNumXG5);
+
+  const sheets = docNumXG5.sheets.whose({
+    _and: [{ name: { _contains: sheetFilterName } }, { _not: [{ name: { _beginsWith: templateProjAndPropGeneralPartName } }] }],
+  });
+
+  /*
+	const generateCorrectedIdentifiers = (length) => {
+		const correctedIdentifiers = [];
+		let currentIdentifier = '0'; // Start with string '1'
+
+		for (let i = 0; i < length; i++) {
+			correctedIdentifiers.push(currentIdentifier);
+			currentIdentifier = getNextNumberOrLetter(currentIdentifier, nextNumberIsNumber);
+		}
+
+		return correctedIdentifiers;
+	};
+	*/
+
+  const generateCorrectedIdentifiers = (length, nextNumberIsNumber) => {
+    const correctedIdentifiers = [];
+    let currentIdentifier = nextNumberIsNumber ? '0' : '1'; // Adjust starting point based on nextNumberIsNumber
+    // let currentIdentifier = '1'
+
+    for (let i = 0; i < length; i++) {
+      // correctedIdentifiers.push(currentIdentifier);
+      // currentIdentifier = getNextNumberOrLetter(currentIdentifier, nextNumberIsNumber);
+
+      if (nextNumberIsNumber) {
+        currentIdentifier = getNextNumberOrLetter(currentIdentifier, nextNumberIsNumber);
+        correctedIdentifiers.push(currentIdentifier);
+      } else {
+        correctedIdentifiers.push(currentIdentifier);
+        currentIdentifier = getNextNumberOrLetter(currentIdentifier, nextNumberIsNumber);
+      }
+    }
+
+    // var theVariable = cfl2Str(correctedIdentifiers, "Referência", correctedIdentifiers[0])
+
+    return correctedIdentifiers;
+  };
+
+  const correctedIdentifiers = generateCorrectedIdentifiers(sheets.length, nextNumberIsNumber);
+  const correctedIdentifiersDescendent = correctedIdentifiers.slice().reverse();
+
+  // var theVariable = cfl2Str(correctedIdentifiersDescendent, "Referência", correctedIdentifiersDescendent[0])
+
+  for (let i = 0; i < sheets.length; i++) {
+    const [currentNumber, ...restOfName] = sheets[i].name().split(' ');
+
+    // alert(`${i}\n\n${sheets[i].name()}\n\n${currentNumber}\n\n${correctedIdentifiersDescendent[i]}`, ``)
+
+    if (currentNumber != correctedIdentifiersDescendent[i]) {
+      console.log(currentNumber);
+
+      sheets[i].name = `${correctedIdentifiersDescendent[i]} ${restOfName.join(' ')}`;
+    }
+  }
+}
+
+function numbersQuoteChargedPercentage(tableInputs1) {
+  var appliedAmountCheck = tableInputs1.cells['F15'].value();
+
+  if (appliedAmountCheck == 1) {
+    // Will bring symbol only if is X%. 0.3% comes as number 0.003
+    var chargedPercentageWithoutSymbol = tableInputs1.cells['C15'].value();
+
+    if (Number(chargedPercentageWithoutSymbol)) {
+      var chargedPercentage = formatNumber((chargedPercentageWithoutSymbol * 100).toString(), 2, 2);
+    } else {
+      var chargedPercentage = chargedPercentageWithoutSymbol.replace('%', '');
+    }
+  } else {
+    var chargedPercentage = formatNumber((tableInputs1.cells['E12'].value() * 100).toString(), 2, 2);
+  }
+
+  var chargedPercentageItems = chargedPercentage.split('.');
+  var chargedPercentageDecimalPart = chargedPercentageItems[1];
+
+  // O "X" é de valor aplicado de percentagem X%
+  if (chargedPercentageItems[0] != 'X') {
+    if (chargedPercentageDecimalPart == '00') {
+      var chargedPercentage = chargedPercentageItems[0];
+    } else if (chargedPercentageDecimalPart.slice(-1) == '0') {
+      var chargedPercentage = chargedPercentage.slice(0, chargedPercentage.length - 1);
+    } else {
+      var chargedPercentage = chargedPercentage;
+    }
+  }
+
+  return chargedPercentage;
+}
+
+// function numbersWriteReference(numbersApp, docNumbers, productionTypeCode, referenceNumberWithDate, referenceToWrite) {
+function numbersWriteReference(
+  numbersApp,
+  docNumbers,
+  referenceNumberWithDate,
+  referenceNumberIncrement1,
+  referenceToWrite,
+  filePathSaved
+) {
+  numbersApp.activate();
+  // var referenceTableName = numbersReferenceTableName(productionTypeCode)
+  // var tableReference = docNumbers.sheets["CUSTOMERS&SUPPLIERS"].tables[referenceTableName]
+  var tableReference = docNumbers.sheets['CUSTOMERS&SUPPLIERS'].tables['OneTableForReference'];
+
+  // const referenceNumberWithDateItems =
+
+  const referenceNumberWithDateItems = referenceNumberWithDate.split(' | ');
+
+  // tableReference.cells["A1"].value = referenceNumberWithDate
+  tableReference.cells['A2'].addRowAbove();
+  tableReference.cells['A2'].value = referenceNumberWithDateItems[1];
+  tableReference.cells['B2'].value = referenceNumberIncrement1;
+  tableReference.cells['C2'].value = referenceNumberWithDateItems[0][0]; // companyIdentifier
+  tableReference.cells['D2'].value = referenceNumberWithDateItems[0];
+
+  // XD24A5P03 is A for referenceNumberWithDateItems[1][6]
+  tableReference.cells['E2'].value = projectLib.getDisciplineByC1(referenceNumberWithDateItems[0][4]);
+
+  // XD24A5P03 is P for referenceNumberWithDateItems[1][6]
+  tableReference.cells['F2'].value = projectLib.getServiceByC1(referenceNumberWithDateItems[0][6]);
+  tableReference.cells['G2'].value = referenceToWrite;
+  tableReference.cells['H2'].value = filePathSaved;
+}
+
+// function numbersGetRecipientTableNameAndObjectsAndCss(customerAndSupplierSheet, invoiceCs, docStringName) {
+
+// 	// 🔴🔴🔴 MELHORAR ESTE FILTRO PARA NÃO PEGAR QUALQUER TABELA QUE TENHA " - "
+// 	// TRIED BELOW WITH NO SUCESS
+// 	var tableRecipients = customerAndSupplierSheet.tables.whose({name: { _contains: " - "}})
+
+// 	// var tables = customerAndSupplierSheet.tables; // assuming this gets the tables
+// 	// var regex = /^\d.* - .*/;
+
+// 	// var tableRecipients = tables.filter(function(table) {
+// 	// 	return regex.test(table.name);
+// 	// });
+
+// 	// var theVariable = cflLib.cfl2Str(tableRecipients.name(), "Referência", tableRecipients.name()[0])
+
+// 	for (var l = 0; l < tableRecipients.length; l++) {
+
+// 		var table = tableRecipients[l]
+// 		var tableRowsL = table.rowCount()
+// 		var tableName = table.name()
+
+// 		var tableObjectsAndCss = []
+
+// 		for (var m = 5; m < tableRowsL; m++) {
+
+// 			var mSum = m + 1
+// 			var currentObject = table.cells["A" + mSum].value()
+
+// 			// alert(`${currentObject}\n------\n${tableName}`, ``)
+
+// 			if (currentObject.includes("Fiscalização da ")) {
+// 				var currentObject = currentObject.replace("Fiscalização da ", "")
+// 			}
+
+// 			var locationID = table.cells["B" + mSum].value()
+// 			var currentObjectInvoiceCs = table.cells["C" + mSum].value().toString()
+
+// 			try { // Para acomodar situações que no campo de CS não seja CS (ex: Trazer CS5)
+
+// 				if (!projectLib.isCs(currentObjectInvoiceCs)) {
+
+// 					// Gestão - In Gestão comes as number TVCabo is 2018105550
+// 					// Vodacom is V0276269
+
+// 					//var service = "Gestão"
+// 					// tableObjectsAndCss | Não precisa de service e currentObjectInvoiceCs por que o objecto já vem com currentObjectInvoiceCs
+// 					tableObjectsAndCss.push(`${currentObject}`)
+
+// 				} else {
+
+// 					var service = projectLib.getServiceByC1(currentObjectInvoiceCs[5])
+
+// 					if (service == "Projecto" && currentObjectInvoiceCs[4] == "U") {
+// 						var service = "Plano" // substituir "Projecto" por "Plano"
+// 					}
+
+// 					if (service[0] != "P") { // If is not Plano ou Projecto
+// 						var service = "Obra"
+// 					}
+
+// 					tableObjectsAndCss.push(`${currentObject} (${service} ${locationID} ${currentObjectInvoiceCs})`)
+// 				}
+
+// 				//tableObjectsAndCss.push(`${currentObject} (${service} ${currentObjectInvoiceCs})`)
+
+// 				// alert(`${currentObjectInvoiceCs}\n------\n${invoiceCs}`, ``)
+
+// 				if (currentObjectInvoiceCs == invoiceCs) {
+// 					var isThisTable = true
+// 				}
+// 			} catch {
+// 				//
+// 			}
+// 		}
+
+// 		if (isThisTable) {
+// 			var recipientName = tableName
+// 			break;
+// 		}
+// 	}
+
+// 	if (recipientName == undefined) {
+// 		alert(`${docStringName}\nNão foi encontrada tabela de cliente para o Projecto "${invoiceCs}"❗️`, ``)
+
+// 	} else {
+// 		return [recipientName, tableObjectsAndCss]
+// 	}
+// }
+
+// --------------------------------------- Pages
+
+function pagesApplyLetterHeader(tableHeader, header, reference, date, production) {
+  if (!production.includes('Quitações')) {
+    tableHeader.cells['A1'].value = header;
+
+    // Because A1 is merged with B1, when you apply info in it, it pushes existing info to B1 and unmerge, so must be cleared before merge again
+    tableHeader.cells['B1'].value = '';
+
+    mergeCells(tableHeader, 'A1:B1');
+  }
+
+  tableHeader.cells['A2'].value = reference;
+  tableHeader.cells['B2'].value = date;
+}

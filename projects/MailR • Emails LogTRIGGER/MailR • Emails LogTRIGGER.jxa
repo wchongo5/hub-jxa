@@ -1,0 +1,36 @@
+
+
+// v1.0
+// Save using Script Editor (.scpt)
+// And place in "/Users/xd5-wmac/Library/Application Scripts/com.apple.mail"
+
+var pathLib = Library("pathLib")
+
+
+
+
+
+var emailsProcessTriggerStr = pathLib.getPlataformsPathStr() + "/APPS WF/EMAILS LOG TRIGGER"
+
+function performMailActionWithMessages(messages, {forRule: theRule}) {
+
+	var seApp = Application("System Events")
+	var finderApp = Application("Finder")
+
+	var dateMain = new Date()
+
+	var yyyy = (dateMain.getFullYear().toString())
+	var mm = dateMain.toLocaleString("en", {month: "2-digit"})
+	var dd = dateMain.toLocaleString("en", {day: "2-digit"})
+	var time = (dateMain.toLocaleString("en", {hourCycle: "h24", hour: "2-digit", minute: "2-digit", second: "2-digit"})).replace(/:/g, "")
+
+	var timeStamp = yyyy + mm + dd + "-" + time
+
+	//var emailsProcessTriggerStr = "/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/APPS WF/EMAILS LOG TRIGGER"
+	var emailsProcessTriggerFolders = seApp.folders.byName(emailsProcessTriggerStr).folders
+	var thisFolderL = emailsProcessTriggerFolders.length
+
+	if (thisFolderL == 0) {
+		finderApp.make({new: "folder", at: Path(emailsProcessTriggerStr), withProperties: {name: "TRIGGER " + timeStamp }});
+	}
+}

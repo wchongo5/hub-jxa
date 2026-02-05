@@ -1,0 +1,1938 @@
+// v13.3
+
+ObjC.import('Quartz');
+
+const {
+  sortArray,
+
+  // 	// Affinity Publisher
+  getAffinityPublisherName,
+  // publisherCreateCSV,
+  publisherExport2PDF,
+  publisherUpdateDataMerge,
+} = Library('appLib');
+const { cfl, cfl2Str } = Library('cflLib');
+const contactLib = Library('contactLib');
+const { formatDateV3, getDelays } = Library('datetimeLib');
+const { alert, dialog } = Library('displayLib');
+const documentLib = Library('documentLib');
+const {
+  getFinderFilePathSr,
+  getFinderFolderPathSr,
+  getItemNamesFromPathStrs,
+  getND,
+  getPathStrsFromPathStr,
+  getPathStrsFromPathObjs,
+} = Library('finderLib');
+const { numbersDocIsArchived, numbersDocIsTextXA5, numbersProjectInProcessInfoPopulate, numbersSheetsUpdatePrefixNumbers } =
+  Library('iWorkLib');
+const { createSmartMailbox } = Library('mailLib');
+const { paste, selectPreviousInputParagraph, selectPreviousParagraph, setClipboard, theClipboard } = Library('menuLib');
+const { getMoneyInText, getNextNumberOrLetter } = Library('numberLib');
+
+const affinityPublisherName = getAffinityPublisherName();
+
+const pathLib = Library('pathLib');
+const objCLib = Library('objCLib');
+const projectLib = Library('projectLib');
+const safariLib = Library('safariLib');
+const { enter, tab } = Library('systemLib');
+
+const colorsLib = Library('colorsLib');
+const xxAutoLib = Library('xxAutoLib');
+const paymentLib = Library('paymentLib');
+const notesLib = Library('notesLib');
+
+const imageLib = Library('imageLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+const previewApp = Application('Preview');
+
+const safariApp = Application('Safari');
+const safariAppControllerP = seApp.processes['Safari'];
+
+const mailApp = Application('Mail');
+const pagesApp = Application('Pages');
+const numbersApp = Application('Numbers');
+const notesApp = Application('Notes');
+const textEditApp = Application('TextEdit');
+
+const affinityPublisherApp = Application(affinityPublisherName);
+const publisherAppControllerAp = seApp.processes[affinityPublisherName];
+
+alert(
+  `🔴🔴🔴 O xxAuto _ AutoProcesses2 - ScriptEditor4System (autoUpdateContactsNotes, autoGetAndSaveContacts, autoBackup and autoDisplay) - tem a função saveLogAutoProcess desactivada em autoUpdateContactsNotes por congela - fix in the future (os logs no file não tem interferência no processamento demorado de "autoGetAndSaveContacts"?)`,
+  ``
+);
+
+alert('Z1');
+
+// ---------------------------------------
+const ND = getND();
+alert('Z1.1');
+
+// ---------------------------------------
+const { d0p3, d1, d2, d3, d5, d7 } = getDelays();
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const { dateY4M2D2H2M2S2, dateY4M2D2__H2M2S2, yearY4M2 } = nowFormatted.formats;
+
+alert('Z2');
+
+// ---------------------------------------
+
+const plataformsPathStr = pathLib.getPlataformsPathStr();
+const xa5TemporayPathStr = pathLib.getXa5TemporayPathStr();
+
+const numXG5PathObj = Path(pathLib.getNumXG5PathStr());
+
+alert('Z3');
+
+const profileFolderPathStr = pathLib.getP2PathStr() + '/IDENTIDADE (SYNC5 COM PAPER)/P2II IDENTIDADE - CONCURSOS/P2I1P PERFIL';
+
+const a5ProfilePathStr = profileFolderPathStr + '/X-DIM PERFIL PLACEHOLDER - A5.afpub';
+const u5ProfilePathStr = profileFolderPathStr + '/X-DIM PERFIL PLACEHOLDER - U5.afpub';
+
+// const imageCsvInfoPathStr = profileFolderPathStr + "/X5 - XD5PROFILE CSV INFO.CSV"
+
+// TEMPORARY PATHS BECAUSE OF ICLOUD ISSUES
+// const a5ProfilePathStr = "/Users/xd5-wmac/P0 OFFLINE FOLDER/X-DIM PERFIL PLACEHOLDER - A5.afpub"
+// const u5ProfilePathStr = profileFolderPathStr + "/X-DIM PERFIL PLACEHOLDER - U5.afpub"
+const imageCsvInfoPathStr = '/Users/xd5-wmac/P0 OFFLINE FOLDER/PERFIL OFFLINE/X5 - XD5PROFILE CSV INFO.CSV';
+
+const assetPathStr = profileFolderPathStr + '/ASSETS4XD5PROFILE';
+
+alert('Z4');
+
+const designAndSpecsPathStr = pathLib.getNumDesignAndSpecsPathStr();
+
+const p4SP5DAutomatorFolderActionsPathStr = pathLib.getP4SP5DAutomatorFolderActionsPathStr();
+
+alert('Z5');
+
+// ---------------------------------------
+
+const destinyFolderStr = getFinderFolderPathSr();
+const finderFilePathSr = getFinderFilePathSr();
+
+// ---------------------------------------
+
+alert('1');
+
+var appsNamesListInput = ['Atom', 'GitHub Desktop', 'Dropbox', 'Dropbox Paper', 'Dropbox Passwords', 'Google Earth Pro'];
+
+const optionsToExclude = [
+  '---------------',
+  'Open Invoices',
+  'xd5ProfileMaker',
+  '---------------',
+  'xxAuto _ AutoBackup - RunNow',
+  'xxAuto _ AutoDisplay - RunNow',
+  '---------------',
+  'xxAuto _ AutoUpdateContactsNotes - RunNow - ThenRun #AutoGetAndSaveContacts',
+  'xxAuto _ AutoGetAndSaveContacts - RunNow',
+];
+
+const appsAndVersionName = 'Apps & Versions';
+
+const optionD_ID = 'AutoUpdateContactsNotes';
+
+const options = [
+  appsAndVersionName,
+  'Cálculo de Tempo',
+  'Clear Invoicing Name',
+  'Colors - Writing',
+  'Consultoria - ExtractPDFImagesByPaperFormat',
+  'Copiar Nomes de Items Selecionados no Finder',
+  'CreateLinkInNotes - CopyLinkName_URLFrontPage',
+  'CreateLinkInNotes - MultiCopyURLAndLinkName',
+  'CreateLinkInNotes - YoutubePlaylists',
+  'Dinheiro Por Extenso',
+  'Display Item Properties',
+  'Encontre Soma na Lista de Valores',
+  'Folder Actions',
+  'Folder Names to Document',
+  'Mail - SmartMailboxes - Create from GroupsInfoForMail - 01',
+  'Mail - SmartMailboxes - Create from GroupsInfo - 02',
+  'Mail Message Info',
+  'Merge PDFs',
+  'Needs - QuantityZero',
+  'Safari W1 - Bookmark Tabs',
+  'Safari W1 - ClipboardURLTabs Opener',
+  'Safari W1 - Close Tabs',
+  'Safari W1 - Order Tabs',
+  'Save Numbers Info to PNG',
+  'System',
+  'Tags',
+  'UpdatePrefixNumbersAndProjectInProcessTable',
+  'Word Counter',
+].concat(optionsToExclude);
+
+alert('2');
+
+const optionsWithShortcuts = options.map((option, index) => {
+  if (optionsToExclude.includes(option)) {
+    return option;
+  } else {
+    return `${getNextNumberOrLetter(index)}. ${option}`;
+  }
+});
+
+const optionD = optionsWithShortcuts.find(option => option.includes(optionD_ID));
+
+alert('3');
+
+var option = cfl2Str(optionsWithShortcuts, 'Tool', optionD);
+
+if (option.includes('.')) {
+  var option = option.split('. ')[1];
+}
+
+if (option == 'Apps & Versions') {
+  var appsNamesListOutput = [];
+
+  try {
+    for (var i = 0; i < appsNamesListInput.length; i++) {
+      var finderAppVersion = Application(appsNamesListInput[i]).version();
+      appsNamesListOutput.push(`${appsNamesListInput[i]} ${finderAppVersion}`);
+    }
+  } catch (error) {
+    alert(`${error.name}`, `${error.message}\n\n—\nTalvez o App "${appsNamesListInput[i]}" não está instalado`);
+  }
+
+  alert(appsAndVersionName, appsNamesListOutput.join('\n'));
+} else if (option == 'Cálculo de Tempo') {
+  var dateMain = new Date();
+
+  var yyyy = dateMain.getFullYear();
+  var mm = addZero(dateMain.getMonth() + 1);
+  var dd = addZero(dateMain.getDate());
+
+  var timeOperation = cfl2Str(
+    [
+      '1. Soma - Dias',
+      '2. Soma - Meses',
+      '3. Subtração - Dias',
+      '4. Subtração - Meses',
+      '---------------',
+      'Subtração entre datas',
+    ],
+    'Cálculo',
+    '2. Soma - Meses'
+  );
+
+  // Number(dd).toString() / Para eliminar 0 if dd < 10
+  var ddEntry = addZero(dDialog('Dia (início)', Number(dd).toString()));
+  var mmEntry = addZero(dDialog('Mês (início)', Number(mm).toString()));
+
+  var startDateStr = dDialog('Data (início)', mmEntry + '/' + ddEntry + '/' + yyyy);
+
+  var startDate = new Date(startDateStr);
+
+  if (timeOperation == '1. Soma - Dias' || timeOperation == '3. Subtração - Dias') {
+    var duration = Number(dDialog('Tempo em dias.', '15'));
+
+    if (timeOperation == '1. Soma - Dias') {
+      var endDateNum = startDate.setDate(startDate.getDate() + duration);
+    } else if (timeOperation == '3. Subtração - Dias') {
+      var endDateNum = startDate.setDate(startDate.getDate() - duration);
+    }
+
+    var endDate = new Date(endDateNum);
+
+    var endMonth = addZero(endDate.getMonth() + 1);
+    var endDay = addZero(endDate.getDate());
+    var endYear = endDate.getFullYear();
+
+    dAlert('Data fim (mm/dd/yyyy).\n\n' + endMonth + '/' + endDay + '/' + endYear, '');
+  } else if (timeOperation == '2. Soma - Meses' || timeOperation == '4. Subtração - Meses') {
+    var duration = Number(dDialog('Tempo em meses.', '3'));
+
+    var durationStr = duration.toString();
+
+    if (durationStr.includes('.')) {
+      var durationDecimal = durationStr.split('.')[1];
+    }
+
+    if (timeOperation == '2. Soma - Meses') {
+      if (durationStr.includes('.') && Number(durationDecimal) > 0) {
+        var endDateNum = startDate.setDate(startDate.getDate() + duration * 4.33 * 7);
+      } else {
+        var endDateNum = startDate.setMonth(startDate.getMonth() + duration);
+      }
+    } else if (timeOperation == '4. Subtração - Meses') {
+      if (durationStr.includes('.') && Number(durationDecimal) > 0) {
+        var endDateNum = startDate.setDate(startDate.getDate() - duration * 4.33 * 7);
+      } else {
+        var endDateNum = startDate.setMonth(startDate.getMonth() - duration);
+      }
+    }
+
+    var endDate = new Date(endDateNum);
+
+    var endMonth = addZero(endDate.getMonth() + 1);
+    var endDay = addZero(endDate.getDate());
+    var endYear = endDate.getFullYear();
+
+    dAlert('Data fim (mm/dd/yyyy).\n\n' + endMonth + '/' + endDay + '/' + endYear, '');
+  } else if (timeOperation == 'Subtração entre datas') {
+    var ddEntry = addZero(dDialog('Dia fim', Number(dd).toString()));
+    var mmEntry = addZero(dDialog('Mês fim', Number(mm).toString()));
+
+    var endDateStr = dDialog('Data fim', mmEntry + '/' + ddEntry + '/' + yyyy);
+
+    var endDate = new Date(endDateStr);
+
+    var durationUnit = cfl2Str(['Dias', 'Meses'], 'Unidades de cálculo', 'Meses');
+
+    var duration = endDate - startDate;
+
+    if (durationUnit == 'Dias') {
+      var duration = duration / 24 / 60 / 60 / 1000;
+
+      if (duration > 1 && durationUnit == 'Dias') {
+        var durationUnit = 'dias';
+      } else {
+        var durationUnit = 'dia';
+      }
+    } else if (durationUnit == 'Meses') {
+      var duration = duration / 30 / 24 / 60 / 60 / 1000;
+
+      if (duration > 1 && durationUnit == 'Meses') {
+        var durationUnit = 'meses';
+      } else {
+        var durationUnit = 'mês';
+      }
+    }
+
+    var durationStr = duration.toString();
+
+    if (durationStr.includes('.')) {
+      //var durationDecimal = durationStr.split(".")[1]
+      dAlert(formatNumber(duration, 1, 1) + ' ' + durationUnit, '');
+    } else {
+      dAlert(duration + ' ' + durationUnit, '');
+    }
+  }
+} else if (option == 'Clear Invoicing Name') {
+  var finderSelectionList = finderApp.selection();
+
+  var fileNameOfFile1 = finderSelectionList[0].name();
+
+  if (fileNameOfFile1.includes('(FR)') || fileNameOfFile1.includes('(R)')) {
+    var renameOptionD = `2. R`;
+  } else if (fileNameOfFile1.includes('(F)')) {
+    var renameOptionD = `1. F`;
+  }
+
+  if (fileNameOfFile1.includes('(FR)')) {
+    var renameOption = cfl2Str([`1. F`, `2. R`, `3. FR`], `Remover`, renameOptionD);
+  } else {
+    var renameOption = renameOptionD;
+  }
+
+  var renameOption = renameOption.split(`. `)[1];
+
+  for (var i = 0; i < finderSelectionList.length; i++) {
+    finderSelectionList[i].extensionHidden = true;
+
+    var fileSelectedCurrent = finderSelectionList[i];
+
+    var fileName = fileSelectedCurrent.name();
+    var nameExtension = fileSelectedCurrent.nameExtension();
+
+    var aliasNameWithOutExtension = fileName.split(`.` + nameExtension)[0];
+
+    if (renameOption == `F`) {
+      if (aliasNameWithOutExtension.includes('R)')) {
+        var aliasNameWithOutExtension = aliasNameWithOutExtension.replace(/\(F/, `(`);
+      } else {
+        var aliasNameWithOutExtension = aliasNameWithOutExtension.replace(/\s_\sA \(F\)/, ``);
+      }
+    } else if (renameOption == `R`) {
+      if (aliasNameWithOutExtension.includes('(F')) {
+        var aliasNameWithOutExtension = aliasNameWithOutExtension.replace(/R\)/, `)`);
+      } else {
+        var aliasNameWithOutExtension = aliasNameWithOutExtension.replace(/\s_\sA \(R\)/, ``);
+      }
+    } else if (renameOption == `FR`) {
+      var aliasNameWithOutExtension = aliasNameWithOutExtension.replace(/\s_\sA \(FR\)/, ``);
+    }
+
+    var docNameAndExtension = aliasNameWithOutExtension + `.` + nameExtension;
+
+    // New Name
+    fileSelectedCurrent.name = docNameAndExtension;
+    delay(0.5);
+
+    var fileNameRenamed = finderApp.selection()[0].name();
+
+    if (!fileNameRenamed.includes('(F)') && !fileNameRenamed.includes('(R)')) {
+      //var notifyToUpdateInXero = true
+
+      dAlert(`Xero | Faz Upload final de "${fileNameRenamed.split('.pdf')[0]}"!`, ``);
+    }
+  }
+} else if (option == 'Colors - Writing') {
+  numbersApp.activate();
+
+  // var designAndSpecsPathStr = pathLib.getNumDesignAndSpecsPathStr()
+
+  var docNumDesignAndSpecs = numbersApp.open(Path(designAndSpecsPathStr));
+
+  //var docNumbers = numbersApp.documents[0]
+
+  var tableColorLib = docNumDesignAndSpecs.sheets['JAVASCRIPT COLOR'].tables['Table-colorsLib'];
+
+  var tableColorLibRowsL = tableColorLib.rowCount();
+  var tableColorLibRowsLMinus1 = tableColorLibRowsL - 1;
+
+  var colors = colorsLib.getColors();
+
+  var colorsList = Object.entries(colors);
+  // [["black", "black"], ["blue", "blue"], ["brown", "brown"], ["cyan", "cyan"], ["cyanLight", [48059, 65535, 65535]], ["green", "green"], ["greenLight", [48573, 64764, 51657]], ["magenta", "magenta"], ["magentaLight", [65535, 48059, 65535]], ["orange", "orange"], ["purple", "purple"], ["red", "red"], ["redLight", [65535, 46774, 49601]], ["yellow", "yellow"], ["yellowLight", [65535, 63222, 36237]], ["white", "white"], ["grayLight1", [54998, 54998, 54998]]]
+
+  var colorL = colorsList.length;
+
+  if (colorL > tableColorLibRowsLMinus1) {
+    // - 1 para excluir a fila de títulos
+    alert(`A tabela "tableColorLib" tem menos filas (${tableColorLibRowsLMinus1}) para processar as cores (${colorL}).`, ``);
+  } else {
+    for (var i = 0; i < colorL; i++) {
+      var iSum = i + 2; // + 2 to start from A2, A1 is for
+
+      var color = colorsList[i];
+
+      tableColorLib.cells['A' + iSum].backgroundColor = color[1];
+      tableColorLib.cells['B' + iSum].value = color[0];
+    }
+  }
+} else if (option == 'Consultoria - ExtractPDFImagesByPaperFormat') {
+  // alert(`${destinyFolderStr}`, ``)
+
+  imageLib.extractConsultancyPDFImagesByPaperFormat(finderFilePathSr);
+} else if (option == 'Copiar Nomes de Items Selecionados no Finder') {
+  const itemsToExcludeAtBeginningWithSpaceSplitter = Number(
+    dialog(`Número de items a excluir no início considerando "splitter" de " "`, `0`)
+  );
+  const excludeExtension = cfl2Str(['Não', 'Sim'], 'Exluir extensão se for ficheiro?', 'Sim');
+  const includeCommaAtEndOfNameAndPeriodInLast = cfl2Str(
+    ['Não', 'Sim'],
+    'Incluir ";" no fim de cada nome e "." no último',
+    'Sim'
+  );
+
+  const names = getItemNamesFromPathStrs(getPathStrsFromPathObjs(finderApp.selection()), ['']);
+
+  const processedNames = names
+    .map((item, index, array) => {
+      let processedName = item.split(' ').slice(itemsToExcludeAtBeginningWithSpaceSplitter, 100).join(' ');
+
+      if (excludeExtension === 'Sim') {
+        processedName = processedName.replace('.pdf', '');
+      }
+
+      if (includeCommaAtEndOfNameAndPeriodInLast === 'Sim') {
+        processedName = processedName + (index === array.length - 1 ? '.' : ';');
+      }
+      return processedName;
+    })
+    .join('\n');
+
+  setClipboard(processedNames);
+  //dAlert(appsNamesListOutput.join("\n"))
+} else if (option == 'CreateLinkInNotes - CopyLinkName_URLFrontPage' || option == 'CreateLinkInNotes - MultiCopyURLAndLinkName') {
+  safariApp.activate();
+  setClipboard(''); // Reset TheClipboard
+
+  for (var h = 0; h < 1000; h++) {
+    for (var i = 0; i < 1000; i++) {
+      delay(d0p3);
+
+      // d3 tempo suficiente para manualmente activar a área de URL, copiar e clicar fora para desactivar antes de dar bip (se System Event querer fechar enquanto estiver a mexer - SUPONHO QUE seja System Events na operação theClipboard())
+      // Se não clicar fora para fechar área de URL, System Events fecha automaticamente
+      // 🔴🔴🔴 A idéia é fazer copy de URL usando o mínimo de tempo possível para minimizar chances CRUZAMENTO com processos de System Events
+      if (h > 0) {
+        delay(3);
+      }
+
+      if (option == 'CreateLinkInNotes - CopyLinkName_URLFrontPage') {
+        var linkUrl = safariLib.getURL();
+      } else if (option == 'CreateLinkInNotes - MultiCopyURLAndLinkName') {
+        var linkUrl = theClipboard();
+      }
+
+      //var linkUrl = theClipboard()
+      delay(d0p3);
+
+      if (linkUrl.slice(0, 6) == 'https:') {
+        break;
+      }
+    }
+
+    for (var i = 0; i < 1000; i++) {
+      delay(d0p3);
+      var linkName = theClipboard();
+
+      // `linkName != ""` necessário se for "CreateLinkInNotes - CopyLinkName_URLFrontPage" pois clipboard teve Reset acima em `setClipboard("")`
+      if (linkName.slice(0, 6) != 'https:' && linkName != '') {
+        break;
+      }
+    }
+
+    if (linkName.slice(0, 3) == 'htt') {
+      alert(`PARECE QUE A CONDIÇÃO DE LINKNAME NÃO TEVE SATISFAÇÃO. LINKNAME É:\n\n${linkName}`, ``);
+    }
+
+    notesApp.activate();
+
+    setClipboard(linkName);
+    paste();
+    setClipboard(linkUrl);
+    selectPreviousInputParagraph(linkName, 'all');
+    notesLib.applyLinkInSelectionFromClipboard();
+    if (option == 'CreateLinkInNotes - MultiCopyURLAndLinkName') {
+      enter(1);
+    }
+    setClipboard(''); // Reset TheClipboard
+    safariApp.activate();
+
+    if (option == 'CreateLinkInNotes - CopyLinkName_URLFrontPage') {
+      break;
+    }
+  }
+} else if (option == 'CreateLinkInNotes - YoutubePlaylists') {
+  var sectionsLimit = 20;
+
+  var pageText = safariLib.getPageText();
+  var playlistsInfo = pageText.match(/\d\d*\nNOW PLAYING[\nPLAY ALL]*\n.*/g);
+
+  var youtuberInfo = pageText.match(/.*\n[0-9A-Z,.]*\ssubscribers/)[0];
+  var youtuberName = youtuberInfo.split('\n')[0].trim();
+
+  var linksAndUrl = [];
+
+  try {
+    for (var i = 0; i < 3000000; i++) {
+      var link = safariApp.doJavaScript("document.getElementsByTagName('" + 'a' + "')[" + i + '].innerHTML', {
+        in: safariApp.windows[0].currentTab,
+      });
+
+      var linkTimed = link.trim().replace(/&amp;/g, '&');
+
+      if (linkTimed == 'Test new features') {
+        var startCollecting = true;
+        continue;
+      }
+
+      if (startCollecting && linkTimed[0] != '<' && linkTimed != '' && !linkTimed.includes('View full playlist')) {
+        var url = safariApp.doJavaScript("document.getElementsByTagName('" + 'a' + "')[" + i + '].href', {
+          in: safariApp.windows[0].currentTab,
+        });
+
+        linksAndUrl.push([linkTimed, url]);
+      }
+    }
+  } catch {
+    //
+  }
+
+  var linksAndUrlSections = [];
+
+  for (var h = 0; h < sectionsLimit; h++) {
+    if (h > 0) {
+      // Uses after first Playlist
+      var linksAndUrl = linksAndUrlSortedNotSeleted;
+    }
+
+    try {
+      // Try para se não tiver mais playlist remancescentes não dar erro
+
+      var linksAndUrlSorted = sortArray(linksAndUrl);
+      var linksAndUrlSortedL = linksAndUrlSorted.length;
+      // sectionsLimit
+      var linksSortedSeleted = cfl(
+        linksAndUrlSorted.map(item => item[0]),
+        `Selecione Playlists (${linksAndUrlSortedL}) para secção ${
+          linksAndUrlSections.length + 1
+        } \n\n• Número máximo de seções - ${sectionsLimit}\n\n—\nAntes fazer reload duas vezes para evitar leitura de número errado (maior) de vídeos❗️`,
+        linksAndUrlSorted[0][0],
+        'm'
+      );
+
+      // ------------ FIND SELETED PLAYLISTS
+
+      var linksAndUrlSortedSeleted = [];
+      var links = [];
+
+      for (var i = 0; i < linksSortedSeleted.length; i++) {
+        var linkSeleted = linksSortedSeleted[i];
+
+        for (var j = 0; j < linksAndUrlSorted.length; j++) {
+          var linkAndUrl = linksAndUrlSorted[j];
+          var link = linkAndUrl[0];
+
+          if (link == linkSeleted) {
+            linksAndUrlSortedSeleted.push(linkAndUrl);
+            links.push(link);
+          }
+        }
+      }
+
+      // ------------ FIND NOT SELETED PLAYLISTS
+
+      var linksAndUrlSortedNotSeleted = [];
+
+      for (var i = 0; i < linksAndUrlSorted.length; i++) {
+        var linkToTrack = linksAndUrlSorted[i];
+        var linkNameToTrack = linkToTrack[0];
+
+        if (!links.includes(linkNameToTrack)) {
+          linksAndUrlSortedNotSeleted.push(linkToTrack);
+        }
+      }
+
+      linksAndUrlSections.push(linksAndUrlSortedSeleted);
+
+      var linksAndUrlSortedSeleted = []; // Reset
+    } catch {
+      //
+    }
+  }
+
+  var linksAndUrlSectionsL1 = linksAndUrlSections.length;
+
+  for (var h = 0; h < linksAndUrlSectionsL1; h++) {
+    var linksAndUrlSortedSeleted = linksAndUrlSections[h];
+
+    delay(d0p3);
+
+    var linksAndUrlL1 = linksAndUrlSortedSeleted.length;
+
+    var sectionNameAndVideosNum =
+      dialog(
+        `Nome da secção para ${linksAndUrlL1} Playlists (${h + 1 + '/' + linksAndUrlSectionsL1})\n\n${linksAndUrlSortedSeleted
+          .map(item => '• ' + item[0])
+          .join('\n')}`,
+        youtuberName
+      ) + ` (${linksAndUrlL1})`;
+
+    notesApp.activate();
+
+    //var linksAndUrlSorted = sortArray(linksAndUrl)
+
+    delay(d0p3);
+
+    linksAndUrlSortedSeleted.unshift([sectionNameAndVideosNum, 'emptyUrl']);
+
+    var linksAndUrlL2 = linksAndUrlSortedSeleted.length;
+
+    for (var i = 0; i < linksAndUrlL2; i++) {
+      // if (i == 0) {
+      // 	var sectionName = dialog(`Nome da secção para ${linksAndUrlL2} Playlist`, youtuberName)
+      // }
+
+      var linkName = linksAndUrlSortedSeleted[i][0]; //.replace(/&amp;/g, "&")
+      var linkUrl = linksAndUrlSortedSeleted[i][1];
+
+      // --- Get videos Number of playlist
+
+      try {
+        var playlistInfo = playlistsInfo.filter(item => item.includes(linkName))[0];
+        var playlistVideosNum = playlistInfo.split('\n')[0] + ' ';
+      } catch {}
+
+      // ---
+
+      if (playlistVideosNum == undefined) {
+        var playlistVideosNum = '';
+      }
+
+      setClipboard(playlistVideosNum + linkName);
+      paste();
+
+      if (i > 0) {
+        setClipboard(linkUrl);
+        selectPreviousParagraph();
+        notesLib.applyLinkInSelectionFromClipboard();
+      }
+
+      if (i != linksAndUrlL2 - 1) {
+        enter(1);
+      }
+
+      if (i == linksAndUrlL2 - 1 && h != linksAndUrlSectionsL1 - 1) {
+        enter(2);
+        var playlistVideosNum = undefined;
+      }
+
+      if (i == 0) {
+        tab(1);
+      }
+    }
+  }
+} else if (option == 'Dinheiro Por Extenso') {
+  var moneyInTextAmountClipb = saApp.theClipboard();
+
+  if (Number(moneyInTextAmountClipb.replace(/,/g, ''))) {
+    var moneyInTextAmountD = moneyInTextAmountClipb;
+  } else {
+    var moneyInTextAmountD = '';
+  }
+
+  var moneyInTextAmount = dDialog(
+    `Valor\n\n—\n• Pode ter separador de múltiplos de mil, usando vírgulas ",".\n• Para casas decimais, usar ponto ".".`,
+    moneyInTextAmountD
+  );
+
+  var moneyInTextAmount = moneyInTextAmount.replace(/,/g, '');
+
+  var moneyInTextAmountFormated = formatNumber(moneyInTextAmount, 2, 2);
+  var moneyInTextAmountConverted = getMoneyInText(moneyInTextAmount);
+
+  var moneyInTextAmountAction = cfl2Str(
+    ['Copiar', 'Em Pages Doc - Inserir valor por extenso', 'Em Pages Doc - Inserir valor numérico e valor por extenso'],
+    moneyInTextAmountFormated + '\n—\n' + moneyInTextAmountConverted + '\n\n\n\n',
+    'Em Pages Doc - Inserir valor numérico e valor por extenso'
+  );
+
+  if (moneyInTextAmountAction == 'Copiar' || moneyInTextAmountAction == 'Em Pages Doc - Inserir valor por extenso') {
+    saApp.setTheClipboardTo(moneyInTextAmountConverted);
+    delay(0.1);
+
+    if (moneyInTextAmountAction == 'Em Pages Doc - Inserir valor por extenso') {
+      pagesApp.activate();
+      delay(0.1);
+      seApp.keystroke('v', { using: 'command down' });
+    }
+  } else if (moneyInTextAmountAction == 'Em Pages Doc - Inserir valor numérico e valor por extenso') {
+    saApp.setTheClipboardTo('MZN' + moneyInTextAmountFormated + ' (' + moneyInTextAmountConverted + ')');
+    delay(0.1);
+    pagesApp.activate();
+    delay(0.1);
+
+    seApp.keystroke('v', { using: 'command down' });
+  }
+} else if (option == 'Display Item Properties') {
+  var finderItem1 = finderApp.selection()[0];
+  var properties = finderItem1.properties();
+
+  var propertiesCollection = [];
+
+  for (const key of Object.keys(properties)) {
+    try {
+      // Stringfy to show text objects like <bounds: {"x":-33,"y":-33,"width":64,"height":64}>
+      propertiesCollection.push(`${key}: ${JSON.stringify(properties[key])}`);
+    } catch {
+      //
+    }
+  }
+
+  dAlert('Properties', propertiesCollection.join('\n'));
+} else if (option == 'Encontre Soma na Lista de Valores') {
+  // Input Array in String
+  var numbersArrayInputStrings = dDialog('Valores para soma entre eles', '5,7,  8').split(',');
+
+  //
+  var numbersArray = []; // Para converter split string numbers (["5", "7", "  8"]) em numebrs ([5, 7, 8])
+  for (var g = 0; g < numbersArrayInputStrings.length; g++) {
+    numbersArray.push(Number(numbersArrayInputStrings[g]));
+  }
+
+  var searchedNumberInputStrings = dDialog('Somas a procurar', '13,15,16').split(',');
+
+  var searchedNumber = []; // Para converter split string numbers () em numebrs ()
+  for (var h = 0; h < searchedNumberInputStrings.length; h++) {
+    searchedNumber.push(Number(searchedNumberInputStrings[h]));
+  }
+
+  var newNumbersArray = [];
+  var foundNumbers = []; // [13]
+
+  for (var i = 0; i < numbersArray.length; i++) {
+    var numbersArraySliced = numbersArray.slice(i);
+
+    for (var j = 0; j < numbersArraySliced.length; j++) {
+      var sum = Number(numbersArray[i]) + Number(numbersArraySliced[j]);
+
+      newNumbersArray.push(sum);
+
+      if (searchedNumber.toString().includes(sum)) {
+        var foundNumbersIndex = searchedNumber.indexOf(sum) + 1;
+
+        //dAlert("Encontrado número " + foundNumbersIndex + "/" + searchedNumber.length + "\n" + sum + "=" + numbersArray[i] + "+" + numbersArraySliced[j], "")
+
+        foundNumbers.push(sum);
+      }
+    }
+  }
+
+  if (foundNumbers.toString() == '') {
+    foundNumbers = '<nada>';
+  }
+
+  dAlert(
+    `Relatório`,
+    `Valores introduzidos para soma entre eles\n${numbersArray
+      .toString()
+      .replace(/,/g, `, `)}\n\nSomas a procurar\n${searchedNumber
+      .toString()
+      .replace(/,/g, `, `)}\n\nSomas processadas\n${newNumbersArray
+      .toString()
+      .replace(/,/g, `, `)}\n\nSomas encotradas\n${foundNumbers.toString().replace(/,/g, `, `)}`
+  );
+} else if (option == 'Folder Actions') {
+  var option = cfl2Str(
+    [
+      'Delete',
+      'Lista - SaveByFoldersAndByScripts',
+      'Aplicação de Scripts',
+      '---------------',
+      'Activar Folder Actions',
+      'Desactivar Folder Actions',
+    ],
+    'Folder Actions',
+    'Aplicação de Scripts'
+  );
+
+  if (option == 'Delete') {
+    deleteFolderActions();
+  } else if (option == 'Lista - SaveByFoldersAndByScripts') {
+    saveByFoldersAndByScripts();
+  } else if (option == 'Aplicação de Scripts') {
+    var folderActionsLTrack = seApp.folderActions.length;
+
+    if (folderActionsLTrack > 0) {
+      // 🔴🔴🔴 DESACTIVADO ABAIXO: NOTE202301241432
+      deleteFolderActions();
+
+      // alert(`Tem ${folderActionsLTrack} Folder Actions.\nApaga com opção "Delete" ou manualmente.\nVer no futuro, se já aceita apagar automaticamente e aplicasr Folder Actions na Nota NOTE202301241432`, ``)
+    }
+
+    seApp.folderActionsEnabled = true;
+    var folderActionsPathStr = pathLib.getFolderActionsPathStr();
+    // var plataformsPathStr = pathLib.getPlataformsPathStr()
+
+    var folderActionsInfo = [
+      ['WF _ Emails Log.workflow', [plataformsPathStr + '/APPS WF/EMAILS LOG TRIGGER']],
+
+      ['WF _ Estimate byM.workflow', [`${xa5TemporayPathStr}/TF 00 ${ND} WF_ESTIMATE A5E`]],
+
+      ['WF _ Export.workflow', [plataformsPathStr + '/APPS WF/EXP | EXPORT']],
+
+      // ["WF _ iScan Rename.workflow", [pathLib.getDropboxPathStr() + "/DownloadsDB", plataformsPathStr + "/iScan Rename"]],
+
+      // getDropboxPathStr() Moved to wfMovePathStrs()
+      ['WF _ iScan Rename.workflow', [plataformsPathStr + '/iScan Rename']],
+
+      ['WF _ Move.workflow', pathLib.wfMovePathStrs()],
+
+      ['WF _ R1 - Fornecedores.workflow', pathLib.wfR1FornecedoresPathStrs()],
+
+      ['WF _ Reveal & 1plus.workflow', pathLib.wfRevealAnd1Plus()],
+
+      ['WF _ XeroAutoPay.workflow', [pathLib.getInboxPathStr() + '/XEROAUTOPAY']],
+
+      ['WF _ XeroIVA.workflow', [`${xa5TemporayPathStr}/TF 00 ${ND} WF_XEROVATREPORT`]],
+
+      [
+        'WF _ XeroBank - Statements.workflow',
+        [
+          pathLib.getSuppliersPathStr() + '/P1FSB — BANCOS5/ACTIVIDADES BANK5/WBCI1',
+          pathLib.getSuppliersPathStr() + '/P1FSB — BANCOS5/ACTIVIDADES BANK5/WBIM1',
+          pathLib.getSuppliersPathStr() + '/P1FSB — BANCOS5/ACTIVIDADES BANK5/WBIM2',
+          pathLib.getSuppliersPathStr() + '/P1FSB — BANCOS5/ACTIVIDADES BANK5/XBIM1',
+          pathLib.getSuppliersPathStr() + '/P1FSB — BANCOS5/ACTIVIDADES BANK5/XBIM2',
+        ],
+      ],
+
+      ['WFCentralProcess.workflow', [plataformsPathStr + '/iWFCentralProcess']],
+    ];
+
+    for (var i = 0; i < folderActionsInfo.length; i++) {
+      try {
+        const [scriptName, foldersPathStrs] = folderActionsInfo[i];
+        const scriptPathStr = `${folderActionsPathStr}/${scriptName}`;
+
+        for (var j = 0; j < foldersPathStrs.length; j++) {
+          // var script – Above out LOOP raise error, must create script for each Action
+          const script = seApp.Script({ name: scriptName, posixPath: scriptPathStr });
+          const folderPathStr = foldersPathStrs[j];
+          const folderPathStrItems = folderPathStr.split('/');
+          const folderName = folderPathStrItems.slice(-1)[0];
+          const folderAction = seApp.FolderAction({ name: folderName, path: folderPathStr });
+
+          seApp.folderActions.push(folderAction);
+
+          delay(d0p3);
+          folderAction.scripts.push(script);
+        }
+      } catch {
+        alert(
+          `Erro processando o item nº ${i}, scriptName: ${scriptName}`,
+          `Verifique se o error não se deve ao facto da função "deleteFolderActions()" não ter apagado Folder Actions existentes. Se for o caso, execute a opção "Folder Actions" > "Delete" (para despertar o OS - por vezes falha  e aconteceu de macOS 13.0 para 14.0) e depois tente de novo.`
+        );
+      }
+    }
+    delay(d1);
+
+    saveByFoldersAndByScripts();
+  } else if (option == 'Activar Folder Actions' || option == 'Desactivar Folder Actions') {
+    if (option == 'Activar Folder Actions') {
+      var folderActionsEnabledBool = true;
+    } else if (option == 'Desactivar Folder Actions') {
+      var folderActionsEnabledBool = false;
+    }
+
+    seApp.folderActionsEnabled = folderActionsEnabledBool;
+  }
+} else if (option == 'Folder Names to Document') {
+  var Repeatation = Number(dDialog('Número de nomes', ''));
+  var RepeatationText = Repeatation.toString();
+
+  delay(d1);
+
+  for (var i = 0; i < Repeatation; i++) {
+    finderApp.activate();
+    delay(d0p15);
+    seApp.keyCode(36);
+    delay(d0p15);
+    seApp.keystroke('c', { using: 'command down' });
+    delay(d0p15);
+    seApp.keyCode(36);
+    delay(d0p15);
+    seApp.keyCode(125);
+    delay(d0p15); // [ √ ]
+    pagesApp.activate();
+    delay(d0p15);
+    seApp.keystroke('v', { using: 'command down' });
+    delay(d0p15);
+    seApp.keyCode(36);
+  }
+
+  pagesApp.activate();
+} else if (option == 'Mail - SmartMailboxes - Create from GroupsInfoForMail - 01') {
+  const groupsInfoExtra = contactLib.getGroupsInfoForMail();
+
+  for (var i = 0; i < groupsInfoExtra.length; i++) {
+    createSmartMailbox(groupsInfoExtra[i][0], groupsInfoExtra[i][1], groupsInfoExtra[i][2], groupsInfoExtra[i][3]);
+  }
+} else if (option == 'Mail - SmartMailboxes - Create from GroupsInfo - 02') {
+  alert(`In contactLib Add code in new function “getGroupsInfoExtras” - has notes their;`, ``);
+
+  const groupsInfo = contactLib.getGroupsInfo();
+  const groupsInfoSelected = contactLib.getGroupsInfoSelected(groupsInfo);
+
+  for (var i = 0; i < groupsInfoSelected.length; i++) {
+    createSmartMailbox('Sender is member of group', groupsInfoSelected[i][0], false, true);
+  }
+} else if (option == 'Mail Message Info') {
+  var message = mailApp.selection()[0];
+
+  var messageDateReceived = message.dateReceived();
+
+  var YYMsg = messageDateReceived.toLocaleString('en', { year: 'numeric' });
+  var MMMsg = messageDateReceived.toLocaleString('en', { month: '2-digit' });
+  var DDMsg = messageDateReceived.toLocaleString('en', { day: '2-digit' });
+  var timeMsg = messageDateReceived
+    .toLocaleString('en', { hourCycle: 'h24', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .replace(/:/g, '');
+
+  timeStampMsg = YYMsg + MMMsg + DDMsg + '-' + timeMsg;
+
+  var senderName = message.sender.extractNameFrom();
+
+  // Se não tiver nome (Como TVCabo, o Mail usa email como nome)
+  if (senderName.includes('@')) {
+    var senderName = `Não tem "systemName"`;
+    //var senderName = senderName.split("@")[1].split(".")[0] // Name from Email
+  }
+
+  var senderEmail = message.sender.extractAddressFrom();
+  var deliveredToEmail = message.allHeaders().split(' ')[1].split('\n')[0];
+
+  var input = currentApp.displayAlert(senderName + '\n' + senderEmail + '\n' + timeStampMsg + '\n\n—\n' + deliveredToEmail, {
+    buttons: [`Cancel`, `Copy LowerCase Email`, `OK`],
+    defaultButton: 3,
+    cancelButton: 1,
+  });
+
+  if (input.buttonReturned == `Copy LowerCase Email`) {
+    saApp.setTheClipboardTo(senderEmail.toLowerCase());
+  }
+} else if (option == 'Merge PDFs') {
+  var pdfFinderSelection = finderApp.selection();
+
+  documentLib.pdfMerger(pdfFinderSelection, 'pdfFinderSelection', 'addInNewPdfWihtNewName');
+} else if (option == 'Needs - QuantityZero') {
+  var docNumXG5 = numbersApp.open(numXG5PathObj);
+
+  numbersApp.activate();
+
+  var propSheetNames = docNumXG5.sheets.whose({ name: { _contains: 'PROP' } }).name();
+
+  propSheetNames.sort();
+
+  currentApp.activate();
+  var propSheetName = cfl2Str(
+    propSheetNames,
+    'Sheet para zerar as quantidades de Necessidades.',
+    propSheetNames[propSheetNames.length - 1]
+  );
+
+  numbersApp.activate();
+
+  docNumXG5.activeSheet.set(docNumXG5.sheets[propSheetName]);
+  var propSheet = docNumXG5.sheets[propSheetName];
+
+  projectLib.needsZero(propSheet);
+} else if (option == 'Safari W1 - Bookmark Tabs') {
+  var folderNameAndFolderNumber = dDialog(
+    'Nome da Pasta & Número da Pasta Save (Undefined é 4)',
+    'NomePasta,NúmeroPastaUndefinedIs4'
+  );
+
+  // Garantia de que os items estão separados por vírgula espaço
+  var folderNameAndFolderNumber = folderNameAndFolderNumber.replace(/, /g, ',').replace(/,/g, ', ');
+
+  var tabsLAndFolderNameAndFolderNumberItems = folderNameAndFolderNumber.split(', ');
+  var folderName = tabsLAndFolderNameAndFolderNumberItems[0];
+  var folderWhereToSave = tabsLAndFolderNameAndFolderNumberItems[1];
+
+  if (folderWhereToSave == undefined) {
+    folderWhereToSave = '4';
+  }
+
+  doMenuBar('Safari', 'Bookmarks');
+  delay(d0p3);
+
+  for (var i = 0; i < 5; i++) {
+    seApp.keyCode(125);
+  }
+
+  seApp.keyCode(76); // Enter
+  delay(d0p3);
+
+  saApp.setTheClipboardTo(folderName);
+  delay(d0p3);
+
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+
+  safariAppControllerP.windows[0].sheets[0].popUpButtons[0].click();
+  delay(d0p3);
+
+  safariAppControllerP.windows[0].sheets[0].popUpButtons[0].menus[0].menuItems.byName(folderWhereToSave).click();
+  delay(d0p3);
+
+  seApp.keyCode(76); // Enter
+} else if (
+  option == 'Safari W1 - Close Tabs' ||
+  option == 'Safari W1 - Order Tabs' ||
+  option == 'Safari W1 - ClipboardURLTabs Opener'
+) {
+  const urlsSeparator = ' _ ';
+  let filteredUrls = [];
+
+  if (option == 'Safari W1 - Close Tabs' || option == 'Safari W1 - Order Tabs') {
+    var urlsLogNameForFileName = '_ LOG WEB_OCW_TABS';
+    var urlsLogNameForAlert = `${urlsLogNameForFileName} yyyyMm`;
+
+    safariApp.activate();
+    delay(d0p3);
+
+    var urls = safariApp.windows[0].tabs.url();
+
+    // login.xero.com inclui "go.xero" ao longo do URL
+
+    // //192. é servidor
+
+    /*
+		var filteredUrls = urls.filter(url => !url.includes("//192.") && !url.includes("www.apple.com") && !url.includes("github.com") && !url.includes("infopedia.pt") && !url.includes("mail.google.com") && !url.includes("translate.google") && !url.includes("dropbox") && !url.includes("archicadapi.graphisoft") && !url.includes("graphisoftid.graphisoft") && !url.includes("portal.conslog.com") && !url.includes("portaldocliente.tvcabo") && !url.includes("sinonimos.com") && !url.includes("wetransfer.com") && !url.includes("www.epicgames.com"))
+		*/
+
+    const excludedSubstrings = [
+      '//192.',
+      'archicadapi.graphisoft',
+      'dropbox',
+      'github.com',
+      'graphisoftid.graphisoft',
+      'infopedia.pt',
+      'mail.google.com',
+      'millenniumbim.co.mz',
+      'portal.conslog.com',
+      'portaldocliente.tvcabo',
+      'sinonimos.com',
+      'translate.google',
+      'wetransfer.com',
+      'www.apple.com',
+      'www.epicgames.com',
+    ];
+
+    filteredUrls = urls.filter(url => !excludedSubstrings.some(substring => url.includes(substring)));
+
+    // --------------- START LOG
+    // 🔴🔴🔴 PARA ARQUIVO DE SEGURANÇA DE URLs, FAZ LOG DE ULRs FILTRADOS
+
+    var filteredUrlsStr = filteredUrls.join(urlsSeparator).replace(/,/g, 'VírgulaAqui');
+
+    var text = dateY4M2D2__H2M2S2 + ',' + filteredUrlsStr; //+ "\n\n"
+
+    var filePath = `/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/INBOX/${urlsLogNameForFileName} ${yearY4M2}.csv`;
+
+    objCLib.writeToFileWithAppend(filePath, text, false);
+
+    // --------------- END OF LOG
+  }
+
+  // Intronced after Safari Groups - To keep it. Even before I was necessary to prevent open ordered tabs in another another active window after closed all tabs of window in process.
+  let fakeTabUrlToStayWhenClosedTabsInSafariOrderTabs = '';
+  const uniqueFilteredUrls = [];
+
+  try {
+    if (option == 'Safari W1 - Close Tabs' || option == 'Safari W1 - Order Tabs') {
+      if (option == 'Safari W1 - Order Tabs') {
+        fakeTabUrlToStayWhenClosedTabsInSafariOrderTabs = `https://www.xdimxd5.com`;
+        openURL(fakeTabUrlToStayWhenClosedTabsInSafariOrderTabs);
+      }
+
+      // var uniqueFilteredUrls = [] // No duplicates
+
+      // Close filteredUrls
+      for (var i = 0; i < filteredUrls.length; i++) {
+        const filteredUrl = filteredUrls[i];
+        getTab(filteredUrl).close();
+
+        if (!uniqueFilteredUrls.includes(filteredUrl)) {
+          uniqueFilteredUrls.push(filteredUrl);
+        }
+      }
+    }
+
+    if (option == 'Safari W1 - Order Tabs' || option == 'Safari W1 - ClipboardURLTabs Opener') {
+      var openUlrsStatus = true;
+
+      if (option == 'Safari W1 - Order Tabs') {
+        uniqueFilteredUrls.sort();
+
+        // Consider BIM and xero at end of Tabs/URLs
+
+        // go.xero
+        var uniqueFilteredUrlsWithoutExcludedUrls = uniqueFilteredUrls.filter(
+          url => !url.includes('xero') && !url.includes('millenniumbim.co.mz')
+        );
+
+        var uniqueFilteredUrlsGoxero = uniqueFilteredUrls.filter(url => url.includes('xero'));
+
+        var uniqueFilteredUrlsMillenniumbim = uniqueFilteredUrls.filter(url => url.includes('millenniumbim.co.mz'));
+
+        var urlsToOpen = uniqueFilteredUrlsWithoutExcludedUrls.concat(uniqueFilteredUrlsMillenniumbim, uniqueFilteredUrlsGoxero);
+      } else if (option == 'Safari W1 - ClipboardURLTabs Opener') {
+        // Identifier "VírgulaAqui" se os links foram gravados por "Safari W1 - Close Tabs" ou "Safari W1 - Order Tabs"
+
+        var urlsToOpen = saApp
+          .theClipboard()
+          .replace(/VírgulaAqui/g, ',')
+          .split(urlsSeparator);
+
+        var httpCheckerOfItemOne = urlsToOpen[0].slice(0, 4);
+
+        if (httpCheckerOfItemOne != 'http') {
+          var openUlrsStatus = false;
+
+          dAlert(`Parece que Clipboard não tem URLs para abrir!`, ``);
+        }
+      }
+
+      if (openUlrsStatus) {
+        // Reopen urlsToOpen
+        for (var i = 0; i < urlsToOpen.length; i++) {
+          openURL(urlsToOpen[i]);
+          delay(d0p3);
+        }
+      }
+
+      if (option == 'Safari W1 - Order Tabs') {
+        // Close fake Tab after
+        getTab(fakeTabUrlToStayWhenClosedTabsInSafariOrderTabs).close();
+      }
+    }
+  } catch (error) {
+    dAlert(
+      `${error.name}`,
+      `${error.message}\n\n—\n🔴🔴🔴\n\nDeu erro mas os URLs (${filteredUrls.length}) foram gravados no CSV "${urlsLogNameForAlert}"`
+    );
+  }
+} else if (option == 'Save Numbers Info to PNG') {
+  var itemsSel = finderApp.selection();
+
+  try {
+    if (itemsSel[0].kind() == 'Folder') {
+      var folderSelected = itemsSel[0];
+    } else {
+      var folderSelected = itemsSel[0].container();
+    }
+
+    var destinyPathStr = decodeURI(folderSelected.url()).slice(7).replace(/%23/g, '#');
+  } catch {
+    currentApp.displayAlert('Seleciona uma pasta ou ficheiro!', { buttons: 'Cancel', cancelButton: 1 });
+  }
+
+  numbersApp.activate();
+
+  const docNumbers = numbersApp.documents[0]; // active document
+  const activeSheet = docNumbers.activeSheet(); // active sheet
+  var tableList = activeSheet.tables(); // all tables on sheet
+
+  // --- Get FIRST Table That Contains the Selected Range ---
+  var thisTable = tableList.filter(table => table.selectionRange())[0];
+
+  currentApp.activate();
+  var what2Save = cfl2Str(
+    [
+      'Cancel',
+      '---------------',
+      'Range da Tabela (Selecção)',
+      'Table',
+      '---------------',
+      'Itens Seleccionados',
+      'Todos Itens do Sheet',
+    ],
+    'Opções',
+    'Table'
+  );
+
+  if (what2Save != 'Cancel') {
+    //numbersApp.activate()
+
+    //var closeImageStatus = cfl2Str(["Não", "Sim"], "Fechar a image* em Preview?\n\n\—\n*Imagem da opção : " + what2Save , "Sim")
+
+    //currentApp.activate()
+    var closeImageStatus = cfl2Str(
+      ['Não', 'Sim'],
+      'Fechar a image em Preview, da opção seleccionada "' + what2Save + '"?\n',
+      'Sim'
+    );
+
+    numbersApp.activate();
+
+    //var tableName = thisTable.name()
+
+    if (what2Save == 'Table') {
+      var thisRange = thisTable.selectionRange();
+      thisTable.selectionRange = thisTable.cellRange();
+      delay(d0p3);
+      seApp.keystroke('c', { using: 'command down' });
+
+      thisTable.selectionRange = thisRange;
+
+      var tableName = thisTable.name();
+      var defaultName = tableName + '.png';
+    } else if (what2Save == 'Range da Tabela (Selecção)') {
+      var tableName = thisTable.name();
+      var defaultName = tableName + ' _ ' + what2Save.toUpperCase() + '.png';
+      delay(d0p3);
+      seApp.keystroke('c', { using: 'command down' });
+    } else if (what2Save == 'Itens Seleccionados') {
+      var defaultName = activeSheet.name() + ' _ ' + what2Save.toUpperCase() + '.png';
+
+      //var timeToSelection = Number(dDialog("Tempo para selecção de items.", "5"))
+      //delay(timeToSelection)
+
+      seApp.keystroke('c', { using: 'command down' });
+      delay(d0p3);
+
+      seApp.keyCode(53); // Scape
+    } else if (what2Save == 'Todos Itens do Sheet') {
+      var ranges = activeSheet.tables.selectionRange.name();
+
+      // Se não for "null", tem selecção de Range em Table
+      // "null" é convertido em "" durante o processo mas teste directo dá "null"
+      //if (ranges != null && ranges != "") {
+
+      if (ranges != '') {
+        // "null" convertido em "" durante o processo
+
+        seApp.keyCode(53); // Scape
+      }
+
+      var defaultName = activeSheet.name() + ' _ ' + what2Save.toUpperCase() + '.png';
+
+      delay(d0p3);
+      seApp.keystroke('a', { using: 'command down' });
+      delay(d0p3);
+      seApp.keystroke('c', { using: 'command down' });
+      delay(d0p3);
+
+      seApp.keyCode(53); // Scape
+    }
+
+    var imageFilePathObj = Path(destinyPathStr + defaultName);
+
+    previewApp.activate();
+    delay(d0p3);
+
+    doMenu('Preview', 'File', 'New from Clipboard');
+    delay(d0p3);
+
+    previewApp.documents[0].save({ in: imageFilePathObj });
+
+    finderApp.reveal(imageFilePathObj).extensionHidden = true;
+
+    if (closeImageStatus == 'Sim') {
+      delay(d1);
+
+      var previewWindowsNum = previewApp.windows().length;
+
+      if (previewWindowsNum > 1) {
+        previewApp.windows[0].close();
+      } else {
+        previewApp.quit();
+      }
+
+      numbersApp.activate();
+    }
+  }
+} else if (option == 'System') {
+  var appleScriptVerion = saApp.systemInfo().applescriptVersion;
+  var appleScriptStudioverion = saApp.systemInfo().applescriptVersion;
+  var systemVersion = saApp.systemInfo().systemVersion;
+  var shortUserName = saApp.systemInfo().shortUserName;
+  var longUserName = saApp.systemInfo().longUserName;
+  var userID = saApp.systemInfo().userID;
+  var userLocale = saApp.systemInfo().userLocale;
+  var homeDirectory = saApp.systemInfo().homeDirectory;
+  var bootVolume = saApp.systemInfo().bootVolume;
+  var computerName = saApp.systemInfo().computerName;
+  var hostName = saApp.systemInfo().hostName;
+  var ipv4Address = saApp.systemInfo().ipv4Address;
+  var primaryEthernetAddress = saApp.systemInfo().primaryEthernetAddress;
+  var cpuType = saApp.systemInfo().cpuType;
+  var cpuSpeed = saApp.systemInfo().cpuSpeed;
+  var physicalMemory = saApp.systemInfo().physicalMemory;
+
+  var macModel = saApp.doShellScript("system_profiler SPHardwareDataType | awk '/Model Identifier/ {print $3}'");
+  var macSerial = saApp.doShellScript("system_profiler SPHardwareDataType | awk '/Serial/ {print $4}'");
+
+  var SytemInfo1 =
+    'User Name: ' +
+    longUserName +
+    ' (' +
+    shortUserName +
+    ')' +
+    '\n' +
+    'Computer Name: ' +
+    computerName +
+    '\n' +
+    'Mac Model: ' +
+    macModel +
+    '\n' +
+    'Serial: ' +
+    macSerial;
+
+  var SytemInfo2 =
+    'Apple Script Verion: ' +
+    appleScriptVerion +
+    '\n' +
+    'Apple Script Studioverion: ' +
+    appleScriptStudioverion +
+    '\n' +
+    'System Version: ' +
+    systemVersion +
+    '\n' +
+    'User ID: ' +
+    userID +
+    '\n' +
+    'User Locale: ' +
+    userLocale +
+    '\n' +
+    'Home Directory: ' +
+    homeDirectory +
+    '\n' +
+    'Boot Volume: ' +
+    bootVolume +
+    '\n' +
+    'Host Name: ' +
+    hostName +
+    '\n' +
+    'Ip Address: ' +
+    ipv4Address +
+    '\n' +
+    'Ethernet: ' +
+    primaryEthernetAddress +
+    '\n' +
+    'CPU Type: ' +
+    cpuType +
+    '\n' +
+    'CPU Speed: ' +
+    cpuSpeed +
+    '\n' +
+    'Physical Memory: ' +
+    physicalMemory;
+
+  var SystemInfo = '\n\n\n' + SytemInfo1 + '\n\n' + SytemInfo2;
+
+  var response = cfl2Str(['Copy Serial Number', 'Display info', 'Save (In Selected Folder)'], 'Acção', 'Display info');
+
+  if (response == 'Copy Serial Number') {
+    setClipboard(macSerial);
+  } else if (response == 'Display info') {
+    dialog(SystemInfo, `Press OK`);
+  } else if (response == 'Save (In Selected Folder)') {
+    var doc = textEditApp.make({ new: 'document', withProperties: { text: SystemInfo } });
+
+    var filePathStr = destinyFolderStr + '/SYSTEM INFO ' + longUserName + ' ' + dateY4M2D2H2M2S2 + '.txt';
+
+    doc.save({ in: Path(filePathStr) });
+    delay(0.3);
+
+    finderApp.reveal(Path(filePathStr)).extensionHidden = true;
+  }
+} else if (option == 'Tags') {
+  var tagOption = cfl2Str(['Color', 'List'], 'Tags no Documento', 'Color');
+
+  if (tagOption == 'Color') {
+    var tagColor = cfl2Str(['black', 'red', 'blue'], 'Escolhe a cor para Tags', 'blue');
+  }
+
+  //pagesApp.activate()
+  var docPages = pagesApp.documents[0];
+
+  var placeHolderTexts_ = docPages.placeholderTexts;
+  var theseTags = placeHolderTexts_.tag();
+
+  var uniqueTags = [];
+
+  for (var i = 0; i < theseTags.length; i++) {
+    var thisTag = theseTags[i];
+
+    if (tagOption == 'Color') {
+      placeHolderTexts_.color.set(tagColor);
+    } else if (tagOption == 'List') {
+      uniqueTags.push(i + 1 + '.	' + thisTag);
+    }
+  }
+
+  if (tagOption == 'List') {
+    var uniqueTagsSelection = currentApp.chooseFromList(uniqueTags, {
+      withPrompt: 'Tags no Documento',
+      defaultItems: uniqueTags[0],
+      multipleSelectionsAllowed: true,
+    });
+
+    currentApp.displayDialog('Tags selecionados', { defaultAnswer: uniqueTagsSelection.join('\n') }).textReturned;
+  }
+} else if (option == 'UpdatePrefixNumbersAndProjectInProcessTable') {
+  const docNumXA5 = numbersApp.documents[0];
+  // const docNumXA5Name = docNumXA5.name()
+  numbersApp.activate();
+
+  numbersSheetsUpdatePrefixNumbers(docNumXA5);
+
+  // if (docNumXA5Name.includes("TEXT XA5") && !docNumXA5Name.includes("ARCHIVED")) {
+  if (numbersDocIsTextXA5(docNumXA5) && !numbersDocIsArchived(docNumXA5)) {
+    numbersProjectInProcessInfoPopulate(docNumXA5);
+  }
+
+  docNumXA5.save();
+} else if (option == 'Word Counter') {
+  dAlert(`INCLUDE COPIED INFO OPTION IN "Word Counter"`, ``);
+
+  // Can be log file
+  var fileObject = saApp.chooseFile({ ofType: 'txt', withPrompt: 'Please select a txt file:' });
+
+  var allwords = objCLib.readFile(fileObject.toString());
+
+  var processOptionsStr = cfl2StrWithEmpty(
+    ['Incluir números', 'Todas palavras em LowerCase', 'Palavra mais frequente no Topo'],
+    'Opções de processamento',
+    'Palavra mais frequente no Topo',
+    'm'
+  );
+
+  var counts = {};
+  var keys = [];
+  var keysAndCounts = [];
+
+  var allwordsPrepared = allwords.split('\n').join('\t').split('\t').join(' ').split(' ').join(' ');
+
+  //var tokens = allwordsPrepared.split(/\W+/);
+
+  var tokens = allwordsPrepared.split(' ');
+
+  for (var i = 0; i < tokens.length; i++) {
+    if (processOptionsStr.includes('Todas palavras em LowerCase')) {
+      var word = tokens[i].toLowerCase();
+    } else {
+      var word = tokens[i];
+    }
+
+    if (processOptionsStr.includes('Incluir números')) {
+      var patt = /\W+/;
+    } else {
+      var patt = /\d+/;
+    }
+
+    // Recebe o contrário de patt
+    if (!patt.test(word)) {
+      // Exclude numbers
+      if (counts[word] === undefined) {
+        counts[word] = 1;
+
+        // Make array to get sort. Object does not support sort.
+        keys.push(word);
+      } else {
+        counts[word] = counts[word] + 1;
+      }
+    }
+  }
+
+  if (processOptionsStr.includes('Palavra mais frequente no Topo')) {
+    keys.sort(compare);
+  } else {
+    keys.sort();
+  }
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    keysAndCounts.push(key + ' ' + counts[key]);
+  }
+
+  // var countsArray = []
+  //
+  // for (let key in counts) {
+  // 	countsArray.push(key + " " + counts[key])
+  // }
+
+  dAlert('Resultados', keysAndCounts.join('\n'));
+} else if (option == 'Open Invoices') {
+  var invoicesOpen = paymentLib.invoices('').open1;
+
+  var invoiceOpen = cfl2Str(invoicesOpen, 'Factura abertas', invoicesOpen[0]);
+} else if (option == 'xd5ProfileMaker') {
+  const sectionPathStrs = getPathStrsFromPathStr(assetPathStr, 'folders');
+
+  const sectionPathStrsFiltered = sectionPathStrs.filter(url => !url.split('/').slice(-1)[0].startsWith('+'));
+
+  // -------------
+
+  const imageName = 'Imagem';
+
+  const projectsPrefixes = ['proj1', 'proj2', 'proj3', 'proj4', 'proj5'];
+
+  let headersFinal = ['Secção'];
+  let headers = ['Separador', 'Consultoria', 'Objecto', 'CS', 'Cliente', 'Localizacão', 'Data'];
+
+  const imagesPrefixes = [
+    `${imageName}1`,
+    `${imageName}2`,
+    `${imageName}3`,
+    `${imageName}4`,
+    `${imageName}5`,
+    `${imageName}6`,
+    `${imageName}7`,
+    `${imageName}8`,
+  ];
+
+  for (var i = 0; i < projectsPrefixes.length; i++) {
+    const projectPrefix = projectsPrefixes[i];
+    itemsGeneral = headers.map(item => projectPrefix + item);
+
+    const itemsImages = imagesPrefixes.map(item => projectPrefix + item);
+
+    headersFinal.push(...itemsGeneral, ...itemsImages);
+  }
+
+  headersFinal = headersFinal.join(',');
+  // -------------
+
+  const infoToFillFinalAll = [[headersFinal]];
+  const sectionsNames = [];
+
+  for (var h = 0; h < sectionPathStrsFiltered.length; h++) {
+    var sectionName = sectionPathStrsFiltered[h].split('/').slice(-1).toString();
+    let projPathStrs = getPathStrsFromPathStr(assetPathStr + '/' + sectionName, 'folders');
+
+    projPathStrs = projPathStrs.filter(url => !url.split('/').slice(-1)[0].startsWith('+'));
+
+    // var headersFinal = ["Secção"]
+    var infoToFillFinal = [sectionName];
+    sectionsNames.push(sectionName);
+    var profilePagesRows = [];
+
+    for (var i = 0; i < projPathStrs.length; i++) {
+      const projName = projPathStrs[i].split('/').slice(-1).toString();
+
+      const projectPath = assetPathStr + '/' + sectionName + '/' + projName;
+
+      // const imagePathStrs = getPathStrsFromPathStr(assetPathStr + "/" + sectionName + "/" + projName, "files")
+
+      const [, projDate, projCs, projConsultancy, projObject, projCustomer, projSite] = projName.split(` ${ND} `);
+
+      // const [ , projConsultancy, projCs, projObject, projCustomer, projSite, projDate] = projName.split(` ${ND} `)
+
+      // let headers = ["Separador", "Data", "CS", "Consultoria", "Objecto", "Cliente", "Localizacão"]
+      var infoToFill = [' • ', projConsultancy, projObject, projCs, projCustomer, projSite, projDate];
+
+      const projectPrefix = 'proj' + (i + 1);
+      headers = headers.map(title => projectPrefix + title);
+
+      // var headersFinal = headersFinal.concat(headers)
+      var infoToFillFinal = infoToFillFinal.concat(infoToFill);
+
+      // for (var j = 0; j < imagePathStrs.length; j++) {
+      for (var j = 0; j < 8; j++) {
+        // 8 placeholders for images
+        // headersFinal.push(projectPrefix + "Imagem" + (j + 1))
+
+        const jSum = j + 1;
+
+        // const imagePathStr = imagePathStrs[j]
+        // const imageName = getItemNamesFromPathStrs([imagePathStr], [""])[0]
+
+        // if (!imageName.startsWith("+")) {
+        infoToFillFinal.push(`${projectPath}/${imageName}${jSum}`);
+        // }
+      }
+    }
+
+    // const text = headersFinal.join(",") + "\n" + infoToFillFinal.join(",") + "\n\n"
+
+    infoToFillFinalAll.push(infoToFillFinal.join(','));
+
+    /*
+		publisherCreateCSV(numbersApp, imageCsvInfoPathStr, text)
+		delay(d1)
+
+		// PUT OUT LOOP IN THIS VERSION
+		// --------------- PREPARE AND EXPORT
+
+		if (h == 0) {
+			// ----- OPEN PUBLISHER DOC AND PROCESS
+			finderApp.open(Path(a5ProfilePathStr))
+			delay(d7)
+		}
+
+		// --------------- DATA MERGE
+		publisherUpdateDataMerge(publisherAppControllerAp)
+
+		const sectionNameUpdated = "X-DIM PERFIL - " + sectionName + ".pdf"
+
+		const exportedPdfsPathStr = profileFolderPathStr + "/" + sectionNameUpdated
+
+		publisherExport2PDF(publisherAppControllerAp, profileFolderPathStr, exportedPdfsPathStr, sectionNameUpdated)
+		*/
+  }
+
+  const text = infoToFillFinalAll.join('\n'); //.normalize("NFC");
+
+  // publisherCreateCSV(numbersApp, imageCsvInfoPathStr, text)
+  objCLib.writeToFile(imageCsvInfoPathStr, text);
+  delay(d1);
+
+  finderApp.open(Path(a5ProfilePathStr));
+  delay(d7);
+
+  const exportedPdfsPathsStrs = [];
+  const sectionNamesUpdated = [];
+
+  for (let i = 0; i < sectionsNames.length; i++) {
+    const nowFormatted = formatDateV3(new Date());
+    const dateY4M2D2__H2M2S2 = nowFormatted.dateY4M2D2__H2M2S2;
+
+    const sectionName = sectionsNames[i];
+
+    // --------------- DATA MERGE
+    publisherUpdateDataMerge(publisherAppControllerAp, affinityPublisherApp, i);
+
+    delay(5); // 🔴🔴🔴 USEFULL?
+
+    const sectionNameUpdated = `X-DIM PERFIL _ ${sectionName} _ ${dateY4M2D2__H2M2S2}.pdf`;
+
+    sectionNamesUpdated.push(sectionNameUpdated);
+
+    const exportedPdfsPathStr = profileFolderPathStr + '/' + sectionNameUpdated;
+
+    exportedPdfsPathsStrs.push(exportedPdfsPathStr);
+
+    delay(3);
+
+    publisherExport2PDF(publisherAppControllerAp, profileFolderPathStr, exportedPdfsPathStr, sectionNameUpdated);
+  }
+
+  /*
+	doMenu(affinityPublisherName, "File", "Close")
+	delay(d1)
+	// Application("System Events").applicationProcesses.byName("Affinity Publisher").windows.at(0).buttons.byName("Don't Save")
+
+
+	// 🔴🔴🔴 USE // publisherAppControllerAp.windows[0].buttons["Don't Save"].click()
+	publisherAppControllerAp.windows[0].buttons.byName("Don't Save").click()
+	*/
+
+  documentLib.pdfMerger(exportedPdfsPathsStrs, 'pdfPathStrs', 'addInNewPdfWihtNewName', true);
+  delay(d5); // To make sure, last PDF was fully open
+
+  const previewDocNames = previewApp.documents.name();
+
+  // const justTest = cfl2Str(previewDocNames, "previewDocNames", previewDocNames[0])
+
+  const pdfsNotOpen = sectionNamesUpdated.filter(item => !previewDocNames.includes(item));
+
+  const pdfsNotOpenL = pdfsNotOpen.length;
+
+  if (pdfsNotOpenL > 0) {
+    const alertStr = pdfsNotOpenL > 1 ? `São ${pdfsNotOpenL} PDFs não abertos` : `Um PDF não aberto`;
+
+    alert(`Erro. ${alertStr} automaticamente.`, `${pdfsNotOpen.map((item, i) => i + 1 + '. ' + item).join('\n')}`);
+  }
+} else if (option == 'xxAuto _ AutoBackup - RunNow') {
+  xxAutoLib.autoBackup('MANUAL');
+} else if (option == 'xxAuto _ AutoDisplay - RunNow') {
+  xxAutoLib.autoDisplay();
+} else if (option == 'xxAuto _ AutoUpdateContactsNotes - RunNow - ThenRun #AutoGetAndSaveContacts') {
+  xxAutoLib.autoUpdateContactsNotes('Manual');
+} else if (option == 'xxAuto _ AutoGetAndSaveContacts - RunNow') {
+  xxAutoLib.autoGetAndSaveContacts('Manual');
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function deleteFolderActions() {
+  seApp.folderActionsEnabled = false;
+
+  while (seApp.folderActions.length > 0) {
+    seApp.folderActions[0].delete();
+    delay(d0p3); // Necessary to prevent error
+  }
+  //delay(d0p3) // Necessary to prevent error
+}
+
+function saveByFoldersAndByScripts() {
+  var folderActions = seApp.folderActions;
+
+  var folderActionsInfo = [];
+  var folderActionsInfoDict = {};
+
+  for (var i = 0; i < folderActions.length; i++) {
+    var folderAction = folderActions[i];
+    var folderActionName = folderAction.name();
+
+    // In iCloud </Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs>
+    // Offline </Users>
+    var folderActionPathStr = folderAction
+      .path()
+      .toString()
+      .replace('/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs', '')
+      .replace('/Users', '');
+
+    var scripts = folderAction.scripts;
+
+    var srciptsNames = [];
+
+    for (var j = 0; j < scripts.length; j++) {
+      var scriptName = scripts[j].name();
+
+      srciptsNames.push(scriptName);
+
+      if (folderActionsInfoDict[scriptName] === undefined) {
+        folderActionsInfoDict[scriptName] = ' - ' + folderActionName;
+      } else {
+        folderActionsInfoDict[scriptName] += '\n - ' + folderActionName;
+      }
+    }
+
+    folderActionsInfo.push([folderActionPathStr, folderActionName, srciptsNames]);
+  }
+
+  // --------------- 🔴 LIST BY FOLDER ACTION
+  var folderActionsTextByFoldersProcessed = folderActionsInfo
+    .map(item => item.slice(0, 2).join('\n') + '\n' + item[2].join('\n'))
+    .join('\n\n');
+
+  var folderActionsInfoL = folderActionsInfo.length;
+
+  saveFolderActionsFile(folderActionsTextByFoldersProcessed, folderActionsInfoL, 'Pasta');
+
+  // // --------------- 🔴 LIST BY SCRIPT NAME
+  var folderActionsInfoDictArray = Object.entries(folderActionsInfoDict);
+
+  var folderActionsTextByScriptsProcessed = folderActionsInfoDictArray.map(item => item.join('\n')).join('\n\n');
+
+  var folderActionsInfoDictArrayL = folderActionsInfoDictArray.length;
+
+  saveFolderActionsFile(folderActionsTextByScriptsProcessed, folderActionsInfoDictArrayL, 'Script');
+}
+
+function saveFolderActionsFile(folderActionsTextProcessed, folderActionsL, listBy) {
+  //var folderActionsInfoL = folderActionsInfo.length
+
+  var folderActionsLTernary =
+    folderActionsL > 0 ? folderActionsL : folderActionsL + ' (Erro — Repetir: Fez save antes de processamento)';
+
+  var folderActionsLInfo = `${listBy}: ${folderActionsLTernary}`;
+
+  var folderActionsText = folderActionsLInfo + '\n\n' + folderActionsTextProcessed;
+
+  // var folderActionsTextPathStr = `${p4SP5DAutomatorFolderActionsPathStr}/WF - folderActionsInfo - Lista Por ${listBy} ${dateY4M2D2__H2M2S2}.txt`
+  var folderActionsTextPathStr = `${p4SP5DAutomatorFolderActionsPathStr}/WF - folderActionsInfo - ${dateY4M2D2__H2M2S2} Lista Por ${listBy}.txt`;
+
+  objCLib.writeToFile(folderActionsTextPathStr, '\n\n\n' + folderActionsText);
+
+  finderApp.open(Path(folderActionsTextPathStr));
+}
+
+function dDialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer }).textReturned;
+  } else {
+    return currentApp.displayDialog(theTitle, {
+      defaultAnswer: theDefaultAnswer,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    }).textReturned;
+  }
+}
+
+function doMenuBar(appName, menuName, menuItem) {
+  var frontApp = Application(appName);
+
+  frontApp.activate();
+
+  var frontAppSE = seApp.processes.byName(appName);
+
+  var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName).click();
+}
+
+function doMenu(appName, menuName, menuItem) {
+  var frontApp = Application(appName);
+
+  frontApp.activate();
+
+  var frontAppSE = seApp.processes.byName(appName);
+
+  var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+  delay(d0p3);
+
+  menuName.menus[0].menuItems.byName(menuItem).click();
+}
+
+function compare(a, b) {
+  var countA = counts[a];
+  var countB = counts[b];
+
+  return countB - countA;
+}
+
+function readAndSplitFile(filePath, delimiter) {
+  return saApp.read(Path(filePath), { usingDelimiter: delimiter });
+}
+
+function formatNumber(numberToFomat, toFixedDecimals, maxdecimals) {
+  return Number(parseFloat(numberToFomat).toFixed(toFixedDecimals)).toLocaleString('en', { minimumFractionDigits: maxdecimals });
+}
+
+function dAlert(theTitle, theMessage, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    currentApp.displayAlert(theTitle, { message: theMessage });
+  } else {
+    currentApp.displayAlert(theTitle, {
+      message: theMessage,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    });
+  }
+}
+
+function dDialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer }).textReturned;
+  } else {
+    return currentApp.displayDialog(theTitle, {
+      defaultAnswer: theDefaultAnswer,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    }).textReturned;
+  }
+}
+
+function cfl2StrWithEmpty(theList, thePrompt, theDefaultItems, multipleStatus) {
+  if (multipleStatus == undefined) {
+    return currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems }).toString();
+  } else if (multipleStatus == 'm') {
+    return currentApp
+      .chooseFromList(theList, {
+        withPrompt: thePrompt,
+        defaultItems: theDefaultItems,
+        multipleSelectionsAllowed: true,
+        emptySelectionAllowed: true,
+      })
+      .toString();
+  }
+}
+
+function addZero(i) {
+  if (i < 10) {
+    i = '0' + i;
+  }
+  return i.toString();
+}
+
+/* Returns the first tab that contains a page whose URL starts with the provided URL */
+function getTab(url, window) {
+  var result;
+  window = window || safariApp.windows[0];
+  for (var index in window.tabs) {
+    var tab = window.tabs[index];
+    var tabURL = tab.url();
+    if (tabURL.startsWith(url)) {
+      result = tab;
+      break;
+    }
+  }
+  return result;
+}
+
+function getURL() {
+  return safariApp.windows[0].currentTab.url();
+}
+
+function openURL(urlInput) {
+  const firstWindow = safariApp.windows[0];
+  const tab = safariApp.Tab({ url: urlInput });
+  firstWindow.tabs.push(tab);
+  firstWindow.currentTab = tab;
+  delay(d1);
+
+  var urlSubscriptionCurrentTab = getURL();
+
+  // "favorites://" is link of blank page
+  if (urlSubscriptionCurrentTab == 'favorites://') {
+    delay(d0p3);
+
+    // Open Location - garantir que que barra de endereço esteja activa (Spend activa imediatamente mas Create Invoice não)
+    seApp.keystroke('l', { using: 'command down' });
+    delay(d0p3);
+
+    saApp.setTheClipboardTo(urlInput);
+    delay(d1);
+
+    seApp.keystroke('v', { using: 'command down' });
+    delay(d1);
+
+    seApp.keyCode(76); // Press Enter
+    delay(d1);
+  }
+}

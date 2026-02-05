@@ -1,0 +1,187 @@
+
+
+// v1.0
+// var bankLib = Library("bankLib")
+
+
+
+var displayLib = Library("displayLib")
+var safariLib = Library("safariLib")
+
+
+var seApp = Application("System Events")
+
+var safariApp = Application("Safari")
+var safariAppControllerP = seApp.processes["Safari"]
+
+
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3
+var d1 = 1
+var d1p5 = 1.5
+var d3 = 3
+var d5 = 5
+//var d7 = 7
+//var d10 = 10
+
+// ---------------------------------------
+
+
+
+// --------------------------------------------- BANK ACCOUNTS
+
+function bciMenu(button, groupTrack) {
+	safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[1].scrollAreas[0].uiElements[0].groups[2].groups[groupTrack].uiElements.byName(button).uiElements.byName(button).staticTexts.byName(button).click()
+}
+
+
+function bciSubMenuTransfer(button, groupTrack) {
+	safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[1].scrollAreas[0].uiElements[0].groups[2].groups[3].uiElements[1].groups[0].groups[groupTrack].uiElements.byName(button).staticTexts.byName(button).click()
+}
+
+function bankBIMAccount(operation, account) {
+	try {
+
+
+
+
+
+
+
+
+
+
+		// 🔴🔴🔴 CAN I USE DICTIONARY LIKE IN FUNCTION <bankSpendAndReceive> that is in Subscricoes
+
+
+
+
+
+
+
+
+
+
+
+		if (account == "135746263") {
+			// var changingGroup = 15 // 26 até 20230302
+
+			if (account == "135746263" && operation == "Extrato") {
+				// 23 até 20230302, 24 até 20220530, 
+				var changingGroup = 13 // 20230302
+
+			} else if (account == "135746263" && (operation == "Comprar Recarga Celular" || operation == "INSS X")) {
+				// 24 até 20230302, 25 até 20220725
+				var changingGroup = 14 // 20230302
+
+			} else {
+
+				// 25 até 20230302, 26 até 20220530
+				var changingGroup = 15 // 20230302
+			}
+
+		} else if (account == "303233835" || account == "152750848") {
+
+			if (account == "152750848" && operation == "Extrato") {
+
+				// 23 até 20230302
+				var changingGroup = 14 // 20230302
+
+			} else if (account == "152750848" && operation == "INSS X") { // 20221108
+
+				// 14 até 20230302
+				var changingGroup = 15 // 20230302
+
+			} else if (account == "152750848" && operation == "Comprar Recarga Celular") {
+				// 24 até 20230302
+				var changingGroup = 15 // 20230302
+
+			} else if (account == "303233835" && operation == "Extrato") {
+
+				// 24 até 20230302, 25 até 20220530
+				var changingGroup = 14 // 20230302
+
+			} else if (account == "303233835" && (operation == "Comprar Recarga Celular" || operation == "INSS X" || operation == "Serviços X")) {
+				// 25 até 20230302, 25 até 20220530
+				var changingGroup = 15 // 20230302
+
+			} else {
+				//var changingGroup = 27
+				//var changingGroup = 26 // 20220530
+
+				if (account ==  "303233835") { // 20220603
+
+					// 26 até 20230302
+					var changingGroup = 16 // 20230302
+
+				} else if (account ==  "152750848") {
+
+					// 27 até 20230302
+					var changingGroup = 18 // 20230302
+				}
+			}
+
+		} else if (account == "233960606") {
+
+			if (account == "233960606" && operation == "Extrato") {
+				// 24 até 20230302
+				var changingGroup = 15 // 20230302
+
+			} else if (account == "233960606" && (operation == "Comprar Recarga Celular" || operation == "Credelec W")) {
+				// 25 até 20230302
+				var changingGroup = 16 // 20230302
+
+			} else {
+				// 28 até 20230302
+				var changingGroup = 19 // 20230302
+			}
+		}
+
+		//delay(d1) // Acrescido para evitar erros pela demora
+
+		// Para evitar erro, 20220506 removemos groups[2] na linha a seguir e ficou a linha em uso
+		/// [changingGroup].groups[0].groups[0].groups[2]
+		//safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[changingGroup].groups[0].groups[0].staticTexts.byName(account).click()
+
+		// safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[changingGroup].groups[0].groups[0].staticTexts[account].click()
+
+		// Depois de algum tempo, negou acesso director em <staticTexts[account]>
+		safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[changingGroup].groups[0].groups[0].staticTexts.byName(account).click()
+
+		delay(d3) // Comes from SUbscricnoes, was d1
+
+	} catch {
+		displayLib.alert("Deu erro!", "Erro devido ao click ou tempo de processamento.")
+	}
+}
+
+function bimAuthenticationCredelecAndInssAndMobileRechargesAndServices(continueDelay, confirmNum) {
+
+	// CONTINUAR
+	safariLib.superSafari("click", "class", "Button_button_17jbo   Actions_button_217W7", 1, 0)
+
+	delay(continueDelay) // Aceitou d13
+
+	// CONFIRMAR
+	safariLib.superSafari("click", "class", "Button_button_17jbo   Actions_button_217W7", confirmNum, 0)
+	delay(d5) // Era d3
+
+
+
+	safariLib.superSafari("click", "class", "CheckBox5_inner_2xS5U", 0, 0) // Select SMS
+	delay(d1p5)
+
+	var smsCode = displayLib.dialog("Código de autorização", "")
+
+	safariApp.activate();
+	delay(d0p3)
+
+	seApp.keystroke(smsCode) // 20210310 Já não aceita shortcut de Paste
+
+	delay(d0p3)
+
+	// AUTORIZAR
+	safariLib.superSafari("click", "class", "Button_button_17jbo   Actions_button_217W7", 2, 0)
+}

@@ -1,0 +1,21 @@
+
+
+// v2.8
+
+var currentApp = Application.currentApplication()
+currentApp.includeStandardAdditions = true
+
+var finderApp = Application("Finder")
+
+function run(input, parameters) {
+
+	var filePathStr = (input[0]).toString()
+	var filePathStrItems	= filePathStr.split("/")
+  	var fileName	= filePathStrItems.pop();
+	var folderActionName	= filePathStrItems.pop();
+
+	for(var i=0; i < input.length; i++) {
+		finderApp.reveal(input[i]).extensionHidden = true
+		delay(0.5)
+	}
+}

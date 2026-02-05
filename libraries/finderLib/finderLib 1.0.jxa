@@ -1,0 +1,1468 @@
+// v1.0
+// const {
+// 	activateWindowById,
+// 	adjustPathSeparator,
+// 	analyzePath,
+// 	deleteFinderItems,
+// 	getContratFolderInfo,
+// 	getExtensionFromStr,
+// 	getFinderFilePathSr,
+// 	getFinderFolderPathSr,
+// 	getFolderNameByWhoseByBeginsWith,
+// 	getFolderNameByWhoseByContains,
+// 	getFolderNameByWhoseByContainsNotEndsWith,
+// 	getIsInEmailFolderInteraction,
+// 	getItemNamesFromPathStrs,
+// 	getItemObj,
+// 	getItemsInfoFromPathStr,
+// 	getItemPropertiesByItem,
+// 	getItemPropertiesByPathStr,
+// 	getItemsPropertiesByPathStr,
+// 	getND,
+// 	getND4CP,
+// 	getPathStrFromUrl,
+// 	getPathStrsFromPathObjs,
+// 	getPathStrsFromPathStr,
+// 	getProjectPathStrUsingCs,
+// 	getScan2BankFilePathStrs,
+// 	getTags,
+// 	goToFolderCopyPaste,
+// 	goToFolderKeystroke,
+// 	itemProperties,
+// 	makeAlias,
+// 	makeFolder,
+// 	moveItems,
+// 	process255FolderNameCharacters,
+// 	----------- Related,
+// 	provAndNumberAndSiteAndFolders,
+// 	folderListing,
+// 	checkYy,
+// 	----------- ,
+// 	renameItem,
+// 	modifyTags,
+// 	whereToExport,
+// } = Library("finderLib")
+
+// // ------------ For getTags and modifyTags
+// ObjC.import('Foundation');
+// ObjC.import('AppKit');
+
+const ND = getND();
+
+// ------------
+
+const { alert, dialog } = Library('displayLib');
+const { cflV2, cfl2Str } = Library('cflLib');
+
+const { getDelays } = Library('datetimeLib');
+
+const { getXa5XProdutionPathStr, getXa5TemporayPathStr, getP5PathStrWithSuffixP5 } = Library('pathLib');
+
+const p5PathStrWithSuffixP5 = getP5PathStrWithSuffixP5();
+
+const xa5TemporayPathStr = getXa5TemporayPathStr();
+const xa5XProdutionPathStr = getXa5XProdutionPathStr();
+
+const { getConsultancyPathStrs, getCsInfo, getServiceByC1, isCs } = Library('projectLib');
+const menuLib = Library('menuLib');
+const appLib = Library('appLib');
+
+const { revealItem } = Library('xxNodejsJXALib');
+const systemLib = Library('systemLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+
+const { addZero } = Library('numberLib');
+
+// --------------------------------------- DELAYS
+
+const { d0p1, d0p3, d0p5, d1, d1p5, d3, d5 } = getDelays();
+
+// ---------------------------------------------------------
+
+function activateWindowById(windowId) {
+  var windows = finderApp.windows;
+
+  for (var i = 0; i < windows.length; i++) {
+    var window = windows[i];
+    if (window.id() == windowId) {
+      window.index = 1; // Brings the window to the front
+      break;
+    }
+  }
+
+  //  🔴🔴🔴 IN THE FUTURE CHECK IF window object supports find or filter method, in 20230618 does not
+  /*
+	var windowToActivate = windows.find(window => window.id() == currentWindowId);
+
+	if (windowToActivate) {
+		windowToActivate.index = 1; // Brings the window to the front
+	} else {
+		console.log("Window not found");
+	}
+	*/
+}
+
+// Helper function to adjust path separators based on context.
+
+function adjustPathSeparator(string, forUI = false) {
+  if (forUI) {
+    // For UI: replace all ':' with '/'
+    return string.replace(/:/g, '/');
+  } else {
+    // For file system paths: replace all '/' with ':'
+    return string.replace(/\//g, ':');
+  }
+}
+
+function analyzePath(path, componentLimit = 255, totalLimit = 773) {
+  // totalLimit = 1024
+  // totalLimit is 1024 for macOS. But the study showed limit of 773, maybe includes extra parts before "/Users/..."
+
+  // Normalize the entire path to the decomposed form (NFD)
+  const normalizedPath = path.normalize('NFD');
+
+  // Calculate the total byte count for the entire normalized path.
+  let totalBytes = 0;
+  for (let i = 0; i < normalizedPath.length; i++) {
+    const code = normalizedPath.charCodeAt(i);
+    if (code < 0x80) {
+      totalBytes += 1;
+    } else if (code < 0x800) {
+      totalBytes += 2;
+    } else if (code < 0x10000) {
+      totalBytes += 3;
+    } else {
+      totalBytes += 4;
+    }
+  }
+
+  // Create the total info object.
+  const totalInfo = {
+    exceeds: totalBytes > totalLimit,
+    total: totalBytes,
+    limit: totalLimit,
+    excessBytes: totalBytes > totalLimit ? totalBytes - totalLimit : 0,
+  };
+
+  // Split the normalized path into components (handles both '/' and '\' as separators).
+  const components = normalizedPath.split(/[/\\]/);
+
+  // Check each component against the componentLimit.
+  let maxExceed = 0;
+  let componentDetail = null;
+  for (let i = 0; i < components.length; i++) {
+    let compBytes = 0;
+    const component = components[i];
+    for (let j = 0; j < component.length; j++) {
+      const code = component.charCodeAt(j);
+      if (code < 0x80) {
+        compBytes += 1;
+      } else if (code < 0x800) {
+        compBytes += 2;
+      } else if (code < 0x10000) {
+        compBytes += 3;
+      } else {
+        compBytes += 4;
+      }
+    }
+
+    if (compBytes > componentLimit) {
+      const excess = compBytes - componentLimit;
+      if (excess > maxExceed) {
+        maxExceed = excess;
+        componentDetail = {
+          index: i, // Position of the component in the path.
+          component: component, // The normalized component string.
+          byteCount: compBytes, // Total byte count of the component.
+          excessBytes: excess, // Number of bytes exceeding the component limit.
+        };
+      }
+    }
+  }
+
+  const componentExcessInfo = {
+    exceeds: maxExceed > 0,
+    limit: componentLimit,
+    // maxExceed: maxExceed,
+    // detail: componentDetail,
+    ...componentDetail,
+  };
+
+  if (totalInfo.exceeds) {
+    const errorMessage = `Path excede limite de ${totalLimit} bytes`;
+
+    alert(
+      errorMessage,
+      Object.entries(totalInfo)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n')
+    );
+
+    throw new Error(errorMessage);
+  }
+
+  if (componentExcessInfo.exceeds) {
+    const errorMessage = `Path: um dos componentes excede limite de ${componentLimit} bytes`;
+
+    alert(
+      errorMessage,
+      Object.entries(totalInfo)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n')
+    );
+
+    throw new Error(errorMessage);
+  }
+
+  // Consolidate all excess information in a single object.
+  return {
+    totalInfo,
+    componentExcessInfo,
+  };
+}
+
+function deleteFinderItems(pathStrs) {
+  for (var i = 0; i < pathStrs.length; i++) {
+    var pathStr = pathStrs[i];
+
+    // --------------- USING REVEAL & DELETE
+    delay(d0p3);
+    var item = revealItem(pathStr, 'reveal'); // 🔴🔴🔴 It goes to trash
+    delay(d0p3);
+
+    // Sem este Activate mesmo depois de ter feito reveal do ficnheiro, apaga aquele que estava selecionado (ex  imagem 1 de Imagens) // 🔴🔴🔴 FUTURO VER SE CONTINUA NECESSÁRIO // Usar ImagensPUBLISHER como teste
+    finderApp.activate();
+    delay(d0p3);
+    finderApp.selection()[0].delete();
+    delay(d0p3);
+  }
+  seApp.keyCode(48, { using: 'command down' }); // Switch to previous App
+  delay(d0p3);
+}
+
+function invoicingPrompt(
+  invoicingStage,
+  nextNumber,
+  quoteFoldersL,
+  quoteMainsL,
+  quoteAddendumsL,
+  quoteExtraWorksL,
+  invoiceFoldersL,
+  invoiceMainsL,
+  invoiceAddendumsL,
+  invoiceExtraWorksL
+) {
+  var invoicingStageLowerCase = invoicingStage.toLowerCase();
+
+  var generalPrompt1 = `${invoicingStage} principal — Escreve ou escolhe a cotação!`;
+
+  //var generalPrompt2 = "\nSubfactura (Adenda ou Trabalhos a Mais) – Escolhe a Factura principal❗️"
+  var generalPrompt3 = `\n\n—\nPróxima ${invoicingStageLowerCase} principal: ${nextNumber}`;
+
+  var quotePrompt = `\n\n• Cotações ${quoteFoldersL} – Principais ${quoteMainsL}, Adenda ${quoteAddendumsL}, Trabalhos A Mais ${quoteExtraWorksL}`;
+
+  //var invoicePrompt = `\n• Facturas ${invoiceFoldersL} – Principais ${invoiceMainsL}, Adenda ${invoiceAddendumsL}, Trabalhos A Mais ${invoiceExtraWorksL}`
+
+  if (invoiceFoldersL == 0) {
+    var generalPrompt2 = '';
+    var invoicePrompt = '';
+  } else {
+    var generalPrompt2 = `\nSub${invoicingStageLowerCase} (Adenda ou Trabalhos a Mais) – Escolhe a Factura principal❗️`;
+
+    var invoicePrompt = `\n• Facturas ${invoiceFoldersL} – Principais ${invoiceMainsL}, Adenda ${invoiceAddendumsL}, Trabalhos A Mais ${invoiceExtraWorksL}`;
+  }
+
+  return generalPrompt1 + generalPrompt2 + generalPrompt3 + quotePrompt + invoicePrompt + '\n';
+}
+
+function getContratFolderInfo(containerPathStr) {
+  let entityType;
+  let isHubFolder = false;
+  let isFolderWithoutCs = false;
+  let contractNumbers = [];
+
+  let parentFolderName = null;
+  let findFolderSubject = false;
+  let parentFolderSubject = null;
+
+  let contractFolderName = null;
+
+  var containerPathStrItems = containerPathStr.split('/');
+  var containerPathStrItemsIntact = containerPathStr.split('/');
+
+  let parentFolderNameItems = [];
+  let foundFolderIsConsultancy = false;
+  let foundFolderIsSupplierType2 = false;
+
+  // 10 níveis de hierarquia de pastas // pode variar. Was 5
+  for (var i = 0; i < 10; i++) {
+    var currentFolderName = containerPathStrItemsIntact[containerPathStrItemsIntact.length - (1 + i)];
+
+    var currentFolderNameItems = currentFolderName.split(` ${ND} `);
+
+    if (i === 0) {
+      parentFolderName = currentFolderName;
+    }
+
+    try {
+      // THER ARE 3 TYPES OF FOLDER FOR CONTRACT
+      // 01 CONSULTANCY FOLDER & TEMPORARY FOLDER - LOOKS FOR " _ CS"
+      // <\s_\s[A-Z]{6}\d{6}\w*>
+      // IN PASTA HUB
+      /// 20230524 _ XDXCAF210603 _ TIJOLEIRA AMOSTRAS
+      // PASTA NORMAL NORMAL
+      /// Y _ XDXFAF210603 _ SENAMI _ REABILITAÇÃO POSTO TRAVESSIA ROTANDA _ BAIRRO X - ROTANDA _ XDXCAF210603
+      // "\s_\s" para excluir pastas que contém CS. ex. "XX5 PROJECTO DIGITAL XDWFAP230901"
+
+      // 02 SUPPLIER FOLDER - TIPO 1
+      // <^\w*\d{1}\s_\s\d{6}[0-9.]*\s_\s\w*\s_\s\w*>
+      // <XBIM01 _ 135746263 _ BIM _ CONTA _ MAPUTO _ DATAINICIO>
+      // Inclui BM 233960606.555 (Ver notas do App para perber ".555")
+
+      // 03 SUPPLIER FOLDER - TIPO 2
+      /// <^\w*\s_\s\w*\d{1}\s_\s\d{6}\d*\s_\s\w*\s_\s\w*>
+      /// <^\w*\s_\s\w*\d{1}\s_\s[A-Z]*\d{6}\d*\s_\s\w*\s_\s\w*>
+      //  <P1FSCT _ XTVCABO1 _ 2018105550 _ TVCABO _ CONTRATO _ MAPUTO _ DATAINICIO>
+
+      // var identifier = currentFolderName.match(/\s_\s[A-Z]{6}\d{6}\w*|^\w*\d{1}\s_\s\d{6}[0-9.]*\s_\s\w*\s_\s\w*|^\w*\s_\s\w*\d{1}\s_\s\d{6}\d*\s_\s\w*\s_\s\w*/)[0]
+
+      if (currentFolderName.startsWith('XX5')) {
+        // To skip "XX5 PROJECTO DIGITAL _ ALMEIDA TAMATAMA _ RESIDÊNCIA 3P _ XDWFAP240902"
+        continue;
+      }
+
+      var identifier = currentFolderName.match(
+        /\s_\s[A-Z]{6}\d{6}\w*|^\w*\d{1}\s_\s\d{6}[0-9.]*\s_\s\w*\s_\s\w*|^\w*\s_\s\w*\d{1}\s_\s[A-Z]*\d{6}\d*\s_\s\w*\s_\s\w*/
+      )[0];
+
+      var foundFolderName = currentFolderName;
+
+      if (identifier) {
+        break;
+      }
+    } catch {
+      containerPathStrItems.pop(); // Remove currentFolderName
+    }
+  }
+
+  if (!identifier) {
+    isFolderWithoutCs = true;
+
+    var finderFolderPathSr = getFinderFolderPathSr();
+
+    var contractNumber = 'NO_CS';
+    var entity4Folders = getItemNamesFromPathStrs([finderFolderPathSr], [''])[0];
+
+    alert(
+      `Não encontrou a pasta da Consultoria ou Fornecedor. Vai usar os dados abaixo:\n\ncontractNumber: ${contractNumber}\nentity4Folders: ${entity4Folders}`,
+      ``
+    );
+
+    var companyIdentifier = dialog('companyIdentifier - W or X', 'X');
+
+    return {
+      isFolderWithoutCs,
+      companyIdentifier,
+      contractNumber,
+      entity4Folders,
+      // "contractFolderName": contractFolderName,
+      // "contractFolderPathStr": containerPathStrItems.join("/"),
+    };
+  }
+
+  // if (identifier) {
+  var foundFolderNameItems = foundFolderName.split(` ${ND} `);
+
+  foundFolderIsConsultancy =
+    foundFolderNameItems.length === 6 && (foundFolderName.startsWith('Y') || foundFolderName.startsWith('Z'));
+  foundFolderIsSupplierType2 = foundFolderNameItems.length === 7;
+
+  if (foundFolderIsSupplierType2) {
+    var foundFolderNameItems = foundFolderNameItems.slice(1);
+  }
+
+  var contractNumber = foundFolderNameItems[1];
+
+  // Main "HUB" folder: Y _ XDXFAF210601 - XDXFAF210602 - XDXFAF210603 _ SENAMI _ HUB5
+  // And Sub HUB Folder: 20240719-143018 _ XDXFAF210601 - XDXFAF210602 _ SITUAÇÃO DO FURO DE ÁGUA __ KENSANI - COMERCIAL | EMAIL
+  if (contractNumber.includes(' - ')) {
+    // In HUB, use first CS
+    contractNumbers = contractNumber.split(' - ');
+    var contractNumber = contractNumbers[0];
+  }
+
+  // alert(contractNumber);
+
+  /*
+    // if (!foundFolderIsConsultancy) {
+    if (!foundFolderIsConsultancy && !foundFolderIsSupplierType2) {
+      isHubFolder = true;
+    }
+      */
+
+  if (containerPathStr.includes(` ${ND} HUB5`)) {
+    isHubFolder = true;
+  }
+
+  parentFolderNameItems = parentFolderName.split(` ${ND} `);
+  const startsWithDateTime = /^\d{8}-\d{6}$/.test(parentFolderNameItems[0]);
+
+  // alert(parentFolderName);
+  // alert(foundFolderName);
+  /// -------------
+
+  if (startsWithDateTime) {
+    findFolderSubject = true;
+  }
+
+  if (!startsWithDateTime) {
+    parentFolderNameItems = foundFolderName.split(` ${ND} `);
+  }
+
+  if (findFolderSubject) {
+    if (isHubFolder) {
+      // 20240502-205039 _ XDXFAF210601 - XDXFAF210602 - XDXFAF210603 _ POSTO DE TRAVESSIA DE ESPUNGABERA- ORÇAMENTO DE TRABALHOS A MAIS- TM001 __ KENSANI - COMERCIAL | EMAIL
+      parentFolderSubject = parentFolderNameItems[2].split(` ${ND}`)[0];
+    } else {
+      // 20240629-083114 _ EIS OS MODELOS DOS SLIDES __ COOPERATIVA Q17 - HELDER JAUANA | EMAIL
+      parentFolderSubject = parentFolderNameItems[1].split(` ${ND}`)[0];
+    }
+  }
+
+  if (isHubFolder) {
+    // 20240529-120139 _ XDXFAF210601 _ POSTO DE ESPUNGABERA- PROPOSTA DE ALTERAÇÃO DAS PORTAS INTERIORES __ KENSANI - COMERCIAL | EMAIL
+
+    const contractNumberParentFolder = parentFolderNameItems[1];
+
+    // alert(contractNumberParentFolder);
+
+    if (contractNumberParentFolder.includes(' - ')) {
+      // // In HUB, use first CS
+      contractNumbers = contractNumberParentFolder.split(' - ');
+      var contractNumber = contractNumbers[0];
+    } else {
+      contractNumbers = [];
+      var contractNumber = contractNumberParentFolder;
+    }
+  }
+
+  if (isCs(contractNumber)) {
+    entityType = 'customer';
+    var companyIdentifier = contractNumber[2];
+
+    if (companyIdentifier != 'W') {
+      // Check W in XDWFAP221004 XCPFUP220801
+      var companyIdentifier = 'X';
+    }
+
+    const csPosition = foundFolderNameItems[1];
+
+    if (
+      (foundFolderNameItems[0] != 'Y' && foundFolderNameItems[0] != 'Z') ||
+      (foundFolderNameItems[0] === 'Y' && csPosition.includes(' - '))
+    ) {
+      var { consultancyPathStr } = getConsultancyPathStrs(p5PathStrWithSuffixP5, contractNumber);
+
+      var containerPathStrItems = consultancyPathStr.split('/');
+      contractFolderName = containerPathStrItems.slice(-1)[0];
+      var contractFolderNameItems = contractFolderName.split(` ${ND} `);
+    } else {
+      contractFolderName = foundFolderName;
+      var contractFolderNameItems = foundFolderNameItems;
+    }
+  } else {
+    entityType = 'supplier';
+
+    // 2018105550 TVCABO
+    // V0276269 VODACOM
+    //// HUB5 "20230622 _ XDXFAF210603 _ ATRASO E SOLICITAÇÃO DE AMOSTRAS"
+    //// PATAS DE SUPPLIERS
+    if (contractNumber === 'TVC2018105550' || contractNumber === 'V0276269' || contractNumber === 'FPD20140722') {
+      var companyIdentifier = 'X';
+    } else {
+      // WALTER: BIM, BCI, ECT
+
+      alert(`companyIdentifier será "W", update Folder STRUCTURE if must "X"`, ``);
+
+      var companyIdentifier = 'W';
+    }
+
+    contractFolderName = foundFolderName;
+    var contractFolderNameItems = foundFolderNameItems;
+  }
+
+  var entity4Folders = contractFolderNameItems[2];
+
+  if (parentFolderSubject && parentFolderSubject.includes(' | ')) {
+    /* 
+      ' | ' is used when original subject is edited like below. This was noted in QuickFOLDER txt note:
+      	- 20240629-083114 _ POWER POINT PARA APRESENTAÇÃO | EIS OS MODELOS DOS SLIDES __ COOPERATIVA Q17 - HELDER JAUANA | EMAIL
+					- Assunto orginal: "EIS OS MODELOS DOS SLIDES"
+					- Novo assunto: "POWER POINT PARA APRESENTAÇÃO"
+      */
+    parentFolderSubject = parentFolderSubject.split(' | ')[0];
+  }
+
+  return {
+    entityType, // 'customer' or 'supplier
+    isHubFolder,
+    parentFolderSubject,
+    companyIdentifier,
+    contractNumber,
+    contractNumbers,
+    entity4Folders,
+    contractFolderName,
+    contractFolderPathStr: containerPathStrItems.join('/'),
+  };
+  /*   } else {
+
+  } */
+}
+
+function getExtensionFromStr(pathStr) {
+  var matches = pathStr.match(/\.(\w*)$/); //[1]
+
+  if (matches) {
+    return matches[1];
+  } else {
+    return null;
+  }
+}
+
+function getFinderFilePathSr() {
+  try {
+    return decodeURI(finderApp.selection()[0].url()).slice(7).replace(/\/$/, '');
+  } catch {
+    alert(`Seleciona um ficheiro!`, ``);
+  }
+}
+
+function getFinderFolderPathSr() {
+  try {
+    var itemSelected = finderApp.selection()[0];
+    var itemSelectedKind = itemSelected.kind();
+
+    if (itemSelectedKind == 'Alias') {
+      var originalItemPathObj = itemSelected.originalItem();
+
+      if (originalItemPathObj.kind() == 'Folder') {
+        var destinyFolder = originalItemPathObj;
+      } else {
+        var destinyFolder = itemSelected.container();
+      }
+    } else if (itemSelectedKind == 'Folder') {
+      var destinyFolder = itemSelected;
+    } else {
+      var destinyFolder = itemSelected.container();
+    }
+
+    return decodeURI(destinyFolder.url()).slice(7).replace(/\/$/, '');
+
+    // var path = decodeURI(destinyFolder.url()).slice(7).replace(/\/$/, '');
+    // Normalize to NFD to decompose accented characters, which prevents errors when saving.
+    // return path.normalize('NFD');
+  } catch {
+    alert(`Seleciona uma pasta ou ficheiro!`, ``);
+  }
+}
+
+function getFolderNameByWhoseByBeginsWith(pathStr, filter) {
+  if (!finderApp.exists(Path(pathStr))) {
+    throw new Error(`Não existe "${pathStr}" para filtro "${filter}"`);
+  }
+
+  return seApp.folders
+    .byName(pathStr)
+    .folders.whose({ name: { _beginsWith: filter } })
+    .name()[0];
+}
+
+function getFolderNameByWhoseByContains(pathStr, filter) {
+  if (!finderApp.exists(Path(pathStr))) {
+    throw new Error(`Não existe "${pathStr}" para filtro "${filter}"`);
+  }
+
+  return seApp.folders
+    .byName(pathStr)
+    .folders.whose({ name: { _contains: filter } })
+    .name()[0];
+}
+
+function getFolderNameByWhoseByContainsNotEndsWith(pathStr, filter, filterNot) {
+  if (!finderApp.exists(Path(pathStr))) {
+    throw new Error(`Não existe "${pathStr}" para filtros "${filter}" e "${filterNot}"`);
+  }
+
+  return seApp.folders
+    .byName(pathStr)
+    .folders.whose({ _and: [{ name: { _contains: filter } }, { _not: [{ name: { _endsWith: filterNot } }] }] })
+    .name()[0];
+}
+
+function getIsInEmailFolderInteraction(item) {
+  const containerNameParts = item.container().name().split(' | ');
+
+  if (containerNameParts[containerNameParts.length - 1] === 'EMAIL') {
+    return true;
+  }
+
+  return false;
+}
+
+// filters [""] for all
+function getItemNamesFromPathStrs(pathStrs, filters) {
+  var itemNames = pathStrs.map(url => url.split('/').slice(-1).toString());
+
+  var filteredItemNames = itemNames.filter(name => filters.some(filter => name.includes(filter)));
+
+  return appLib.sortArray(filteredItemNames);
+}
+
+function getItemObj(pathStr) {
+  return seApp.aliases.byName(pathStr);
+}
+
+function getItemsInfoFromPathStr(pathStr, itemsType) {
+  let rawItems;
+
+  switch (itemsType) {
+    case 'files':
+      rawItems = seApp.folders.byName(pathStr).files();
+      break;
+    case 'folders':
+      rawItems = seApp.folders.byName(pathStr).folders();
+      break;
+    case 'diskItems':
+      rawItems = seApp.folders.byName(pathStr).diskItems();
+      break;
+    default:
+      return [];
+  }
+
+  const propsArray = rawItems.map(item => {
+    return getItemPropertiesByItem(item);
+  });
+
+  const filtered = propsArray.filter(props => {
+    return !props.posixPath.includes('.DS_Store');
+  });
+
+  filtered.sort((a, b) => {
+    const classA = a.class.toLowerCase();
+    const classB = b.class.toLowerCase();
+
+    if (classA !== classB) {
+      // If one is "folder", it should come first
+      if (classA === 'folder') return -1;
+      if (classB === 'folder') return 1;
+      // Otherwise, fallback to string comparison of kinds
+      return classA.localeCompare(classB);
+    }
+
+    // Same kind: compare by POSIX path
+    return a.posixPath.localeCompare(b.posixPath);
+  });
+
+  // 4. If the only result is the root “/” placeholder, return an empty array
+  if (filtered.length === 1 && filtered[0].posixPath === '/') {
+    return [];
+  }
+
+  const itemsNames = filtered.map(item => {
+    return item.name;
+  });
+
+  const itemsDisplayedNames = filtered.map(item => {
+    return item.displayedName; //|| item.name;
+  });
+
+  return { itemsNames, itemsDisplayedNames, itemsProperties: filtered };
+}
+
+function getItemPropertiesByItem(item) {
+  if (typeof item.properties === 'function') {
+    // Usually Folder
+    return item.properties();
+  } else {
+    // Usually File
+    const posix = Path(item).toString();
+    return getItemObj(posix).properties();
+  }
+}
+
+function getItemPropertiesByPathStr(pathStr) {
+  return getItemObj(pathStr).properties();
+}
+
+function getItemsPropertiesByPathStr(pathStrs, filters = []) {
+  const itemsProperties = pathStrs
+    .map(pathStr => {
+      return getItemObj(pathStr).properties();
+    })
+    .filter(item => filters.some(filter => item.name.includes(filter)));
+
+  const itemsNames = itemsProperties.map(item => {
+    return item.name;
+  });
+
+  return { itemsNames, itemsProperties };
+}
+
+function getND(times = 1) {
+  /* 
+	- Use "+" instead of "&".
+		- macOS, Windows, and Linux, support the use of "&";
+		- Some softwres specially in command-line, can consider "&" as "control character (for instance, in Unix-like systems, "&" is used to run commands in the background)."
+		- URLs and Web Contexts: For "&", the URL-encoded representation is "%26". Not properly encoding URLs can lead to issues with accessing the files or directories.
+	- Now I use "|" (pipe) in Hub Folder, Replace in future if necessary
+	 */
+
+  return '_'.repeat(times);
+}
+// getNDClipboardPattern;
+function getND4CP() {
+  return '||';
+}
+
+function getPathStrFromUrl(urlToDecode) {
+  return decodeURIComponent(decodeURI(urlToDecode).slice(7));
+}
+
+// function getPathStrsFromPathObjs(pathObjs) {
+//   return pathObjs.map(item => decodeURIComponent(decodeURI(item.url()).slice(7)).replace(/\/$/, ''));
+// }
+
+function getPathStrsFromPathObjs(pathObjs) {
+  return pathObjs.map(item => {
+    try {
+      // Properly encode URI components before decoding them to handle special characters like spaces and percent signs.
+      const encodedUrl = encodeURI(item.url());
+      const decodedPath = decodeURIComponent(decodeURI(encodedUrl.slice(7)));
+      return decodedPath.replace(/\/$/, '');
+    } catch (e) {
+      // console.error('Failed to decode URI:', item.url(), e);
+      // // Return the original URL slice or some error indicator as needed
+      // return item.url().slice(7);
+
+      alert(`Erro na função getPathStrsFromPathObjs, processando "${item.url().slice(7)}".`, ``);
+    }
+  });
+}
+
+function getPathStrsFromPathStr(pathStr, itemsType) {
+  if (itemsType == 'files') {
+    var urlsResult = appLib.sortArray(seApp.folders.byName(pathStr).files.posixPath()).filter(url => !url.includes('.DS_Store'));
+  } else if (itemsType == 'folders') {
+    var urlsResult = appLib
+      .sortArray(seApp.folders.byName(pathStr).folders.posixPath())
+      .filter(url => !url.includes('.DS_Store'));
+  } else if (itemsType == 'diskItems') {
+    var urlsResult = appLib
+      .sortArray(seApp.folders.byName(pathStr).diskItems.posixPath())
+      .filter(url => !url.includes('.DS_Store'));
+  }
+
+  // If empty result is ["/"]
+  if (urlsResult.length == 1 && urlsResult[0] == '/') {
+    // Empty result
+    // var urlsResult = [""]
+    return [''];
+  }
+
+  return urlsResult;
+}
+
+function getProjectPathStrUsingCs(projectCs, whereToSearch) {
+  if (whereToSearch == 'xa5Temporay') {
+    // var pathStr = "/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/INBOX/XA5-TEMPORARY5"
+    var pathStr = xa5TemporayPathStr;
+  } else if (whereToSearch == 'xa5Xproduction') {
+    // var pathStr = "/Users/xd5-wmac/Dropbox/DATACENTER/P5 X-PRODUÇÃO/PROJECTOS"
+    var pathStr = `${xa5XProdutionPathStr}/PROJECTOS`;
+  }
+
+  var foldersList = seApp.folders.byName(pathStr).folders;
+
+  for (var i = 0; i < foldersList.length; i++) {
+    var folderName = foldersList[i].name();
+
+    if (folderName.includes(projectCs)) {
+      var temporaryProjectName = folderName;
+    }
+  }
+
+  return pathStr + '/' + temporaryProjectName;
+}
+
+function getScan2BankFilePathStrs(bankIdentifier) {
+  var scan2BankPathStr = '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/INBOX/SCAN2BANK';
+
+  var scan2BankFilePathObjs = seApp.folders.byName(scan2BankPathStr).files;
+  var scan2BankFilePathObjsL = scan2BankFilePathObjs.length;
+
+  var scan2BankFilePathStrs = [];
+
+  for (var i = 0; i < scan2BankFilePathObjsL; i++) {
+    var filePathStr = decodeURI(scan2BankFilePathObjs[i].url()).slice(7);
+    var fileName = filePathStr.split('/').splice(-1).toString();
+
+    if (fileName.includes(bankIdentifier)) {
+      scan2BankFilePathStrs.push(filePathStr);
+    }
+  }
+
+  var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  scan2BankFilePathStrs.sort(collator.compare);
+
+  return scan2BankFilePathStrs;
+}
+
+// function getTags(filePath) {
+//   var expandedFilePath = $(filePath).stringByExpandingTildeInPath;
+//   var fileURL = $.NSURL.fileURLWithPath(expandedFilePath);
+//   var currentTags = Ref();
+//   var error = Ref();
+
+//   var success = fileURL.getResourceValueForKeyError(currentTags, $.NSURLTagNamesKey, error);
+
+//   /*
+//   if (!success || currentTags[0] === null) {
+//     console.log(
+//       'No existing tags found or failed to get current tags: ' + (error[0] ? error[0].localizedDescription : 'Unknown error')
+//     );
+//     return [];
+//   }
+//     */
+
+//   if (!success || currentTags[0] === null || ObjC.unwrap(currentTags[0]) === undefined) {
+//     console.log(
+//       'No existing tags found or failed to get current tags: ' + (error[0] ? error[0].localizedDescription : 'Unknown error')
+//     );
+//     return [];
+//   }
+
+//   return ObjC.unwrap(currentTags[0]).map(tag => ObjC.unwrap(tag));
+// }
+
+function goToFolderCopyPaste(filePathStr) {
+  // alert('X2');
+
+  //delay(d1) // Fica no App
+  seApp.keystroke('g', { using: ['shift down', 'command down'] });
+  delay(d1); // Era d0p3
+  menuLib.copyPaste(filePathStr);
+  delay(d0p3);
+  seApp.keyCode(76); // Go // Era 76
+  // systemLib.enter(1)
+  delay(d1p5);
+  seApp.keyCode(76); // OK // Era 76
+  // systemLib.enter(1)
+  delay(d0p3);
+}
+
+function goToFolderKeystroke(filePathStr) {
+  seApp.keystroke('g', { using: ['shift down', 'command down'] });
+  delay(d0p3);
+
+  seApp.keystroke(filePathStr);
+  delay(d3);
+  seApp.keyCode(76); // Go
+  delay(d1);
+  seApp.keyCode(76); // OK
+  delay(d1);
+}
+
+function itemProperties(itemPathStr) {
+  return seApp.aliases.byName(itemPathStr).properties();
+}
+
+function makeAlias(itemToAlias, path, theName) {
+  return finderApp.make({ new: 'aliasFile', to: itemToAlias, at: path, withProperties: { name: theName } });
+}
+
+function makeFolder(pathToFolder, theName) {
+  const folder = finderApp.make({ new: 'folder', at: pathToFolder, withProperties: { name: theName } });
+  const folderPathStr = getPathStrsFromPathObjs([folder])[0];
+  const folderPathObj = Path(folderPathStr);
+
+  return {
+    folder,
+    folderPathObj,
+    folderPathStr,
+  };
+}
+
+function moveItems(pathStrsToMove, pathStrWhereToMove) {
+  for (var i = 0; i < pathStrsToMove.length; i++) {
+    var pathStrToMove = pathStrsToMove[i];
+
+    finderApp.move(Path(pathStrToMove), { to: Path(pathStrWhereToMove) });
+    delay(d0p3);
+  }
+}
+
+/*
+function process255FolderNameCharacters(folderName) {
+  const folderNameL = folderName.length;
+  const folderNameItems = folderName.split(' ');
+  const folderNameLMaximum = 255; // 255 maximum
+
+  if (folderNameL > folderNameLMaximum) {
+    var folderName = cflV2(
+      folderNameItems,
+      `Número de caracteres para para nome da pasta excede ${folderNameLMaximum} (${folderNameL}) Seleccione items para novo nome`,
+      folderNameItems,
+      true,
+      true
+    ).join(' ');
+  }
+
+  return folderName;
+}
+*/
+
+function process255FolderNameCharacters(folderName) {
+  const folderNameLMaximum = 255; // 255 maximum
+  let folderNameItems = folderName.split(' ');
+
+  while (folderName.length > folderNameLMaximum) {
+    folderName = cflV2(
+      folderNameItems,
+      `Número de caracteres para para nome da pasta excede ${folderNameLMaximum} (${folderName.length}) Seleccione items para novo nome\n\n\—\n"${folderName}"`,
+      folderNameItems,
+      true,
+      true
+    ).join(' ');
+
+    // Update folderNameItems with the new folderName
+    folderNameItems = folderName.split(' ');
+  }
+
+  return folderName;
+}
+
+// ------------------------------ Related
+
+function folderListing(
+  destinyFolderStr,
+  vatCodeType,
+  invoicingStageC1,
+  disciplineC1,
+  serviceC1,
+  province,
+  yyDateFoldersAndDocuments
+) {
+  // O filtro da província foi considerado embora os projectos não precisem (estão agrupagos por província) mas é útil para obras pois estão na mesma pasta.
+  // L significa letter
+
+  var selectedFolderStr = destinyFolderStr;
+
+  var folders_ = seApp.folders.byName(selectedFolderStr).folders;
+
+  const checkedYy = checkYy(folders_, yyDateFoldersAndDocuments, disciplineC1, serviceC1);
+
+  var quoteCsOfQuotesAndInvoices = [];
+  var invoiceFolders = [];
+
+  for (var i = 0; i < folders_.length; i++) {
+    var folderName = folders_[i].name();
+
+    // alert(folderName);
+
+    var folderNameItems = folderName.split(` ${ND} `);
+    var folderNameItemsL = folderNameItems.length;
+
+    if (folderNameItemsL == 6) {
+      // Listing quotes
+      var quoteCs = folderNameItems[folderNameItems.length - 1];
+
+      // XDWCAP221001
+      // Added 202501-093700: quoteCs.slice(6, 8) == checkedYy &&
+      if (
+        quoteCs.slice(0, 3) == vatCodeType &&
+        quoteCs[3] == 'C' &&
+        quoteCs[4] == disciplineC1 &&
+        quoteCs[5] == serviceC1 &&
+        quoteCs.slice(6, 8) == checkedYy &&
+        quoteCs.slice(8, 10) == province
+      ) {
+        quoteCsOfQuotesAndInvoices.push(folderName);
+      }
+
+      // Listing invoices
+      var invoiceCs = folderNameItems[1];
+
+      if (
+        invoiceCs.slice(0, 3) == vatCodeType &&
+        invoiceCs[3] == 'F' &&
+        invoiceCs[4] == disciplineC1 &&
+        invoiceCs[5] == serviceC1 &&
+        invoiceCs.slice(6, 8) == checkedYy && // New
+        invoiceCs.slice(8, 10) == province
+      ) {
+        invoiceFolders.push(folderName);
+      }
+    }
+  }
+
+  // --------------- QUOTES & INVOICES
+  quoteCsOfQuotesAndInvoices.sort();
+  //invoiceFolders.sort()
+
+  console.log(quoteCsOfQuotesAndInvoices);
+
+  // --------------- QUOTES
+  var quoteFolders = quoteCsOfQuotesAndInvoices.filter(folder => folder[7] == 'C');
+
+  var quoteCsOfQuotesAndInvoicesL = quoteCsOfQuotesAndInvoices.length;
+  var quoteFoldersL = quoteFolders.length;
+
+  // MORE WORK
+  var quoteAddendumsL = quoteFolders.filter(folder => folder[11] == 'A').length;
+
+  var quoteExtraWorksL = quoteFolders.filter(folder => folder[11] == 'T').length;
+
+  var quoteAddendumsAndExtraWorksL = quoteAddendumsL + quoteExtraWorksL;
+
+  var quoteMainsL = quoteFoldersL - (quoteAddendumsL + quoteExtraWorksL);
+
+  // --------------- INVOICES
+  invoiceFolders.sort();
+  var invoiceFoldersL = invoiceFolders.length;
+
+  // MORE WORK
+  var invoiceAddendumsL = invoiceFolders.filter(folder => folder[11] == 'A').length;
+  var invoiceExtraWorksL = invoiceFolders.filter(folder => folder[11] == 'T').length;
+  var invoiceAddendumsAndExtraWorksL = invoiceAddendumsL + invoiceExtraWorksL;
+
+  var invoiceMainsL = invoiceFoldersL - (invoiceAddendumsL + invoiceExtraWorksL);
+
+  if (quoteCsOfQuotesAndInvoicesL > 0 || invoiceFoldersL > 0) {
+    if (invoicingStageC1 == 'C') {
+      // Subtrair Cotações de Adenda e Trabalhos A Mais
+      var nextNumber = quoteCsOfQuotesAndInvoices.length + 1 - quoteAddendumsAndExtraWorksL;
+    } else if (invoicingStageC1 == 'F') {
+      // Subtrair Facturas de Adenda e Trabalhos A Mais
+      var nextNumber = invoiceFolders.length + 1 - invoiceAddendumsAndExtraWorksL;
+    }
+
+    if (quoteCsOfQuotesAndInvoicesL > 0 && invoicingStageC1 == 'C') {
+      var prompt = invoicingPrompt(
+        'Cotação',
+        nextNumber,
+        quoteFoldersL,
+        quoteMainsL,
+        quoteAddendumsL,
+        quoteExtraWorksL,
+        invoiceFoldersL,
+        invoiceMainsL,
+        invoiceAddendumsL,
+        invoiceExtraWorksL
+      );
+
+      if (quoteFoldersL == 0) {
+        var quoteFolders = 'SEM COTAÇÕES';
+      }
+
+      if (invoiceFoldersL == 0) {
+        var invoiceFolders = 'SEM FACTURAS';
+      }
+
+      //var optionSelected = cfl2Str(["NOVA COTAÇÃO"].concat("---------------", quoteFolders), "Pastas de cotações (" + quoteFoldersL + ") - Cria nova Cotação!\n\n—\nPróxima cotação: " + nextNumber + "\n", "NOVA COTAÇÃO")
+
+      var optionSelected = cfl2Str(
+        ['NOVA COTAÇÃO'].concat('---------------', quoteFolders, '---------------', invoiceFolders),
+        prompt,
+        'NOVA COTAÇÃO'
+      );
+
+      // optionSelected já não é útil nesta versão que nunca usa Cotação para criar Cotação
+      // optionSelected fazia Return de "ESCREVER, agora editada para NOVA COTAÇÃO" ou "PASTA SELECIONADA"
+      // Activamos para não dar erro no split SPLITZ1
+
+      // ---------------------------------
+
+      var csOrOptionSelectedItemOne = optionSelected.split(` ${ND} `)[0];
+
+      // Somenete duas opções:
+      // Ou é F de factura "XDXFA210303" ou R de "ESCREVER"
+      if (csOrOptionSelectedItemOne[3] == 'F') {
+        var moreWorkType = cfl2Str(['Adenda', 'Trabalhos A Mais'], 'Tipo de Trabalhos Extras', 'Adenda');
+
+        var allInvoiceFoldersOfThisCs = invoiceFolders.filter(
+          folder =>
+            folder.split(` ${ND} `)[0] == csOrOptionSelectedItemOne ||
+            folder.includes(csOrOptionSelectedItemOne + moreWorkType[0])
+        );
+
+        var csOfLastInvoiceFoldersOfThisCs = allInvoiceFoldersOfThisCs[allInvoiceFoldersOfThisCs.length - 1].split(` ${ND} `)[0];
+
+        var csOfLastInvoiceFoldersOfThisCsL = csOfLastInvoiceFoldersOfThisCs.length;
+
+        var moreWorkTypeCharacterCheck = csOfLastInvoiceFoldersOfThisCs[csOfLastInvoiceFoldersOfThisCsL - 2];
+
+        if (moreWorkTypeCharacterCheck == 'A' || moreWorkTypeCharacterCheck == 'T') {
+          var lastNumberOfExtraWork = csOfLastInvoiceFoldersOfThisCs.slice(-1);
+
+          var cs4ExtraWork =
+            csOfLastInvoiceFoldersOfThisCs.slice(0, csOfLastInvoiceFoldersOfThisCsL - 1) + (Number(lastNumberOfExtraWork) + 1);
+        } else {
+          var cs4ExtraWork = csOfLastInvoiceFoldersOfThisCs + moreWorkType[0] + '1';
+        }
+
+        var nextNumberOrCs4ExtraWork = cs4ExtraWork;
+      } else {
+        var nextNumberOrCs4ExtraWork = nextNumber;
+      }
+
+      // -------------------------
+
+      // return nextNumberOrCs4ExtraWork + ' | ' + optionSelected + ' | ' + selectedFolderStr;
+    } else if (quoteCsOfQuotesAndInvoicesL > 0 && invoicingStageC1 == 'F') {
+      var prompt = invoicingPrompt(
+        'Factura',
+        nextNumber,
+        quoteFoldersL,
+        quoteMainsL,
+        quoteAddendumsL,
+        quoteExtraWorksL,
+        invoiceFoldersL,
+        invoiceMainsL,
+        invoiceAddendumsL,
+        invoiceExtraWorksL
+      );
+
+      if (invoiceFoldersL == 0) {
+        // Se não tiver nenhuma Factura
+
+        var optionSelected = cfl2Str(
+          ['ESCREVER'].concat('---------------', quoteFolders),
+          prompt,
+          quoteFolders[quoteFoldersL - 1]
+        );
+      } else {
+        if (quoteFoldersL == 0) {
+          var quoteFoldersD = 'ESCREVER';
+          var quoteFolders = 'SEM COTAÇÕES';
+        } else {
+          var quoteFoldersD = quoteFolders[quoteFoldersL - 1];
+        }
+
+        var optionSelected = cfl2Str(
+          ['ESCREVER'].concat('---------------', quoteFolders, '---------------', invoiceFolders),
+          prompt,
+          quoteFoldersD
+        );
+      }
+
+      if (optionSelected == 'ESCREVER') {
+        //var quoteNextNumber = " | " + (quoteCsOfQuotesAndInvoicesL + 1) - quoteAddendumsAndExtraWorksL
+
+        var quoteNextNumber = ' | ' + (invoiceMainsL + quoteMainsL + 1);
+      } else {
+        var quoteNextNumber = '';
+      }
+
+      var csOrOptionSelectedItemOne = optionSelected.split(` ${ND} `)[0];
+
+      // Somenete duas opções:
+      // Ou é F de factura "XDXFA210303" ou R de "ESCREVER"
+      if (csOrOptionSelectedItemOne[3] == 'F') {
+        var moreWorkType = cfl2Str(['Adenda', 'Trabalhos A Mais'], 'Tipo de Trabalhos Extras', 'Trabalhos A Mais');
+
+        var allInvoiceFoldersOfThisCs = invoiceFolders.filter(
+          folder =>
+            folder.split(` ${ND} `)[0] == csOrOptionSelectedItemOne ||
+            folder.includes(csOrOptionSelectedItemOne + moreWorkType[0])
+        );
+
+        var csOfLastInvoiceFoldersOfThisCs = allInvoiceFoldersOfThisCs[allInvoiceFoldersOfThisCs.length - 1].split(` ${ND} `)[0];
+
+        var csOfLastInvoiceFoldersOfThisCsL = csOfLastInvoiceFoldersOfThisCs.length;
+
+        var moreWorkTypeCharacterCheck = csOfLastInvoiceFoldersOfThisCs[csOfLastInvoiceFoldersOfThisCsL - 2];
+
+        if (moreWorkTypeCharacterCheck == 'A' || moreWorkTypeCharacterCheck == 'T') {
+          var lastNumberOfExtraWork = csOfLastInvoiceFoldersOfThisCs.slice(-1);
+
+          var cs4ExtraWork =
+            csOfLastInvoiceFoldersOfThisCs.slice(0, csOfLastInvoiceFoldersOfThisCsL - 1) + (Number(lastNumberOfExtraWork) + 1);
+        } else {
+          var cs4ExtraWork = csOfLastInvoiceFoldersOfThisCs + moreWorkType[0] + '1';
+        }
+
+        var nextNumberOrCs4ExtraWork = cs4ExtraWork;
+      } else {
+        var nextNumberOrCs4ExtraWork = nextNumber;
+      }
+
+      // nextNumberOrCs4ExtraWork // ExtraWork - Trabalhos A Mais
+      // return nextNumberOrCs4ExtraWork + ' | ' + optionSelected + ' | ' + selectedFolderStr + quoteNextNumber;
+
+      // return nextNumberOrCs4ExtraWork + ' | ' + optionSelected + ' | ' + selectedFolderStr + quoteNextNumber + ' | ' + checkedYy;
+    }
+
+    return nextNumberOrCs4ExtraWork + ' | ' + optionSelected + ' | ' + selectedFolderStr + quoteNextNumber + ' | ' + checkedYy;
+  } else {
+    // Este 1 é numeração da primeira Cotação (C) ou Factura (F)
+    return '1 | ESCREVER';
+  }
+}
+
+function provAndNumberAndSiteAndFolders(destinyFolderPath, serviceCode, provCode, quoteOrInvoice, yyDateFoldersAndDocuments) {
+  var vatCodeType = serviceCode.slice(0, 3);
+  var invoicingStageC1 = serviceCode[3];
+  var disciplineC1 = serviceCode[4];
+  var serviceC1 = serviceCode[5];
+
+  var folderListInfo = folderListing(
+    destinyFolderPath,
+    vatCodeType,
+    invoicingStageC1,
+    disciplineC1,
+    serviceC1,
+    provCode,
+    yyDateFoldersAndDocuments
+  );
+
+  // 3 | ESCREVER | /Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P5/P5A ARQUITECTURA/P5AP PROJECTO/PA2025/11 MAPUTO (CIDADE) | 3 | 25
+
+  var folderListInfoItems = folderListInfo.split(' | '); // SPLITZ1
+  var nextNumberOrCs4ExtraWork = folderListInfoItems[0];
+  const optionSelected = folderListInfoItems[1];
+  // const checkedYy = optionSelected === 'ESCREVER' ? folderListInfoItems[4] : folderListInfoItems[3];
+
+  const checkedYy =
+    folderListInfoItems.length === 2
+      ? yyDateFoldersAndDocuments
+      : optionSelected === 'ESCREVER'
+      ? folderListInfoItems[4]
+      : folderListInfoItems[3];
+
+  // Se for sub factura de trabalhos a Mais não "nextNumberOrCs4ExtraWork" não será número pois é "05T1"
+  // 05 número da factura inicial
+  // T1 Trabalhos A Mais número 1
+
+  if (
+    Number(nextNumberOrCs4ExtraWork) &&
+    (nextNumberOrCs4ExtraWork == '1' ||
+      nextNumberOrCs4ExtraWork == '10' ||
+      nextNumberOrCs4ExtraWork == '20' ||
+      nextNumberOrCs4ExtraWork == '35' ||
+      nextNumberOrCs4ExtraWork == '50')
+  ) {
+    var displayCS =
+      vatCodeType +
+      invoicingStageC1 +
+      disciplineC1 +
+      serviceC1 +
+      // yyDateFoldersAndDocuments +
+      checkedYy +
+      provCode +
+      addZero(nextNumberOrCs4ExtraWork);
+
+    alert(
+      'Celebração!',
+      '👏👏👏\n\n\n' + quoteOrInvoice + ' número ' + nextNumberOrCs4ExtraWork + ' (' + displayCS + '), neste grupo!'
+    );
+  }
+
+  var nextNumberOrCs4ExtraWorkL = nextNumberOrCs4ExtraWork.length;
+
+  if (
+    nextNumberOrCs4ExtraWork[nextNumberOrCs4ExtraWorkL - 2] == 'A' ||
+    nextNumberOrCs4ExtraWork[nextNumberOrCs4ExtraWorkL - 2] == 'T'
+  ) {
+    var cs = nextNumberOrCs4ExtraWork;
+  } else {
+    // var cs = serviceCode + yyDateFoldersAndDocuments + provCode + addZero(nextNumberOrCs4ExtraWork);
+    var cs = serviceCode + checkedYy + provCode + addZero(nextNumberOrCs4ExtraWork);
+  }
+
+  // Uso de " / " no lugar de usual " | " pois folderListInfo usa " | "
+  return cs + ' / ' + folderListInfo;
+}
+
+function checkYy(folders, yyDateFoldersAndDocuments, disciplineC1, serviceC1) {
+  if (disciplineC1 !== 'R' && serviceC1 !== 'P') {
+    return dialog(
+      `Sendo "${getServiceByC1(
+        serviceC1
+      )}", deve confirmar o ano. Note que o Projecto é o único serviço que é automático porque usa pastas por ano.`,
+      yyDateFoldersAndDocuments
+    );
+  }
+
+  let currentFolderIsOfCurrentYear = false;
+
+  var folderNames = [];
+  for (let i = 0; i < folders.length; i++) {
+    folderNames.push(folders[i].name());
+  }
+
+  let yyFromCsLocal = null;
+
+  for (let i = 0; i < folderNames.length; i++) {
+    const folderNameItems = folderNames[i].split(` ${ND} `);
+    const csPotionString = folderNameItems[1];
+
+    if (!csPotionString || !isCs(csPotionString)) {
+      continue;
+    }
+
+    const csInfo = getCsInfo(csPotionString);
+
+    const { serviceYy: yyFromCs } = csInfo;
+
+    yyFromCsLocal = yyFromCs;
+
+    if (yyFromCs === yyDateFoldersAndDocuments) {
+      currentFolderIsOfCurrentYear = true;
+      break;
+    }
+  }
+
+  if (!currentFolderIsOfCurrentYear && yyFromCsLocal) {
+    yyDateFoldersAndDocuments = yyFromCsLocal;
+
+    alert(`Pasta com ano não corrente (${yyFromCsLocal}), este será usado em "yyDateFoldersAndDocuments" na numeração.`);
+  }
+
+  return yyDateFoldersAndDocuments;
+}
+
+// ------------------------------
+
+function renameItem(pathStr, newName, revealStatus) {
+  delay(d0p1);
+
+  var revealStatusItems = revealStatus.split('-');
+
+  if (revealStatusItems[0] == 'reveal') {
+    revealItem(pathStr, revealStatus);
+  } // else "noReveal"
+
+  var containerPathStr = getItemObj(pathStr).container().posixPath();
+
+  var extension = getExtensionFromStr(pathStr);
+
+  if (extension) {
+    newName += `.${extension}`;
+  }
+
+  if (finderApp.exists(Path(`${containerPathStr}/${newName}`))) {
+    alert(`Existe um${extension ? ' ficheiro' : 'a pasta'} com o nome "${newName}".`, ``);
+  } else {
+    // Extenstion if is File not Folder
+    var filePathAlias = seApp.aliases.byName(pathStr);
+    filePathAlias.name = newName;
+    delay(d0p1);
+  }
+}
+
+/* // MOVED TO "xxNodejsJXALib.jxa"
+function revealItem(pathStr, revealStatus) {
+  // 🔴 revealStatus options: "reveal", "reveal-closeTab", "reveal-activatePreviousTab"
+
+  delay(d0p3);
+
+  if (revealStatus.includes('activatePreviousTab')) {
+    var currentWindowId = finderApp.windows[0].id();
+  }
+
+  // Estranho. Usando esta função os PDFs vem alias para "class" e mas directamente é documentFile. Por isso acabei usando kind
+
+  var fileKind = itemProperties(pathStr).kind;
+
+  if (fileKind == 'Alias' || fileKind == 'Folder') {
+    finderApp.reveal(Path(pathStr));
+  } else {
+    finderApp.reveal(Path(pathStr)).extensionHidden = true;
+  }
+
+  if (revealStatus.includes('closeTab')) {
+    delay(d0p3);
+    finderApp.windows[0].close();
+  }
+
+  if (revealStatus.includes('activatePreviousTab')) {
+    activateWindowById(currentWindowId);
+  }
+  delay(d0p3);
+}
+  */
+
+// function revealItemAndCloseTab(pathStr) {
+// 	finderApp.reveal(Path(pathStr)).extensionHidden = true
+// 	delay(d0p3)
+// 	finderApp.windows[0].close()
+// }
+
+// function modifyTags(filePath, tagsToAdd, tagsToRemove, tagsToOverrideExisting) {
+//   var expandedFilePath = $(filePath).stringByExpandingTildeInPath;
+//   var fileURL = $.NSURL.fileURLWithPath(expandedFilePath);
+//   var updatedTags;
+
+//   if (tagsToOverrideExisting && tagsToOverrideExisting.length > 0) {
+//     console.log('Tags to override existing:', tagsToOverrideExisting);
+//     updatedTags = tagsToOverrideExisting;
+//   } else if ((tagsToAdd && tagsToAdd.length > 0) || (tagsToRemove && tagsToRemove.length > 0)) {
+//     var currentTags = getTags(expandedFilePath);
+//     console.log('Current tags:', currentTags); // ["Red", "Blue"]
+//     console.log('Tags to add:', tagsToAdd); // ["Orange", "Yellow"]
+//     console.log('Tags to remove:', tagsToRemove); // ["Red"]
+
+//     // Add new tags and remove the specified tags
+//     updatedTags = currentTags.concat(tagsToAdd).filter((tag, i, arr) => {
+//       return arr.indexOf(tag) === i && tagsToRemove.indexOf(tag) === -1;
+//     });
+//   } else {
+//     // If all arrays are empty, override existing tags (i.e., remove all current tags)
+//     console.log('All tag arrays are empty, removing all existing tags');
+//     updatedTags = [];
+//   }
+
+//   console.log('Updated tags:', updatedTags);
+
+//   var tagArray = $.NSArray.arrayWithArray(updatedTags);
+//   var error = Ref();
+
+//   var success = fileURL.setResourceValueForKeyError(tagArray, $.NSURLTagNamesKey, error);
+
+//   if (!success) {
+//     throw new Error('Failed to set tags: ' + (error[0] ? error[0].localizedDescription : 'Unknown error'));
+//   } else {
+//     console.log('Tags "' + updatedTags.join(', ') + '" successfully updated for file: ' + expandedFilePath);
+//   }
+// }
+
+// /* modifyTags
+// // Run the modifyTags function
+// var filePath = $PATH_TO_FILE$; // Placeholder for the file path
+// var tagsToAdd = $TAGS_TO_ADD$; // Placeholder for the tags to add
+// var tagsToRemove = $TAGS_TO_REMOVE$; // Placeholder for the tags to remove
+// var tagsToOverrideExisting = $TAGS_TO_OVERRIDE$; // Placeholder for the tags to override existing
+// modifyTags(filePath, tagsToAdd, tagsToRemove, tagsToOverrideExisting);
+// modifyTags */
+
+function whereToExport(finderFolderPathSr, expExtension) {
+  if (expExtension == 'PDF') {
+    var folderName = 'PDF (APROVAÇÃO)';
+  } else {
+    // "editável"
+    var folderName = 'EDITÁVEIS';
+  }
+
+  var a5PDFApprovalFolderStr = finderFolderPathSr + '/XX5 PROJECTO DIGITAL/' + folderName;
+
+  if (finderApp.exists(Path(a5PDFApprovalFolderStr))) {
+    return a5PDFApprovalFolderStr;
+  } else {
+    return finderFolderPathSr;
+  }
+}

@@ -1,0 +1,184 @@
+
+
+// v6.0
+
+
+var currentApp = Application.currentApplication();
+var saApp = (currentApp.includeStandardAdditions = true, currentApp);
+var systemEventsApp = Application("System Events");
+
+var finderApp = Application("Finder")
+var imageEventsApp = Application("Image Events")
+
+var finderSelectionList = finderApp.selection()
+
+var imageOption = (currentApp.chooseFromList(["1. SCALE", "2. PAD", "3. JPEG", "4. JPEG • DEL5Z0", "5. JPEG • DEL5Z1", "6. JPEG • DEL5ZZ", "---------------", "7. ALL - JPEG PAD SCALE"], { withPrompt: "Operação", defaultItems: "6. JPEG • DEL5ZZ"})).toString();
+
+var imageOption = imageOption.split(". ")[1]
+
+// Scale inputs
+if (imageOption.includes("SCALE")) {
+	var theFactor = Number(currentApp.displayDialog("Tamanho - Factor (%)", { defaultAnswer: "50"}).textReturned);
+}
+
+// Pad inputs
+if (imageOption.includes("PAD")) {
+	var padWidthFactor = Number(currentApp.displayDialog("Borda (Esquerda/Direita) - Factor (%)", { defaultAnswer: "5"}).textReturned);
+	var padHeightFactor = Number(currentApp.displayDialog("Borda (Topo/Base) - Factor (%)", { defaultAnswer: "5"}).textReturned);
+
+	var padColorArray = (currentApp.chooseFromList(["Azul", "Branco", "Preto", "Verde", "Vermelho"], { withPrompt: "Pad Color", defaultItems: "Branco"})).toString();
+
+	if (padColorArray == "Azul") {
+		var padColor = [0, 0, 65535]
+
+	} else if (padColorArray == "Branco") {
+		var padColor = [65535, 65535, 65535]
+
+	} else if (padColorArray == "Preto") {
+		var padColor = [0, 0, 0]
+
+	} else if (padColorArray == "Verde") {
+		var padColor = [0, 65535, 0]
+
+	} else if (padColorArray == "Vermelho") {
+		var padColor = [65535, 0, 0]
+	}
+}
+
+var destinyFolder  = finderApp.selection()[0].container();
+
+var destinyFolderString = decodeURI(destinyFolder.url()).slice(7);
+
+for(var j=0; j < finderSelectionList.length; j++) {
+
+	finderSelectionList[j].extensionHidden = true
+
+	if (!imageOption.includes("DEL5Z0") && !imageOption.includes("DEL5Z1") && !imageOption.includes("DEL5ZZ")) {
+		finderApp.duplicate(finderSelectionList[j], {to: destinyFolder})
+	}
+
+	// Conversion
+	imageEventsApp.activate()
+
+	var imageExtension = finderSelectionList[j].nameExtension()
+
+	var imagePathString = decodeURI(finderSelectionList[j].url()).slice(7);
+
+	var image = imageEventsApp.open(Path(imagePathString))
+
+	var imageName = finderSelectionList[j].name().split("." + imageExtension)[0]
+
+	if (imageOption.includes("DEL5ZZ")) {
+		var imageNameNew = "XYZ" + " " + imageName
+
+	} else if (imageOption.includes("DEL5Z0")) {
+		var imageNameNew = "Z0" + " " + imageName
+
+	} else {
+		var imageNameNew = "Z" + addZero(j+1) + " " + imageName
+	}
+	//var imageNameNew = "Z" + addZero(j+1) + " " + imageName
+
+	// Scale
+	if (imageOption.includes("SCALE")) {
+
+		var imageExtension = "." + imageExtension
+		var expExtension = imageExtension.toUpperCase()
+
+		// Scale
+		image.scale({byFactor: theFactor/100})
+
+		image.save()
+		// A nota abaixo não funciona, pois houve necessidade do Save acima para compatibiliar as conversões
+		// Scale deve vir antes de Pad para evitar dois Saves — Pad (Save), Scale (Scale) // See Here - http://www.macosxautomation.com/applescript/imageevents/05.html
+	}
+
+	// Pad
+	if (imageOption.includes("PAD")) {
+
+		var imageExtension = "." + imageExtension
+		var expExtension = imageExtension.toUpperCase()
+
+		var [theWidth, theHeight] = image.dimensions() //[2304, 1728]
+		image.pad({toDimensions:[theWidth + (theWidth * padWidthFactor) / 100, theHeight + (theWidth * padHeightFactor) / 100], withPadColor: padColor})
+	}
+
+	// Deve ficar no fim para casos em que haja necessidade de uma conversão de uma ou todas possibilidades incluindo conversão para JPEG para fazer override de extensão
+	if (imageOption.includes("JPEG")) {
+
+		var imageExtension = ".jpeg"
+		var expExtension = "JPEG"
+	}
+
+
+
+
+
+
+
+	var pathAndName = Path(destinyFolderString + imageNameNew + imageExtension)
+
+	image.save({in: pathAndName, as: expExtension})
+
+	image.close()
+	delay(0.5)
+
+
+	finderApp.delete(finderSelectionList[j]) // Delete processed Image
+
+
+
+
+
+	// ----- ELIMINAÇÃO DE " 2", CRIADO PELA DUPLICACÃO
+
+	if (!imageOption.includes("DEL5Z0") && !imageOption.includes("DEL5Z1") && !imageOption.includes("DEL5ZZ")) {
+
+		var imagePathStringWithoutExtension = imagePathString.split("." + imageExtension)[0]
+
+		var imageDuplicated = systemEventsApp.aliases.byName(imagePathStringWithoutExtension + " 2." + imageExtension)
+
+		imageDuplicated.name = imageName + "." + imageExtension
+	}
+
+	// ----- HIDE EXTENSION COVERTED
+
+	var imagePathStringItems = imagePathString.split("/")
+	var removeName = imagePathStringItems.pop()
+
+	if (imageOption.includes("JPEG")) {
+		var extensionConverted = ".jpeg"
+	} else {
+		var extensionConverted = "." + imageExtension
+	}
+
+
+	if (imageOption.includes("DEL5Z0")) { // Apply original name
+
+		var imagePathStrOfConverted1 = imagePathStringItems.join("/") + "/" + imageNameNew + extensionConverted
+
+		var imageConverted = systemEventsApp.aliases.byName(imagePathStrOfConverted1)
+
+		imageConverted.name = imageNameNew.replace("Z0 ", "") + extensionConverted
+
+		var imagePathStrOfConverted2 = imagePathStringItems.join("/") + "/" + imageNameNew.slice(3) + extensionConverted
+
+		finderApp.reveal(Path(imagePathStrOfConverted2)).extensionHidden = true
+
+	} else { // Name with prefix
+
+		var imagePathStrOfConverted = imagePathStringItems.join("/") + "/" + imageNameNew + extensionConverted
+
+		finderApp.reveal(Path(imagePathStrOfConverted)).extensionHidden = true
+	}
+}
+
+
+// ------------------------------------------ FUNCTIONS
+
+function addZero(i) {
+  if (i < 10) {
+    i = "0" + i;
+  }
+  return i.toString();
+}

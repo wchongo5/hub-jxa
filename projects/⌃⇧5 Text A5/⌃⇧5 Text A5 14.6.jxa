@@ -1,0 +1,1264 @@
+// v14.6
+
+var objCLib = Library('objCLib');
+
+var pathLib = Library('pathLib');
+var systemLib = Library('systemLib');
+const {
+  getContratFolderInfo,
+  getND,
+  getFinderFolderPathSr,
+  getItemNamesFromPathStrs,
+  getPathStrsFromPathStr,
+  getProjectPathStrUsingCs,
+} = Library('finderLib');
+const {
+  applyBackgroundColor,
+  bold,
+  deleteRows,
+  numbersDateAndReference,
+  numbersProjectInProcessInfoPopulate,
+  numbersSheetsUpdatePrefixNumbers,
+  numbersWriteReference,
+} = Library('iWorkLib');
+
+var safariLib = Library('safariLib');
+
+var projectLib = Library('projectLib');
+const { formatDateV3, getDelays } = Library('datetimeLib');
+var displayLib = Library('displayLib');
+var cflLib = Library('cflLib');
+var numberLib = Library('numberLib');
+var documentLib = Library('documentLib');
+var menuLib = Library('menuLib');
+var appLib = Library('appLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var pagesApp = Application('Pages');
+var pagesAppControllerP = seApp.processes['Pages'];
+var numbersApp = Application('Numbers');
+var safariApp = Application('Safari');
+// var archicad23App = Application('ARCHICAD 23');
+// var notesApp = Application('Notes');
+const notesApp = Application('com.apple.Notes');
+
+// ---------------------------------------
+const ND = getND();
+// --------------------------------------- DELAYS
+
+const { d0p1, d0p3, d0p5, d0p8, d1, d1p5, d3, d7 } = getDelays();
+
+var numXA5PathObj = Path(pathLib.getNumXA5PathStr());
+var numXG5PathObj = Path(pathLib.getNumXG5PathStr());
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const {
+  components: {
+    year: { Y4: yearY4 },
+    month: { M2: monthM2 },
+    day: { D2: dayD2 },
+  },
+  formats: { dateY4M2D2__H2M2S2 },
+} = nowFormatted;
+
+displayLib.alert(
+  `🔴 ESPECIFICAÇÕES MUDAM DE 00X02-2 para 00X00 de modo a contemplar todas especialidades. Também em Rename Arquitectura. Code to remove Emblem if is particular project not goverment.`,
+  ``
+);
+
+var documents = cflLib.cfl(
+  ['1. Apresentação A5', '2. Documentos A5', '3. Necessidades A5 (Reset)'],
+  `Tipo de Produção\n\n\n—\nIn "2. Documentos A5"\n   • "VEDAÇÃO" no TXT em X-PRODUCTION é excluído na verificação de programa de necessidades pois não tem espaços❗️`,
+  '2. Documentos A5',
+  'm'
+);
+
+var foundProjectSheet = false;
+
+var destinyFolderStr = getFinderFolderPathSr();
+var folderName = destinyFolderStr.split('/').slice(-1)[0];
+
+if (documents.toString().includes('2. Documentos A5') && !folderName.includes('ORIGINAIS')) {
+  currentApp.displayAlert(`Normalmente, "2. Documentos A5" grava na pasta "ORIGINAIS" e não foi selecionada❗️`, {
+    buttons: 'Cancel',
+    cancelButton: 1,
+  });
+}
+
+for (var h = 0; h < documents.length; h++) {
+  var document = documents[h];
+  numbersApp.activate();
+
+  if (document == '1. Apresentação A5') {
+    var docNumXG5 = numbersApp.open(numXG5PathObj);
+
+    var sheetPresentationA5 = docNumXG5.sheets['APRESENTAÇÃO A5'];
+    var tablePresentationOptions = sheetPresentationA5.tables['presentationOptions'];
+
+    numbersApp.activate();
+
+    docNumXG5.activeSheet.set(docNumXG5.sheets['APRESENTAÇÃO A5']);
+
+    var tableLengthRownReference = tablePresentationOptions.rowCount();
+    var sections_InfoLinessList = [];
+    var sectionList = [];
+    var infoLineList = [];
+
+    for (var i = 0; i < tableLengthRownReference; i++) {
+      var sectionChecker = tablePresentationOptions.rows[i].cells[1].value();
+      var descriptionChecker = tablePresentationOptions.rows[i].cells[2].value();
+
+      var infoLine = tablePresentationOptions.rows[i].cells[0].value();
+
+      if (sectionChecker == 1) {
+        sections_InfoLinessList.push(infoLine + ' / ' + (sectionList.length + 1));
+
+        sectionList.push(sectionList.length + ' ' + infoLine);
+      }
+
+      if (descriptionChecker == 1 && infoLine != '' && infoLine != null) {
+        if (infoLine[0] == ' ') {
+          sections_InfoLinessList.push('•' + infoLine.substr(3));
+        } else {
+          sections_InfoLinessList.push('#' + infoLine);
+        }
+
+        infoLineList.push(infoLine);
+      }
+    }
+
+    var sectionCount = sectionList.length;
+    var infoLineCount = infoLineList.length;
+
+    docNumXG5.save();
+
+    safariApp.activate();
+
+    //safariLib.openURL("https://paper.dropbox.com/doc/XA5-PRESENTATION--A7RvOe60RowYpuKD5kqy05EqAg-jtsSBYVwJfJCzVNSLABqA");
+
+    var presentationNote = notesApp.folders['P5'].notes.whose({ name: { _contains: 'P5XA5 📕 Apresentação P5' } })[0];
+
+    notesApp.show(presentationNote);
+
+    delay(d3); // Era d7
+
+    //systemLib.tab(1)
+    // systemLib.arrowDown(1)
+    systemLib.arrowUp(30);
+    systemLib.arrowDown(4);
+    menuLib.selectNextLine(30);
+
+    // delay(d1)
+
+    for (var i = 0; i < sections_InfoLinessList.length; i++) {
+      var item = sections_InfoLinessList[i];
+
+      if (item.includes('ASPECTOS TÉCNICOS') || item.includes('CONCEITO')) {
+        // ADDED TO SEPARATE SECTIONS
+        systemLib.enter(1);
+
+        systemLib.pressDelete(1);
+        systemLib.enter(1);
+      }
+
+      if (useBullet == 'useBullet') {
+        systemLib.keystrokeStr('-'); // "-"
+        systemLib.space(1);
+      }
+
+      if (item.includes('#')) {
+        systemLib.unTab(1);
+      }
+
+      if (item.includes('•') && indent == 'indent') {
+        systemLib.tab(1);
+      }
+
+      if (item[0].includes('#') || item[0].includes('•')) {
+        //var item2Write = item.substr(1) // ACIMA001
+        // ORIGINAL DE PAPER ACIMA001
+        // DESACTIVADO PARA USAR # E • DEVIDO A FALHA
+        var item2Write = item;
+      } else {
+        var item2Write = item;
+      }
+
+      saApp.setTheClipboardTo(item2Write);
+      menuLib.paste();
+
+      // console.log("1");
+
+      systemLib.enter(1);
+
+      // NEW TO PREVENT TWO LINE IF WORD WORD RECOGNIZED AS TAG
+      if (item2Write.split(' ').length == 1) {
+        systemLib.enter(1);
+      }
+
+      // displayLib.alert(`APAGA AQUI`, ``)
+
+      var indent = '';
+      var useBullet = '';
+
+      if (item.includes('#')) {
+        var indent = 'indent';
+      }
+
+      if (item.includes('CONDICIONANTES') || item.includes('ASPECTOS TÉCNICOS') || item.includes('CONCEITO')) {
+        var useBullet = 'useBullet';
+        // var isNotFirstItem = true
+      }
+      if (sections_InfoLinessList[sections_InfoLinessList.length - 1] == sections_InfoLinessList[i]) {
+        systemLib.enter(1); // Enter. Eliminar last bullet
+      }
+    }
+  } else if (document == '2. Documentos A5') {
+    const docNumXA5 = numbersApp.open(numXA5PathObj);
+    const invoiceCs = getContratFolderInfo(destinyFolderStr).contractNumber;
+
+    let projSheet = undefined;
+    const projSheets = docNumXA5.sheets.whose({ name: { _endsWith: invoiceCs } });
+    const projSheetsL = projSheets.length;
+
+    if (projSheetsL === 1) {
+      projSheet = projSheets[0];
+    } else if (projSheetsL > 1) {
+      displayLib.alert(`Devia ser "1", mas são "${projSheetsL}" sheets com "${invoiceCs}"`, ``);
+    } else {
+      displayLib.alert(`Sheet de "${invoiceCs}" não encontrado!`, ``);
+    }
+
+    var createdDocStrs = '';
+    var createdDocCount = 0;
+
+    var deactivatedDocStrs = '';
+    var deactivatedDocCount = 0;
+
+    var memory = true;
+    var memoryName4Alert = 'Memória A5, ';
+
+    var specifications = true;
+    //var specifications = false
+    var specificationsName4Alert = 'Especificações, ';
+
+    var projectDeliveryTerm = false;
+    // A vírgula e espaço estão abaixo pois recebe mais informação antes da vírgula
+    var projectDeliveryTermName4Alert = 'Termo de Entrega A5';
+
+    var tdR = true;
+    //var tdR = false
+    var tdRName4Alert = 'Termo de Responsabilidade, ';
+
+    var request4Approval = false;
+    var request4ApprovalName4Alert = 'Requerimento para aprovação de Projecto, ';
+
+    var projSheetName = projSheet.name();
+
+    // --------------- BUILDINGNAMES
+
+    var buildingsGroupIDAndNames = projectLib.getBuildingsGroupIDAndNames(invoiceCs);
+
+    var buildingsGroupIDAndNames = buildingsGroupIDAndNames.filter(item => item.includes('G3'));
+
+    var buildingsGroupIDAndNamesL = buildingsGroupIDAndNames.length;
+
+    var temporaryProjectPathStr = getProjectPathStrUsingCs(invoiceCs, 'xa5Temporay');
+
+    const folderSapesName = '+ ESPAÇOS';
+
+    var temporaryProjectSpacesPathStr = temporaryProjectPathStr + '/' + folderSapesName;
+    var spacesPathStrs = getPathStrsFromPathStr(temporaryProjectSpacesPathStr, 'files');
+
+    var spacesPathStrsL = spacesPathStrs.length;
+
+    // --------------- CHECK IF NAMES MATCHES
+
+    var namesMatch = true;
+
+    // if (buildingsGroupIDAndNamesFromSpacesPathStr[0] == "") {
+    if (spacesPathStrsL == 0) {
+      displayLib.alert(`A pasta "${folderSapesName}" não tem ficheiros de espaços de Archicad.`, ``);
+    } else {
+      var buildingsGroupIDAndNamesFromSpacesPathStr = getItemNamesFromPathStrs(spacesPathStrs, ['']);
+
+      var buildingsGroupIDAndNamesFromSpacesPathStr = buildingsGroupIDAndNamesFromSpacesPathStr.map(
+        name => 'G' + name.replace('.txt', '')
+      );
+    }
+
+    for (var f = 0; f < buildingsGroupIDAndNames.length; f++) {
+      if (buildingsGroupIDAndNames[f].slice(0, 6) != buildingsGroupIDAndNamesFromSpacesPathStr[f].slice(0, 6)) {
+        var namesMatch = false;
+      }
+    }
+
+    if (namesMatch && buildingsGroupIDAndNamesL == spacesPathStrsL) {
+      var tableProjectInfo = projSheet.tables['Project Info'];
+
+      // ---------------- CLIENTNAME
+      var customer = tableProjectInfo.cells['B1'].value();
+
+      if (invoiceCs[2] == 'X') {
+        // If "W" continues FALSE
+        var projectDeliveryTerm = true;
+      }
+
+      var customer4SheetOrBimCloud = tableProjectInfo.cells['C1'].value();
+
+      // ---------------- OBJECT
+      var object = tableProjectInfo.cells['B2'].value();
+
+      var localWithBullets = tableProjectInfo.cells['B5'].value();
+      var localWithComma = tableProjectInfo.cells['C5'].value();
+
+      var date = tableProjectInfo.cells['B8'].value();
+      var dateWithPrepositions = date.split(' ')[0] + ' de ' + date.split(' ')[1] + ' de ' + date.split(' ')[2];
+
+      if (memory || specifications) {
+        var mmStrFromDate = date.split(' ')[1];
+        var yyyyFromDate = date.split(' ')[2];
+
+        var mmStrAndYyyyFromDate = mmStrFromDate + ' ' + yyyyFromDate;
+      }
+
+      var customerType = tableProjectInfo.cells['E1'].value();
+      var intervention = tableProjectInfo.cells['E2'].value();
+
+      if (intervention == 'Construção') {
+        var interventionInCover = '';
+        var extraPrompt = '';
+      } else {
+        var interventionInCover = `—\n${intervention}`;
+        var extraPrompt = '\n\n—\n❗️' + intervention + '\n';
+      }
+
+      var specsAndMemoryOptions = specsOrMemoryOptionsLists(projSheet, 'Comum EspecsMem02ARQ - Opções', 2);
+
+      currentApp.activate();
+      var specsAndMemoryOptionsSel = cflLib.cfl(
+        specsAndMemoryOptions,
+        'Comum — Especificações & Memória',
+        [
+          'BLO5 - Bloco',
+          'BLO5CI - Bloco de Cimento',
+          'BLO5CE - Bloco Cerâmico',
+          'COB5 - Cobertura',
+          'COB5LAR - Laje Armada',
+          'PAV5I - Pavimento Interiores',
+          'PAV5IT - Tijoleira',
+          'PAV5IP - Parquet',
+          'ROD5 - Rodapé',
+          'VID5 - Vidro & Alumínio',
+        ],
+        'm'
+      );
+
+      if (memory) {
+        var memoryOptions = specsOrMemoryOptionsLists(projSheet, 'Memória 02ARQ - Opções', 1);
+
+        var memoryGeneralOptions = ['X'].concat(specsAndMemoryOptionsSel);
+
+        var memoryOptionsSel = memoryGeneralOptions.concat(
+          cflLib.cfl(memoryOptions, 'Opções para Memória', ['XXX5 - Code Memory Options'], 'm')
+        );
+
+        var memory4Lists = specsOrMemoryInfoLists(projSheet, 'Memória 02ARQ', memoryOptionsSel);
+        var memoryInfoLines = memory4Lists[0];
+        var heading1List = memory4Lists[1];
+        var heading2List = memory4Lists[2];
+        var heading3List = memory4Lists[3];
+
+        var memoryInfoLinesText = memoryInfoLines.join('\n');
+
+        pagesApp.activate();
+        var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['Memória 02ARQ'] }).make();
+        delay(d0p3);
+
+        var tableMemory02ArqCover = docPages.tables['memory02ArqCover'];
+
+        fillCoverTableInfo(tableMemory02ArqCover, customer, object, localWithBullets, interventionInCover, mmStrAndYyyyFromDate);
+
+        delay(d0p3);
+
+        // CUT TABLES
+        menuLib.selectAll();
+        systemLib.arrowRight(1);
+        menuLib.selectPreviousCharacters(11);
+        menuLib.cut();
+
+        var placeHolderTexts_ = docPages.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag.includes('memoryInfoLinesText')) {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(memoryInfoLinesText);
+          }
+        }
+
+        delay(3);
+
+        // saveDoc(destinyFolderStr, "00X02-1", "MEMÓRIA")
+        processSave(docPages, destinyFolderStr, `00X02-1 ${ND} ${customer4SheetOrBimCloud} ${ND} MEMÓRIA`);
+
+        delay(d0p1);
+
+        delay(3);
+
+        // Para selecionar alguma coisa para activar FORMAT INSPECTOR
+        numberingHeadings(heading1List, 'H1');
+        numberingHeadings(heading2List, 'H2');
+        numberingHeadings(heading3List, 'H3');
+
+        // var docPagesFront = pagesApp.documents[0]
+        var docPagesFront = docPages; //pagesApp.documents[0]
+
+        // --------------- COPY AND PASTE BY OBJECT TABLE
+        for (var w = 0; w < buildingsGroupIDAndNames.length; w++) {
+          var buildingName = buildingsGroupIDAndNames[w];
+          var spacesPathStr = spacesPathStrs[w];
+
+          memoryTableProc(projSheetName, buildingName, spacesPathStr);
+        }
+        delay(d0p1);
+
+        // DELETE NOT USED TABLES
+        var tablesNeedsInMemory = docPagesFront.tables();
+        var tablesNeedsInMemoryL = tablesNeedsInMemory.length;
+
+        // "-1" pois índices de Tabelas começam no 0, última tablela é tablesNeedsInMemoryL - 1
+        // >= para avaliar até a última tabela
+        for (var w = tablesNeedsInMemoryL - 1; w >= 0; w--) {
+          var tableName = tablesNeedsInMemory[w].name();
+
+          if (tableName.includes('OBJ5')) {
+            tablesNeedsInMemory[w].delete();
+            systemLib.pressDelete(2);
+            systemLib.arrowDown(1); // Arrow dow to position cursor below table
+          }
+        }
+
+        docPagesFront.save();
+
+        createdDocStrs += memoryName4Alert;
+        createdDocCount += 1;
+      } else {
+        deactivatedDocStrs += memoryName4Alert;
+        deactivatedDocCount += 1;
+      }
+
+      if (specifications) {
+        var specsOptions = specsOrMemoryOptionsLists(projSheet, 'Especificações 02ARQ - Opções', 1);
+
+        if (customerType == 'Empresa') {
+          var specsGeneralOptions = ['X', 'CLI5E'].concat(specsAndMemoryOptionsSel);
+        } else if (customerType == 'Individual') {
+          var specsGeneralOptions = ['X'].concat(specsAndMemoryOptionsSel);
+
+          // Filter Chaves & Chaveiro Options
+          var specsOptions = specsOptions.filter(option => !option.includes('CHA5'));
+        }
+
+        // "Construção" não entra nos IFs pois é a situação normal
+        // "Restauração" e "Reabilitação" levam dois caracteres depois de 5 para evitar cruzamento
+
+        if (
+          intervention == 'Ampliação' ||
+          intervention.includes('Conclusão') ||
+          intervention.includes('Reabilitação') ||
+          intervention.includes('Restauração')
+        ) {
+          var specsOptions = specsOptions.concat('---------------');
+
+          if (intervention == 'Ampliação') {
+            var specsOptions = specsOptions.concat('INT5AL - Ligação com existente', 'INT5A_ - Trazer mais Opções');
+          } else if (
+            intervention.includes('Conclusão') ||
+            intervention.includes('Reabilitação') ||
+            intervention.includes('Restauração')
+          ) {
+            // 🔴🔴🔴 CODEREF01 Ver notas em NumXA5 > NOTAS
+
+            // Requalificação (Comum para Reabilitação e Restauração)
+            // INT5RQR - Último R é de Reboco e fissuras
+            var specsOptions = specsOptions.concat('INT5RQR - Reboco e fissuras');
+
+            if (intervention.includes('Conclusão')) {
+              var specsOptions = specsOptions.concat('INT5CCA - Aço Exposto', 'INT5CC? - Trazer mais Opções');
+            } else if (intervention.includes('Reabilitação')) {
+              var specsOptions = specsOptions.concat('INT5RBC - Cornijas (Exemplo)', 'INT5RBT - Trazer mais Opções');
+            } else if (intervention.includes('Restauração')) {
+              var specsOptions = specsOptions.concat(
+                'INT5RTC - Cornijas (Exemplo)',
+                'INT5RTT - Restauração - Trazer mais Opções'
+              );
+            }
+          }
+        }
+
+        currentApp.activate();
+        var specsOptionsSel = specsGeneralOptions.concat(
+          cflLib.cfl(
+            specsOptions,
+            'Opções para Especificações' + extraPrompt,
+            [
+              'BET5 - Betão',
+              'BET5E - Betão Estrutural',
+              'BET5NE - Betão Não Estrutural',
+              'AZU5 - Azulejos',
+              'PAV5I - Pavimento Interiores',
+              'PAV5IT - Tijoleira',
+              'PAV5E - Pavimento Exteriores',
+              'PAV5EP - Pavé',
+              'SER5 - Serralharia',
+              'LOI5 - Loiça Fixa',
+              'ARR5 - Arranjos Exteriores',
+              'ARR5J - Jardim',
+            ],
+            'm'
+          )
+        );
+
+        var specs4Lists = specsOrMemoryInfoLists(projSheet, 'Especificações 02ARQ', specsOptionsSel);
+        var specsInfoLines = specs4Lists[0];
+        var heading1List = specs4Lists[1];
+        var heading2List = specs4Lists[2];
+        var heading3List = specs4Lists[3];
+
+        var specsInfoLinesText = specsInfoLines.join('\n');
+
+        pagesApp.activate();
+        var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['Especificações 02ARQ'] }).make();
+
+        var tableSpecs02ArqCover = docPages.tables['specs02ArqCover'];
+
+        fillCoverTableInfo(tableSpecs02ArqCover, customer, object, localWithBullets, interventionInCover, mmStrAndYyyyFromDate);
+        delay(d0p3);
+
+        // --------------- SAVE AS, AQUI PARA EVITAR FALHAS SE FOR NO FIM
+
+        // saveDoc(destinyFolderStr, "00X02-2", "ESPECIFICAÇÕES")
+
+        processSave(docPages, destinyFolderStr, `00X02-2 ${ND} ${customer4SheetOrBimCloud} ${ND} ESPECIFICAÇÕES`);
+
+        var placeHolderTexts_ = docPages.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag.includes('specsInfoLinesText')) {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(specsInfoLinesText);
+          }
+        }
+
+        delay(d0p3);
+
+        // Para selecionar alguma coisa para activar FORMAT INSPECTOR
+        menuLib.selectAll();
+
+        numberingHeadings(heading1List, 'H1');
+        numberingHeadings(heading2List, 'H2');
+        numberingHeadings(heading3List, 'H3');
+
+        docPages.save(); // Save pois houve edit depois de Save As feito antes
+
+        createdDocStrs += specificationsName4Alert;
+        createdDocCount += 1;
+      } else {
+        deactivatedDocStrs += specificationsName4Alert;
+        deactivatedDocCount += 1;
+      }
+
+      if (projectDeliveryTerm) {
+        var projectDeliveryTermTimeToSave = true;
+        var docStringName = 'TERMO DE ENTREGA';
+
+        var productionTypeCode = invoiceCs[4] + '5' + invoiceCs[5];
+
+        var docNumXG5 = numbersApp.open(numXG5PathObj);
+        var customerAndSupplierSheet = docNumXG5.sheets['CUSTOMERS&SUPPLIERS'];
+
+        var recipientTableNameAndObjectsAndCssItems = numbersGetRecipientTableNameAndObjectsAndCss(
+          customerAndSupplierSheet,
+          invoiceCs,
+          docStringName.toUpperCase()
+        );
+
+        var tableRecipientName = recipientTableNameAndObjectsAndCssItems[0];
+
+        // --------------- HEADERSELECTED
+        var tableRecipient = customerAndSupplierSheet.tables[tableRecipientName];
+        var headerSelected = tableRecipient.cells['B1'].value();
+
+        // --------------- DATEANDREFERENCE
+
+        const {
+          referenceNumber1WithDate,
+          // referenceNumber2WithDate,
+          dateDotDdMmYyyy,
+          referenceNumberIncrement1,
+          // referenceNumberIncrement2,
+          referenceNumber1,
+          // referenceNumber2,
+          referenceNumberPreviousWithDate,
+        } = numbersDateAndReference(docNumXG5, productionTypeCode, yearY4, monthM2, dayD2, 'X'); //.split(" / ")
+
+        // var referenceNumber1WithDate = dateAndReferenceItems[0]
+        // var theDate = dateAndReferenceItems[1]
+        // var referenceNumber1 = dateAndReferenceItems[2]
+        var referenceWithXDAndZero = 'XD' + referenceNumber1 + '-0';
+        // var referenceNumberPreviousWithDate = dateAndReferenceItems[3]
+
+        pagesApp.activate();
+        var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['T-Entrega A5'] }).make();
+
+        var placeHolderTexts_ = docPages.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag == 'theDate') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(dateDotDdMmYyyy);
+          } else if (thisTag == 'theDestinyHeader') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(headerSelected);
+          } else if (thisTag == 'theReference') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(referenceNumber1);
+          } else if (thisTag == 'invoiceCs') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(invoiceCs);
+          } else if (thisTag == 'object') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(object);
+          }
+        }
+
+        // .slice(0, -1) para fora de "ORIGINAIS5"
+        var destinyFolderStrOutOfOriginalsFolder = destinyFolderStr.split('/').slice(0, -1).join('/');
+
+        // saveDoc(destinyFolderStrOutOfOriginalsFolder, referenceWithXDAndZero, docStringName)
+
+        processSave(
+          docPages,
+          destinyFolderStr,
+          `${referenceWithXDAndZero} ${ND} ${docStringName.toUpperCase()} ${ND} ${customer4SheetOrBimCloud}`
+        );
+
+        var projectDeliveryTermTimeToSave = false; // To reset
+
+        delay(d1);
+
+        var referenceToWrite =
+          customer4SheetOrBimCloud + ' / ' + documentLib.capitalizeText(docStringName, 'WithExclusions') + ' — ' + object;
+
+        numbersWriteReference(numbersApp, docNumXG5, referenceNumber1WithDate, referenceNumberIncrement1, referenceToWrite);
+
+        createdDocStrs += `${projectDeliveryTermName4Alert} (Refs❗️ Anterior: ${referenceNumberPreviousWithDate} — Actual: ${referenceNumber1WithDate}), `;
+        createdDocCount += 1;
+      } else {
+        deactivatedDocStrs += projectDeliveryTermName4Alert + ', ';
+        deactivatedDocCount += 1;
+      }
+
+      if (tdR) {
+        var gender = tableProjectInfo.cells['B11'].value();
+
+        pagesApp.activate();
+        var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['T-Responsabilidade'] }).make();
+
+        var placeHolderTexts_ = docPages.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag == 'object') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(object);
+          } else if (thisTag == 'gender') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(gender);
+          } else if (thisTag == 'customer') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(customer);
+          } else if (thisTag == 'localWithComma') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(localWithComma);
+          } else if (thisTag == 'dateWithPrepositions') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(dateWithPrepositions);
+          }
+        }
+
+        // saveDoc(destinyFolderStr, "00T02", "TERMO DE RESPONSABILIDADE")
+
+        processSave(docPages, destinyFolderStr, `00T02 ${ND} ${customer4SheetOrBimCloud} ${ND} TERMO DE RESPONSABILIDADE`);
+
+        createdDocStrs += tdRName4Alert;
+        createdDocCount += 1;
+      } else {
+        deactivatedDocStrs += tdRName4Alert;
+        deactivatedDocCount += 1;
+      }
+
+      if (request4Approval) {
+        var age = tableProjectInfo.cells['B14'].value();
+        var maritalStatus = tableProjectInfo.cells['D14'].value();
+        var iDNumber = tableProjectInfo.cells['B15'].value();
+        var cityIssue = tableProjectInfo.cells['C15'].value();
+        var iDDateIssue = tableProjectInfo.cells['D15'].value();
+        var nuitNum = tableProjectInfo.cells['B14'].value();
+        var birthplace = tableProjectInfo.cells['D16'].value();
+        var residence = tableProjectInfo.cells['B17'].value();
+        var telephone = tableProjectInfo.cells['C17'].value();
+        var email = tableProjectInfo.cells['D17'].value();
+        var landNumber = tableProjectInfo.cells['B18'].value();
+        //var quarter = tableProjectInfo.cells["B9"].value() // 🔴 Parece que não é B9
+        var provinceIssue = tableProjectInfo.cells['B19'].value();
+
+        pagesApp.activate();
+        var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['Req-Aprovação 02ARQ'] }).make();
+
+        var placeHolderTexts_ = docPages.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag == 'customer') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(customer);
+          } else if (thisTag == 'age') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(age);
+          } else if (thisTag == 'maritalStatus') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(maritalStatus);
+          } else if (thisTag == 'iDNumber') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(iDNumber);
+          } else if (thisTag == 'cityIssue') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(cityIssue);
+          } else if (thisTag == 'iDDateIssue') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(iDDateIssue);
+          } else if (thisTag == 'nuitNum') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(nuitNum);
+          } else if (thisTag == 'birthplace') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(birthplace);
+          } else if (thisTag == 'residence') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(residence);
+          } else if (thisTag == 'telephone') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(telephone);
+          } else if (thisTag == 'email') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(email);
+          } else if (thisTag == 'object') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(object);
+          } else if (thisTag == 'landNumber') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(landNumber);
+          } else if (thisTag == 'quarter') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(quarter);
+          } else if (thisTag == 'provinceIssue') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(provinceIssue);
+          } else if (thisTag == 'dateWithPrepositions') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(dateWithPrepositions);
+          }
+        }
+
+        // saveDoc(destinyFolderStr, "00XA5", "REQ-APROVAÇÃO 02ARQ")
+
+        processSave(docPages, destinyFolderStr, `00XA5 ${ND} ${customer4SheetOrBimCloud} ${ND} REQ-APROVAÇÃO 02ARQ`);
+
+        createdDocStrs += request4ApprovalName4Alert;
+        createdDocCount += 1;
+      } else {
+        deactivatedDocStrs += request4ApprovalName4Alert;
+        deactivatedDocCount += 1;
+      }
+
+      if (projectDeliveryTerm) {
+        pagesApp.activate();
+      }
+
+      var notifications = '';
+      if (tdR) {
+        notifications += '• Imprimir Certificado Arquitecto (NECESSÁRIO?).';
+      }
+
+      if (notifications == '') {
+        var notifications = '…';
+      }
+
+      var createdDocStrs = createdDocStrs.slice(0, createdDocStrs.length - 2); // Remove last ", "
+      var deactivatedDocStrs = deactivatedDocStrs.slice(0, deactivatedDocStrs.length - 2); // Remove last ", "
+
+      displayLib.alert(
+        `NOTIFICAÇÕES\n` +
+          notifications +
+          `\n\nDOCUMENTOS\n• Criados (${createdDocCount}) — ${createdDocStrs}\n\n• Desactivados (${deactivatedDocCount}) — ${deactivatedDocStrs}\n\n❗️Enviar o projecto completo incluindo o vídeo e imagens soltas na pasta❗️`,
+        ``
+      );
+
+      if (projectDeliveryTerm) {
+        displayLib.alert(
+          `IMPRIMIR DOIS EXEMPLARES DE TERMO DE ENTREGA\n\n🔴🔴🔴"DEL5 THIS ALERT" DEPOIS QUE DOMINAR O Nº DE EXEMPLARES`,
+          ``
+        );
+      }
+    } else {
+      if (buildingsGroupIDAndNamesL != spacesPathStrsL) {
+        displayLib.alert(
+          `ERRO!`,
+          `O número de buildingsGroupIDAndNames (${buildingsGroupIDAndNamesL}) é diferente do número de spacesPathStrs (${spacesPathStrsL})`
+        );
+      } else {
+        displayLib.alert(
+          `ERRO\n—\nTALVEZ SEJA ACENTUAÇÃO!`,
+          `Os "buildingsGroupIDAndNames"\n${buildingsGroupIDAndNames.join(
+            '\n'
+          )}\n\nparece serem diferentes de\n\n "buildingsGroupIDAndNamesFromSpacesPathStr" ${buildingsGroupIDAndNamesFromSpacesPathStr.join(
+            '\n'
+          )})`
+        );
+      }
+    }
+  } else if (document == '3. Necessidades A5 (Reset)') {
+    var docNumXG5 = numbersApp.open(numXG5PathObj);
+
+    var propSheetNames = docNumXG5.sheets.whose({ name: { _contains: 'PROP' } }).name();
+
+    propSheetNames.sort();
+
+    currentApp.activate();
+    var propSheetNamesSelected = cflLib.cfl(propSheetNames, 'Sheets (clientes) para Propostas', propSheetNames[0], 'm');
+
+    var propSheetNamesSelectedL = propSheetNamesSelected.length;
+
+    for (var a = 0; a < propSheetNamesSelectedL; a++) {
+      var propSheetName = propSheetNamesSelected[a];
+
+      var aSlashPropNum = a + 1 + '/' + propSheetNamesSelectedL;
+
+      numbersApp.activate();
+      docNumXG5.activeSheet.set(docNumXG5.sheets[propSheetName]);
+
+      delay(d1); // Para abrir o Doc
+
+      currentApp.activate();
+      var needsOptions = cflLib.cfl2Str(
+        ['EP (Pisos - 1)', 'EP (Pisos - 2)', '-------------', 'EP (Pisos - 1) & Anexo', 'EP (Pisos - 2) & Anexo'],
+        'Objectos para ' + aSlashPropNum + ' ' + propSheetName + '\n',
+        'EP (Pisos - 2) & Anexo'
+      );
+
+      numbersApp.activate();
+
+      var sheetProp1 = docNumXG5.sheets[propSheetName];
+
+      var tableMainBuilding = sheetProp1.tables['tableMainBuilding'];
+
+      var tableAnnex = sheetProp1.tables['tableAnnex'];
+
+      var tableSummary = sheetProp1.tables['tableSummary'];
+
+      // tableSummary UNCHECKING
+      var tableLengthRownSummary = tableSummary.rowCount() - 4; // -7 para excluir Responsabilities & Landscape pois é constante
+
+      for (var h = 2; h < tableLengthRownSummary; h++) {
+        for (var i = 0; i < tableSummary.columnCount() - 2; i++) {
+          var value = tableSummary.columns[i].cells[h].value();
+
+          if (value == 1) {
+            tableSummary.columns[i].cells[h].value = 0;
+          }
+        }
+      }
+
+      // tableMainBuilding UNCHECKING
+      var tableLengthRownMainBuilding = tableMainBuilding.rowCount();
+
+      for (var h = 0; h < tableLengthRownMainBuilding; h++) {
+        for (var i = 8; i < tableMainBuilding.columnCount(); i++) {
+          var value = tableMainBuilding.columns[i].cells[h].value();
+
+          if (value == 1) {
+            tableMainBuilding.columns[i].cells[h].value = 0;
+          }
+        }
+      }
+
+      // tableAnnex UNCHECKING
+      var tableLengthRownAnnex = tableAnnex.rowCount();
+
+      for (var h = 0; h < tableLengthRownAnnex; h++) {
+        for (var i = 8; i < tableAnnex.columnCount(); i++) {
+          var value = tableAnnex.columns[i].cells[h].value();
+
+          if (value == 1) {
+            tableAnnex.columns[i].cells[h].value = 0;
+          }
+        }
+      }
+
+      if (needsOptions.includes('EP (Pisos - ')) {
+        tableSummary.cells['A4'].value = 1; // EP
+      }
+
+      if (needsOptions.includes('& Anexo')) {
+        tableSummary.cells['A7'].value = 1; // EP
+      }
+
+      if (needsOptions == 'EP (Pisos - 1)' || needsOptions == 'EP (Pisos - 2)') {
+        tableSummary.cells['C5'].value = 1; // EP Piso 1
+
+        if (needsOptions == 'EP (Pisos - 1)') {
+          mainBuildingFloorsOne();
+        } else if (needsOptions == 'EP (Pisos - 2)') {
+          tableSummary.cells['C6'].value = 1; // EP Piso 2
+          mainBuildingFloorsTwo();
+        }
+      } else if (needsOptions == 'EP (Pisos - 1) & Anexo' || needsOptions == 'EP (Pisos - 2) & Anexo') {
+        tableSummary.cells['C5'].value = 1; // EP Piso 1
+
+        if (needsOptions == 'EP (Pisos - 1) & Anexo') {
+          mainBuildingFloorsOne();
+        } else if (needsOptions == 'EP (Pisos - 2) & Anexo') {
+          tableSummary.cells['C6'].value = 1; // EP Piso 2
+          mainBuildingFloorsTwo();
+        }
+
+        tableSummary.cells['C8'].value = 1; // Anexo Piso 1
+        annexFloorsOne();
+      }
+    }
+
+    docNumXG5.save();
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function fillCoverTableInfo(table, customer, object, localWithBullets, interventionInCover, mmStrAndYyyyFromDate) {
+  table.cells['A1'].value = customer;
+  table.cells['A2'].value = object.toUpperCase();
+  table.cells['A3'].value = localWithBullets;
+  table.cells['A9'].value = interventionInCover;
+  table.cells['A12'].value = mmStrAndYyyyFromDate;
+  delay(d0p3);
+  systemLib.scape(); // Scape Table
+}
+
+function specsOrMemoryOptionsLists(projSheet, tableName, rowStart) {
+  var table = projSheet.tables[tableName];
+  var tableRowsL = table.rowCount();
+
+  var specsOptions = [];
+
+  for (var i = rowStart; i < tableRowsL; i++) {
+    var infoColumnD = table.cells['D' + (i + 1)].value();
+
+    if (infoColumnD != undefined) {
+      specsOptions.push(infoColumnD);
+    }
+  }
+
+  return specsOptions;
+}
+
+function specsOrMemoryInfoLists(projSheet, tableName, optionsSel) {
+  numbersApp.activate();
+  var table = projSheet.tables[tableName];
+  var tableRowsL = table.rowCount();
+
+  table.selectionRange = table.ranges['D1:D' + tableRowsL];
+  delay(d0p3);
+  systemLib.pressDelete(1);
+  delay(d0p3);
+
+  var infoLines = [];
+  var heading1List = [];
+  var heading2List = [];
+  var heading3List = [];
+
+  for (var i = 0; i < tableRowsL; i++) {
+    var iNum = i + 1;
+    var trackIdInfoLine = table.cells['A' + iNum].value();
+
+    for (var j = 0; j < optionsSel.length; j++) {
+      var trackIdCurrent = optionsSel[j].split(' - ')[0];
+
+      if (trackIdInfoLine == trackIdCurrent) {
+        var infoLine = table.cells['C' + iNum].value();
+
+        table.cells['D' + iNum].value = '•';
+        infoLines.push(infoLine);
+
+        var trackIdHeading = table.cells['B' + iNum].value();
+
+        try {
+          // Por que tem empty "null" para trackIdHeading onde não tem numeração
+          var trackIdHeadingItems = trackIdHeading.split('.');
+          var trackIdHeadingItemsL = trackIdHeadingItems.length;
+
+          if (trackIdHeadingItemsL == 1) {
+            heading1List.push(infoLine);
+          } else if (trackIdHeadingItemsL == 2) {
+            heading2List.push(infoLine);
+          } else if (trackIdHeadingItemsL == 3) {
+            heading3List.push(infoLine);
+          }
+        } catch {
+          //
+        }
+      }
+    }
+  }
+  return [infoLines, heading1List, heading2List, heading3List];
+}
+
+function numberingHeadings(headingList, headingNumber) {
+  var paragraphs = docPages.bodyText.paragraphs; // Whole document
+  pagesApp.activate();
+  //delay(d0p1)
+
+  for (var i = 0; i < paragraphs.length; i++) {
+    var paragraph = paragraphs()[i];
+
+    for (var h = 0; h < headingList.length; h++) {
+      var heading = headingList[h];
+
+      if (paragraph.includes(heading)) {
+        if (heading.includes(' / IDENTIFIER')) {
+          //paragraphs[i].set(paragraph.replace(" / IDENTIFIER", ""))
+          var paragraphNew = paragraphs[i].set(paragraph.replace(' / IDENTIFIER', ''));
+        } else {
+          //paragraphs[i].set(heading)
+          var paragraphNew = paragraphs[i].set(heading);
+        }
+        delay(d0p1);
+
+        // Selecionar um caracter é suficiente para aplicar Paragrapgh Styles
+        menuLib.selectPreviousInputParagraph(paragraphNew, 1);
+
+        delay(d0p1);
+
+        if (headingNumber == 'H1') {
+          systemLib.f1();
+        } else if (headingNumber == 'H2') {
+          systemLib.f2();
+        } else if (headingNumber == 'H3') {
+          systemLib.f3();
+        }
+        delay(d0p1); // Era d0p1 (20220918)
+
+        systemLib.f5(); // F5 Numbered
+
+        // 🔴🔴🔴 SE DER ERROR POR NÃO RECONHECER O HEADING, FECHA E ABRE O PAGES
+        delay(d0p3); // d1 funciona bem
+
+        pagesAppControllerP.windows[0].splitterGroups[0].scrollAreas[1].groups[3].radioGroups[0].radioButtons
+          .byName('Continue from previous')
+          .click();
+        delay(d0p1); // Era d0p1 (20220918)
+
+        if (headingNumber == 'H2') {
+          systemLib.tab(1);
+        } else if (headingNumber == 'H3') {
+          systemLib.tab(2);
+        }
+
+        // PASTE TABLES IN MEMORY
+        if (heading.toLowerCase().includes('programa de necessidades')) {
+          systemLib.arrowRight(1);
+          systemLib.enter(1);
+          menuLib.paste();
+        }
+
+        break;
+      }
+    }
+  }
+}
+
+// tableNeedsSelInNumXA5
+function memoryTableProc(projSheetName, numXA5TableObjectName, spacesPathStr) {
+  var spacesText = objCLib.readFile(spacesPathStr);
+  var spacesTextItems = spacesText.replace(/ m²/g, '').split('\n');
+  var spacesTextItemsRemovedLastTab = spacesTextItems.map(item => item.replace(/\t$/, ''));
+
+  // Excluir as duas primeiras filas e a última de total
+  //var spacesTextItemsNew = spacesTextItemsRemovedLastTab.slice(2, spacesTextItemsRemovedLastTab.length - 2)
+
+  var spacesTextItemsNew = spacesTextItemsRemovedLastTab.slice(2, spacesTextItemsRemovedLastTab.length - 1);
+
+  var spacesTextItemsNewText = spacesTextItemsNew.join('\n');
+  menuLib.setClipboard(spacesTextItemsNewText);
+  delay(d0p5);
+
+  var storiesL = spacesTextItemsNewText.match(/PISO  PISO/g).length;
+
+  pagesApp.activate();
+  var tableIdentifier = 'OBJ5-' + (w + 1);
+  var tableNeedsInMemory = docPagesFront.tables.whose({ name: { _contains: tableIdentifier } })[0];
+
+  tableNeedsInMemory.selectionRange = tableNeedsInMemory.ranges['A2:A2'];
+  delay(d0p5);
+  menuLib.doMenu('Pages', 'Edit', 'Paste and Match Style');
+  delay(d0p5);
+
+  // Correções de Paste que não dá resultado perfeito
+  // Para a parte da tabela que passasse para outra página aplicava um fundo e tamanho 18 para texto e sem alinhamento a direita na coluna C
+  var tableNeedsRowsL = tableNeedsInMemory.rowCount();
+
+  var range = tableNeedsInMemory.ranges['A1' + ':D' + tableNeedsRowsL];
+
+  range.verticalAlignment = 'center';
+  range.fontSize = 10;
+  range.backgroundColor = 'white';
+
+  displayLib.alert('BOLD SUBTOTALS AND TOTAL & ... FREEZES');
+
+  tableNeedsInMemory.columns['D'].alignment = 'right';
+
+  // -------------- BOLD SUBTOTALS AND TOTAL
+
+  for (var i = 0; i < tableNeedsRowsL; i++) {
+    var iSum = i + 1;
+    var spaceName = tableNeedsInMemory.cells['C' + iSum].value();
+    var spaceArea = tableNeedsInMemory.cells['D' + iSum].value();
+
+    if (spaceArea && spaceName === null) {
+      // BOLD SUTTOTALS - DEACTIVATED SINCE FEEZES
+      bold(tableNeedsInMemory, 'D' + iSum);
+
+      if (i === tableNeedsRowsL - 1 && storiesL > 1) {
+        tableNeedsInMemory.cells['D' + iSum].fontSize = 12;
+      }
+    }
+  }
+
+  var tableSpacesCurrentColumnsL = tableNeedsInMemory.columnCount();
+
+  if (storiesL == 1) {
+    deleteRows(tableNeedsInMemory, 1, 1);
+  } else if (storiesL > 1) {
+    for (var i = 0; i < tableNeedsRowsL; i++) {
+      var iSum = i + 1;
+      var storyName = tableNeedsInMemory.cells['A' + iSum].value();
+
+      if (storyName != null) {
+        tableNeedsInMemory.cells['C' + iSum].value = storyName.replace('PISO  PISO', 'PISO'); //.replace(" -", "") // 🔴🔴🔴 Not Necessary now geting PISO X from Archicad Property // Remove this not after USE and APPROVE
+
+        applyBackgroundColor(tableNeedsInMemory, 'A' + iSum + ':D' + iSum, [55049, 55049, 55049]);
+      }
+    }
+  }
+
+  if (tableSpacesCurrentColumnsL == 4) {
+    tableNeedsInMemory.columns[0].delete();
+  } else if (tableSpacesCurrentColumnsL == 5) {
+    tableNeedsInMemory.columns[0].delete();
+    tableNeedsInMemory.columns[3].delete();
+  } else if (tableSpacesCurrentColumnsL == 6) {
+    tableNeedsInMemory.columns[0].delete();
+    tableNeedsInMemory.columns[3].delete();
+    tableNeedsInMemory.columns[3].delete();
+  }
+
+  tableNeedsInMemory.name = numXA5TableObjectName; //buildingName.split(" | ")[1]
+
+  // docPagesFront.save()
+}
+
+function processSave(docPages, destinyFolderStr, fileName) {
+  appLib.saveDoc(docPages, destinyFolderStr, `${dateY4M2D2__H2M2S2}-V1`, fileName, `pages`, true, 'dateAtEnd');
+}
+
+// --------------------- NECESSIDADES A5
+
+function mainBuildingFloorsOne() {
+  tableMainBuilding.cells['I14'].value = 1; // (1) Sala Comum /
+  tableMainBuilding.cells['I17'].value = 1; // (1) Cozinha /
+  tableMainBuilding.cells['J18'].value = 1; // (2) Quartos simples /
+  tableMainBuilding.cells['I20'].value = 1; // (1) Quartos suite com Vestiário /
+  tableMainBuilding.cells['J25'].value = 1; // (2) Varandas /
+  tableMainBuilding.cells['I26'].value = 1; // (1) Casa de Banho Geral /
+}
+
+function mainBuildingFloorsTwo() {
+  // Piso 1
+  tableMainBuilding.cells['I14'].value = 1; // (1) Sala Comum /
+  tableMainBuilding.cells['I17'].value = 1; // (1) Cozinha /
+  tableMainBuilding.cells['I20'].value = 1; // (1) Quartos suite com Vestiário /
+  tableMainBuilding.cells['J25'].value = 1; // (2) Varandas /
+  tableMainBuilding.cells['I27'].value = 1; // (1) Sanitário /
+
+  // Piso 2
+  tableMainBuilding.cells['I33'].value = 1; // (1) Sala familiar /
+  tableMainBuilding.cells['J35'].value = 1; // (2) Quartos simples /
+  tableMainBuilding.cells['I37'].value = 1; // (1) Quartos suite com Vestiário /
+  tableMainBuilding.cells['J42'].value = 1; // (2) Varandas /
+  tableMainBuilding.cells['I44'].value = 1; // (1) Casa de Banho Geral /
+}
+
+function annexFloorsOne() {
+  tableAnnex.cells['I16'].value = 1; // (1) Quartos suite /
+  tableAnnex.cells['I20'].value = 1; // (1) Arrumos /
+  tableAnnex.cells['I21'].value = 1; // (1) Varandas /
+  tableAnnex.cells['I23'].value = 1; // (1) Casa de Banho Exterior /
+  tableAnnex.cells['I25'].value = 1; // (1) Lavandaria /
+  tableAnnex.cells['J27'].value = 1; // Garagem (2 carros) /
+}
+
+/* DESACTIVADO, ÚTIL TALVEZ NO FUTURO
+function annexFloorsTwo() {
+	// Piso 1
+	annexFloorsOne()
+
+	// Piso 2
+	tableMainBuilding.cells["I108"].value = 1
+	tableMainBuilding.cells["I110"].value = 1
+
+}
+
+
+function theLandscape() {
+	tableMainBuilding.cells["I116"].value = 1
+	tableMainBuilding.cells["I117"].value = 1
+	tableMainBuilding.cells["I118"].value = 1
+}
+*/

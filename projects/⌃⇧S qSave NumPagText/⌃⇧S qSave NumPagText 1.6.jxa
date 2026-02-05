@@ -1,0 +1,76 @@
+// v1.6
+
+const { getContratFolderInfo, getFinderFolderPathSr, getND } = Library('finderLib');
+
+const { formatDateV3 } = Library('datetimeLib');
+
+const ND = getND();
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const systemEventsApp = Application('System Events');
+
+const finderApp = Application('Finder');
+const pagesApp = Application('Pages');
+const numbersApp = Application('Numbers');
+const textEditApp = Application('TextEdit');
+
+// ---------------------------------------
+
+const { dateY4M2D2__H2M2S2 } = formatDateV3(new Date()).formats;
+
+// ---------------------------------------
+
+var frontmostAppName = systemEventsApp.applicationProcesses.where({ frontmost: true }).name()[0];
+
+if (frontmostAppName == 'Numbers') {
+  var frontmostApp = numbersApp.documents[0];
+  var docExtensionToSave = '.numbers';
+} else if (frontmostAppName == 'Pages') {
+  var frontmostApp = pagesApp.documents[0];
+  var docExtensionToSave = '.pages';
+} else if (frontmostAppName == 'TextEdit') {
+  var frontmostApp = textEditApp.documents[0];
+  var docExtensionToSave = '.txt';
+}
+
+var destinyFolderStr = getFinderFolderPathSr();
+
+var contratFolderInfo = getContratFolderInfo(destinyFolderStr);
+var contractNumber = contratFolderInfo.contractNumber;
+var entity4Folders = contratFolderInfo.entity4Folders;
+
+var destinyFolderName = destinyFolderStr.split('/').slice(-1)[0];
+
+var docName = dDialog(
+  `Nome do Documento para gravar na pasta ${destinyFolderName}.`,
+  `${dateY4M2D2__H2M2S2}-V1 ${ND} ASSUNTO - OBJECTO ${contractNumber} ${ND} ${entity4Folders}`
+);
+
+var pathAndName = Path(destinyFolderStr + '/' + docName + docExtensionToSave);
+
+frontmostApp.save({ in: pathAndName });
+
+finderApp.reveal(pathAndName).extensionHidden = true;
+
+// ------------------------------------------ FUNCTIONS
+
+function dDialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer }).textReturned;
+  } else {
+    return currentApp.displayDialog(theTitle, {
+      defaultAnswer: theDefaultAnswer,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    }).textReturned;
+  }
+}
+
+function addZero(i) {
+  if (i < 10) {
+    i = '0' + i;
+  }
+  return i.toString();
+}

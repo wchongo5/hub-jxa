@@ -1,0 +1,64 @@
+
+
+var finderLib = Library("finderLib")
+var displayLib = Library("displayLib")
+var cflLib = Library("cflLib")
+var pathLib = Library("pathLib")
+
+
+
+var finderApp = Application("Finder")
+
+
+
+function run(input, parameters) {
+
+   var filePathStr = input[0].toString()
+	var filePathStrItems	= filePathStr.split("/")
+	var fileName = filePathStrItems.pop();
+	
+
+   // Scan from iOS Scan <fileName.includes("Scanned Document")>
+   // Scan from Dropbox <fileName[4] == "-">
+
+   
+   if (fileName.includes("Scanned Document") || fileName[4] == "-") {
+
+      // \w*$ extension
+      var fileNameLast2Cs = fileName.match(/([A-Za-za0-9]{2})\.\w*$/)[1]
+
+      var extraTitle = `wbim1, wbim2, c101, c102, ww, wm, wc\n• iva0, iva8, iva16`
+
+      // Recibo de v (viatura) para combustível ou portagem
+      if (fileNameLast2Cs == "vc" || fileNameLast2Cs == "vl" || fileNameLast2Cs == "vp") {
+         
+         // var extraTitle = `v293, v443, v653, v555`
+         // var fileNameNewD = `today-xbim2-1000.00-vpp555`
+
+         if (fileNameLast2Cs == "vl") {
+            var uploadStr = `• Add "upload" after 555 to auto upload receipt`
+
+         } else {
+            var uploadStr = ``
+         }
+
+         var loanStr = `• Se for empréstimos de W para X, vem "e" de empréstismo antes do nome da viatura (…evpp555…). Condições suficientes para Move5 não reconhecer como recibo de Combustível, senão vai fazer "Move" para pasta XeroAutoPay`
+
+         var fileNameNew = displayLib.dialog(`Nome\n\n—\n• ${extraTitle}${uploadStr}\n• ${fileNameLast2Cs}r293, ${fileNameLast2Cs}f443, ${fileNameLast2Cs}n653\n${loanStr}\n\n…\nvc - Combustível\nvl - Lavagem\nvp - Portagem`, `today-xbim2-1000.00-${fileNameLast2Cs}p555`)
+
+      } else {
+         // var extraTitle = ``
+         // var fileNameNewD = `today-xbim2-333.00-iva16`
+
+         var fileNameNew = displayLib.dialog(`Nome\n\n—\n${extraTitle}`, `today-xbim2-333.00-iva16`)
+      }
+
+      // var fileNameNew = displayLib.dialog(`Nome\n\n—\nc90, c101, c102, xbim1, wbim2\n${extraTitle}`, fileNameNewD)
+
+      finderLib.renameItem(filePathStr, `${fileNameNew}`, "reveal")
+   } else {
+
+      finderApp.move(Path(filePathStr), {to: Path(pathLib.getIDownloadsPathStr())})
+   }
+}
+

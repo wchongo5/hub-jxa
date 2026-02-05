@@ -1,0 +1,516 @@
+// v1.0
+// const xeroLib = Library("xeroLib")
+
+const systemLib = Library('systemLib');
+const safariLib = Library('safariLib');
+
+const { alert } = Library('displayLib');
+const cflLib = Library('cflLib');
+const projectLib = Library('projectLib');
+const menuLib = Library('menuLib');
+
+const seApp = Application('System Events');
+
+const safariApp = Application('Safari');
+const safariAppControllerP = seApp.processes['Safari'];
+
+// --------------------------------------- DELAYS
+
+const d0p3 = 0.3;
+const d0p5 = 0.5;
+const d1 = 1;
+const d2 = 2;
+const d1p5 = 1.5;
+const d5 = 5;
+const d10 = 10;
+
+// --------------------------------------- PAYRUN
+
+function getInvoiceTitle() {
+  return safariLib.superSafari('get', 'id', 'title', 0, 0);
+}
+
+// --------------------------------------- INVOICE
+
+function getInvoiceTitle() {
+  return safariLib.superSafari('get', 'id', 'title', 0, 0);
+}
+
+function getBillOrInvoiceDueAmount() {
+  return safariLib.superSafari('get', 'id', 'invoiceAmountDue', 0, 0);
+}
+
+// --------------------------------------- CONTACT
+
+function getContactPageTitle() {
+  return safariLib.superSafari('get', 'id', 'page_title', 0, 0);
+}
+
+function iw5OutStandingInvoicesLinksAndUrls() {
+  var contactPageTitle = getContactPageTitle();
+  var text = safariApp.windows[0].currentTab.text();
+
+  if (contactPageTitle.includes('Imobiliaria IW5I')) {
+    var matches = text.match(/Invoice\s\w.*\nIW5.*\n\d.*\nDue\s.*\n\d.*\n\d.*/g);
+  } else if (contactPageTitle.includes('Imobiliaria IW1') || contactPageTitle.includes('Imobiliaria IA5')) {
+    var matches = text.match(/Bill\s\w.*\nRancho - .*\n\d.*\nDue\s.*\n\d.*\n\d.*/g);
+  }
+
+  var outStandingLinks = [];
+
+  for (var i = 0; i < matches.length; i++) {
+    var matchItems = matches[i].split('\n');
+    var outStandingLink = matchItems[1].split(/\t/)[0];
+    outStandingLinks.push(outStandingLink);
+  }
+
+  var linksAndUrls = [];
+
+  for (var i = 0; i < 1500; i++) {
+    // Deve ser 1500
+
+    var link = safariApp.doJavaScript("document.getElementsByTagName('" + 'a' + "')[" + i + '].innerHTML', {
+      in: safariApp.windows[0].currentTab,
+    });
+
+    try {
+      var linksAndUrlsStr = linksAndUrls.toString();
+
+      if (outStandingLinks.includes(link)) {
+        var url = safariApp.doJavaScript("document.getElementsByTagName('" + 'a' + "')[" + i + '].getAttribute("href")', {
+          in: safariApp.windows[0].currentTab,
+        });
+
+        if (!linksAndUrlsStr.includes(link + ',https://go.xero.com' + url)) {
+          linksAndUrls.push([link, 'https://go.xero.com' + url]);
+        }
+      }
+    } catch {}
+  }
+  return linksAndUrls;
+}
+
+// --------------------------------------- COMPANY
+
+function xeroCompanyWebpage(cs) {
+  if (cs[3] == 'F' && (cs[2] != 'W' || cs[0] == 'J' || cs[0] == 'N')) {
+    // Se for DW cooperationIdentifierJ5ManagerInFunc_ == "J5X", vai abrir Xero mas não vai usar
+    // Foi a situação ideal encontrada, pois repitia a func cooperationIdentifierJ5Manager() mesmo sendo seletc Quote (que já tem nas pasta se é J5C or J5X)
+    // A solução ficaria muita confusa, assim foi aprovado
+    // Não é problema pois é JointVenture raro
+    // Tem alerta a posterior
+
+    /*
+		if (cs[0] == "N" || (cs[0] == "J" && cs[2] == "W")) {
+
+			var companyName = "X-DIM W"
+		}
+
+		if ((cs[0] == "X" && cs[2] != "W") || (cs[0] == "J" && cs[2] != "W")) {
+
+			var companyName = "X-DIM X"
+		}
+		*/
+
+    var companyName = projectLib.getCompanyFromCs(cs);
+
+    //  xeroLogIn(companyName);
+
+    alert('In xeroCompanyWebpage, xeroLogIn desactivado (create invoice from HyperXD5)');
+
+    delay(d1);
+    return companyName;
+  }
+}
+
+function xeroLogIn(companyTrack) {
+  delay(d0p3);
+
+  safariApp.activate();
+  delay(d0p3);
+  safariLib.openURL('https://login.xero.com');
+  delay(d5);
+
+  var windowNameInOrOutXero = safariApp.windows[0].name();
+
+  if (!windowNameInOrOutXero.includes('X-DIM')) {
+    // "X-DIM W" ou "X-DIM X"
+
+    delay(d10);
+  }
+
+  var company = getCompanyInXero();
+
+  if (companyTrack == 'X-DIM W' && !(company == 'X-DIM W')) {
+    safariLib.superSafari('click', 'class', 'xnav-appbutton--text', 0, 0);
+    delay(d0p5);
+
+    var i = 0;
+    for (i = 0; i < 4; i++) {
+      seApp.keyCode(125);
+    }
+
+    delay(d1p5);
+    seApp.keyCode(76);
+  } else if (companyTrack == 'X-DIM X' && !(company == 'X-DIM X')) {
+    safariLib.superSafari('click', 'class', 'xnav-appbutton--text', 0, 0);
+    delay(d0p5);
+
+    var i = 0;
+    for (i = 0; i < 4; i++) {
+      seApp.keyCode(125);
+    }
+
+    delay(d1p5);
+    seApp.keyCode(76);
+  }
+}
+
+function getCompanyInXero() {
+  /*
+	// Dashboard – X-DIM LDA – Xero // 20220406
+	const windowName = safariApp.windows[0].name()
+
+	//var company = windowName.split(" | ")[2] // Changed 20220406
+	const company = windowName.match(/X-DIM LDA|X-DIM/)[0]
+	
+	*/
+
+  // Changed because windowName now is "+ Work - DevApps — Contacts – Customers – Xero"
+  const currentTabText = safariApp.windows[0].currentTab.text();
+  const matches = currentTabText.match(/X-DIM LDA|X-DIM/); //[0]
+
+  if (matches) {
+    const company = matches[0];
+
+    if (company == 'X-DIM LDA') {
+      return 'X-DIM X';
+    } else if (company == 'X-DIM') {
+      return 'X-DIM W';
+    }
+  } else {
+    return alert(`Não encontrou nome da empresa lendo a página Xero na função "getCompanyInXero".`, ``);
+  }
+}
+
+// --------------------------------------------- PAYMENTS
+
+function tax(company, taxD, taxPercentageWithPrefixD) {
+  if (company == 'X-DIM W') {
+    return 'Tax Exempt (0%)';
+  } else if (company == 'X-DIM X') {
+    if (taxPercentageWithPrefixD) {
+      var taxPercentage = taxPercentageWithPrefixD.replace('iva', '');
+
+      if (taxPercentage == '0') {
+        return 'Tax Exempt (0%)';
+      } else if (taxPercentage == '8') {
+        return `IVA COMPRA GASÓLEO (8%)`;
+      } else if (taxPercentage == '16') {
+        return `IVA COMPRA (16%)`;
+      }
+    } else {
+      return cflLib.cfl2Str(['IVA COMPRA GASÓLEO (8%)', 'IVA COMPRA (16%)', 'Tax Exempt (0%)'], 'Percentagem do IVA', taxD);
+    }
+  }
+}
+
+function old_headerSpendReceiveInvoiceBill(
+  spendReceiveInvoiceBillPerson,
+  dateDdNew,
+  dateMmShortNew,
+  dateYyyyNew,
+  dueDate,
+  referenceEdition,
+  invoiceCsEdition,
+  operation
+) {
+  var dateSpendReceiveInvoiceBill = Number(dateDdNew) + ' ' + dateMmShortNew + ' ' + dateYyyyNew;
+
+  // safariApp.activate()
+  delay(d0p3); // d0p3
+
+  if (operation.includes('Create - Invoice')) {
+    /// Get In Person Field
+    seApp.keyCode(48);
+    delay(d0p3);
+    seApp.keyCode(48);
+    delay(d0p3);
+  }
+
+  menuLib.copyPaste(spendReceiveInvoiceBillPerson);
+  delay(d2);
+
+  seApp.keyCode(48);
+  delay(d0p3);
+
+  if (operation != 'A. Create - Quote (W)') {
+    seApp.keystroke('a', { using: 'command down' });
+    //delay(d0p3)
+    menuLib.copyPaste(dateSpendReceiveInvoiceBill);
+    //delay(d0p3)
+  }
+
+  seApp.keyCode(48);
+  delay(d0p3);
+
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice') || operation == 'C. Create - Bill (WX)') {
+    if (operation != 'A. Create - Quote (W)') {
+      seApp.keystroke('a', { using: 'command down' });
+      //delay(d0p3)
+      menuLib.copyPaste(dueDate);
+      //delay(d0p3)
+    }
+
+    seApp.keyCode(48);
+  }
+  delay(d0p3);
+
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice')) {
+    seApp.keystroke('a', { using: 'command down' });
+    //delay(d0p3)
+    menuLib.copyPaste(invoiceCsEdition);
+    //delay(d0p3)
+    seApp.keyCode(48);
+  }
+  delay(d0p3);
+
+  if (
+    operation == '1. Money - Spend' ||
+    operation == '2. Money - Receive' ||
+    operation == '3. Money - Transfer' ||
+    operation == '4. Pay - Bill' ||
+    operation == 'A. Create - Quote (W)' ||
+    operation == 'C. Create - Bill (WX)'
+  ) {
+    if (invoiceCsEdition[4] != 'C' && invoiceCsEdition[4] != 'E' && invoiceCsEdition[4] != 'T') {
+      menuLib.copyPaste(referenceEdition);
+      delay(d0p3);
+    }
+
+    seApp.keyCode(48);
+  }
+  delay(d0p3);
+
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice')) {
+    if (invoiceCsEdition[4] == 'C' || invoiceCsEdition[4] == 'E' || invoiceCsEdition[4] == 'T') {
+      menuLib.copyPaste('Construção (1)');
+      delay(d0p3);
+    }
+
+    delay(d0p3);
+    seApp.keyCode(48);
+    delay(d0p3);
+    seApp.keyCode(48);
+  }
+
+  delay(d0p3);
+  if (operation == 'C. Create - Bill (WX)') {
+    seApp.keyCode(48);
+  }
+
+  delay(d0p3);
+  seApp.keyCode(48);
+  delay(d0p3);
+  seApp.keyCode(48);
+
+  if (
+    operation == '1. Money - Spend' ||
+    operation == '2. Money - Receive' ||
+    operation == '3. Money - Transfer' ||
+    operation == '4. Pay - Bill'
+  ) {
+    delay(d0p3);
+    seApp.keyCode(48);
+  }
+  delay(d0p3);
+}
+
+function headerInvoice(
+  spendReceiveInvoiceBillPerson,
+  dateDdNew,
+  dateMmShortNew,
+  dateYyyyNew,
+  dueDate,
+  referenceEdition,
+  invoiceCs
+) {
+  var dateSpendReceiveInvoiceBill = Number(dateDdNew) + ' ' + dateMmShortNew + ' ' + dateYyyyNew;
+
+  safariApp.activate();
+  //systemLib.tab(1) /// Get In Person Field
+  menuLib.copyPaste(spendReceiveInvoiceBillPerson);
+  delay(d1); // Give more time to read spendReceiveInvoiceBillPerson
+
+  // Did not accept logic of <headerQuote> to create contact if does not exist
+  // To select existing Contact. If does not exist, it will clear the field
+
+  // 🔴🔴🔴 DESACTIVADO PARA NÃO DAR ERRO SE NÃO EXITIR O CONTCATO // É MANUAL PASTE de spendReceiveInvoiceBillPerson
+  // NO FUTURO DE JÁ ACEITA A SOLUÇÃO DADA EM <headerQuote> SE NÃO EXISTIR O CONTACTO
+  // OU SOLUÇÃO ALTERNATIVA
+  /*
+	systemLib.enter(1)
+	systemLib.tab(1)
+	*/
+
+  systemLib.tab(1);
+  menuLib.copyPaste(referenceEdition);
+  systemLib.tab(1);
+  menuLib.copyPaste(invoiceCs);
+  systemLib.tab(1);
+  menuLib.copyPaste(dateSpendReceiveInvoiceBill);
+  systemLib.tab(1);
+  menuLib.copyPaste(dueDate);
+  systemLib.tab(1);
+
+  /* // Não aceita entrar no Branding theme com Tab, deve ser SELECT
+	if (invoiceCs[5] == "A" || invoiceCs[5] == "C" || invoiceCs[5] == "E") {
+		menuLib.copyPaste("Construção (1)")
+		systemLib.enter(1)
+	}
+	*/
+
+  systemLib.tab(1); // Go to Description not item
+}
+
+function headerQuote(spendReceiveInvoiceBillPerson, quoteCs) {
+  safariApp.activate();
+  systemLib.tab(1); /// Get In Person Field
+  menuLib.copyPaste(spendReceiveInvoiceBillPerson);
+
+  try {
+    delay(d2);
+    // To select existing contact
+    safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[4].groups[1].lists[0].staticTexts[0].click();
+  } catch {
+    delay(d0p3);
+    systemLib.tab(2); // 1 to select Create contact and exit from dropdown Person name
+  }
+
+  systemLib.tab(3);
+  menuLib.copyPaste(quoteCs);
+  systemLib.tab(1);
+
+  // P155035, P403030, P404020A, P5050, P100
+
+  if (quoteCs[5] == 'P') {
+    // XDXFAP230701
+    if (quoteCs.slice(4, 6) == 'AP') {
+      menuLib.copyPaste('P5050');
+    } else if (quoteCs.slice(4, 6) == 'UP') {
+      menuLib.copyPaste('P403030');
+    }
+  }
+
+  systemLib.tab(1);
+
+  if (quoteCs[5] == 'A' || quoteCs[5] == 'C' || quoteCs[5] == 'E') {
+    menuLib.copyPaste('Construção (1)');
+    systemLib.enter(1);
+  }
+
+  systemLib.tab(3); // Go to Description not item
+}
+
+function old_lineSpendReceiveInvoiceBillQuote(invoiceDescrEditionLine, quantity, unitPrice, account, taxRate, operation) {
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice') || operation == 'C. Create - Bill (WX)') {
+    menuLib.copyPaste(invoiceDescrEditionLine);
+    delay(d0p3);
+    seApp.keyCode(48);
+  }
+
+  delay(d0p3);
+  menuLib.copyPaste(quantity);
+  delay(d0p3);
+  seApp.keyCode(48);
+  delay(d0p3);
+  menuLib.copyPaste(unitPrice);
+  delay(d0p3);
+
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice')) {
+    /// Jump Discount
+    seApp.keyCode(48);
+    delay(d0p3);
+  }
+
+  seApp.keyCode(48);
+  delay(d0p3);
+  //saApp.setTheClipboardTo(account);
+  menuLib.setClipboard(account);
+  delay(d0p3);
+
+  if (operation == 'A. Create - Quote (W)') {
+    seApp.keystroke(saApp.theClipboard());
+  } else {
+    seApp.keystroke('v', { using: 'command down' });
+  }
+
+  delay(d0p3);
+  seApp.keyCode(48);
+  delay(d0p3);
+  menuLib.copyPaste(taxRate);
+  delay(d0p3);
+
+  //--- Go to Start
+  if (operation == 'A. Create - Quote (W)') {
+    for (var i = 0; i < 3; i++) {
+      seApp.keyCode(48), delay(d0p3);
+    } // Was i < 4
+  } else if (operation == 'C. Create - Bill (WX)') {
+    for (var i = 0; i < 2; i++) {
+      seApp.keyCode(48), delay(d0p3);
+    }
+  }
+}
+
+function new_lineSpendReceiveInvoiceBillQuote(invoiceDescrEditionLine, quantity, unitPrice, account, taxRate, operation) {
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice') || operation == 'C. Create - Bill (WX)') {
+    menuLib.copyPaste(invoiceDescrEditionLine);
+    systemLib.tab(1);
+  }
+
+  menuLib.copyPaste(quantity);
+  systemLib.tab(1);
+  menuLib.copyPaste(unitPrice);
+
+  /// Jump Discount
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice')) {
+    systemLib.tab(1);
+  }
+
+  systemLib.tab(1);
+  menuLib.setClipboard(account);
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d1);
+
+  //systemLib.enter(2) // To select account are two enters
+
+  systemLib.enter(1); // To select account are two enters
+
+  if (!operation.includes('Create - Invoice')) {
+    //systemLib.enter(1)
+    //systemLib.tab(1)
+  }
+
+  // seApp.keyCode(48)
+  // delay(d1)
+  //menuLib.copyPaste(taxRate)
+
+  menuLib.copyPasteWithSelectAll(taxRate);
+
+  if (operation.includes('Create - Invoice')) {
+    systemLib.enter(1);
+    //systemLib.tab(1)
+  }
+
+  //--- Go to Start
+  if (operation == 'A. Create - Quote (W)' || operation.includes('Create - Invoice')) {
+    systemLib.tab(2);
+
+    if (operation == 'A. Create - Quote (W)') {
+      systemLib.tab(1);
+    }
+  } else if (operation == 'C. Create - Bill (WX)') {
+    systemLib.tab(2);
+  }
+}

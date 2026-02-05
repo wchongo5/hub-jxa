@@ -1,0 +1,482 @@
+// 18.0
+
+const cflLib = Library('cflLib');
+const contactLib = Library('contactLib');
+const { dateInfo, ddEntryWithPreviousAndOrNext30DaysDisplay, formatDateV3, monthSelector } = Library('datetimeLib');
+const { alert, dialog } = Library('displayLib');
+const documentLib = Library('documentLib');
+const numberLib = Library('numberLib');
+const { getP5PathStrWithSuffixP5 } = Library('pathLib');
+const { contractsDetails, getCustomerAndCsOptions, getServices, getServiceDefaultNames4Event } = Library('projectLib');
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const systemEventsApp = Application('System Events');
+const numbersApp = Application('Numbers');
+const contactsApp = Application('Contacts');
+
+const { createCalendarEvent } = Library('xxNodejsJXALib');
+
+const xg5OtherPersonStr = 'TVCabo, Vodacom, ---------------, Clube de Gaza, ENZ, VO5 (FFH)'.toLowerCase();
+
+// OLD PROJECTS
+const oldProjects = ['PROJECTOANTIGO1', 'PROJECTOANTIGO2'];
+
+const p5PathStrWithSuffixP5 = getP5PathStrWithSuffixP5();
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const {
+  year: { Y4: yearY4 },
+  month: { M1: monthM1, long: monthLong },
+} = nowFormatted.components;
+
+const services = getServices([''], false);
+const servicesNumbered = getServices(['']);
+const eventCategoryD = servicesNumbered.find(service => service.includes('Projecto'));
+
+var eventCategoriesNumbered = cflLib.cfl(
+  [...servicesNumbered, '---------------', 'Q. Imobiliária', 'A. Rebanho', '---------------', 'Z. Gestão'],
+  'Categorias de eventos — Aceita múltiplas',
+  eventCategoryD,
+  'm'
+);
+
+var eventCategoriesNumberedL = eventCategoriesNumbered.length;
+
+for (var h = 0; h < eventCategoriesNumberedL; h++) {
+  var eventCategory = eventCategoriesNumbered[h].split('. ')[1];
+  var eventCategoryCode = 'X' + eventCategory[0] + '5';
+
+  if (services.includes(eventCategory)) {
+    alert(`INCLUDES`, ``);
+  } else {
+    alert(`DOES NOT INCLUDE`, ``);
+  }
+
+  var zSlasheventCategoriesNumberedNum = h + 1 + '/' + eventCategoriesNumberedL;
+
+  var times = dialog('Quantos eventos para conta "' + eventCategory + ' ' + zSlasheventCategoriesNumberedNum + '"?', '1');
+
+  for (var i = 0; i < times; i++) {
+    var hoursEventStart = numberLib.addZero(dialog('Horas (Início)', ''));
+    var minutesEventStart = numberLib.addZero(dialog('Minutos (Início)', '0'));
+    var { ddEntry: ddEntryStart } = ddEntryWithPreviousAndOrNext30DaysDisplay(`Próximos`, `Dia`);
+
+    var dateStart = new Date(
+      dialog(
+        'Data',
+        monthSelector('Mês', monthM1, monthLong, 'mm') +
+          '/' +
+          ddEntryStart +
+          '/' +
+          yearY4 +
+          ' ' +
+          hoursEventStart +
+          ':' +
+          minutesEventStart
+      )
+    );
+
+    var dateDDStart = dateInfo(dateStart, { day: '2-digit' });
+    var dateMMStart = dateInfo(dateStart, { month: '2-digit' });
+    var dateYYStart = dateInfo(dateStart, { year: 'numeric' });
+
+    var hoursDuration = Number(dialog('Duração (Horas)', '0'));
+    var minutesDuration = Number(dialog('Duração (Minutos)', '20'));
+
+    var dateEnd = new Date(dateStart.getTime());
+    dateEnd.setHours(dateEnd.getHours() + hoursDuration);
+    dateEnd.setMinutes(dateEnd.getMinutes() + minutesDuration);
+
+    var alarmInputs = cflLib.cfl(
+      ['1', '2', '3', '4', '5', '15', '20', '30', '45', '---------------', 'Dias'],
+      `Tempo de alarme antes?\n\n—\nSelecção automática: Minutos (15 - 45), Horas (1 - 5)\nA opção "Dias" é para input independente de "dias antes" e pode ser sozinha ou com outras opções`,
+      ['1', '2'],
+      'm'
+    );
+
+    if (alarmInputs.includes('Dias')) {
+      var daysStr = dialog(`Dias\n\nSeparados por vírgula`, `1,2,3`);
+      var daysItems = documentLib.ensureSpaceAfterCommaInStr(daysStr).split(', ');
+
+      var daysItemsWithDOfDays = daysItems.map(dayNum => dayNum + 'd');
+
+      var diasStr = alarmInputs.pop(); // Not used
+
+      var alarmInputs = alarmInputs.concat(daysItemsWithDOfDays);
+    }
+
+    var recurrenceOption = cflLib.cfl2Str(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', '----------', 'NO'], 'Repetição', 'NO');
+
+    const hasRecurrence = recurrenceOption !== 'NO' && recurrenceOption !== '----------';
+
+    if (hasRecurrence) {
+      var recurrenceInterval = dialog(`Intervalo`, `3`);
+    }
+
+    if (services.includes(eventCategory)) {
+      // Override eventCategoryCode with "PROPONENTE CS"
+      var csAndCustomer = contractsDetails(
+        '',
+        `ReadFolderName`,
+        p5PathStrWithSuffixP5,
+        ['All'],
+        [eventCategory],
+        yearY4,
+        `customerAndCsNoBullet`,
+        '',
+        3,
+        undefined
+      );
+
+      // DZFC191001 PROP5 | CE5-J201001 PROP5
+      // Não aceita eliminar [0] para obter list imediato depois de usar "|" para integrar CE5-J201001 PROP5. Por isso resolvi com split a posterior.
+
+      if (csAndCustomer == 'NEW' || csAndCustomer == 'SELECTINOLDPROJECTS') {
+        if (csAndCustomer == 'NEW') {
+          var filtersStrD = dialog(
+            `Filtro para o(s) nome(s) do(s) cliente(s)\n\n—\nUsado(s) em "Event Summary" e não como participante(s)`,
+            ''
+          );
+          // Embora apareça separador ", ", será único filtro
+
+          var contact4NewCs = contactLib.getContactInfo(
+            filtersStrD,
+            'Selecione o(s) conctacto(s)',
+            ', ',
+            'Event',
+            'One',
+            'Names'
+          );
+
+          var contact4NewCsMoreThanOneClientTrack = contact4NewCs;
+
+          if (contact4NewCs.includes('RETURNFULLINNEW')) {
+            var contact4NewCs = contact4NewCs.toUpperCase().replace(' RETURNFULLINNEW', '');
+          } else {
+            if (contact4NewCs.includes(',')) {
+              // More than one contact/client
+
+              var contact4NewCsNames = contact4NewCs.split(', ');
+              var contact4NewCsNamesL = contact4NewCsNames.length;
+
+              var contact4NewCsNameBase = cflLib.cfl2Str(
+                contact4NewCsNames,
+                `Sendo ${contact4NewCsNamesL} clientes para mesmo objecto, qual é o "nome base" a usar no Event Summary?\n`,
+                contact4NewCsNames[0]
+              );
+
+              var contact4NewCsNameBaseFirstName = contact4NewCsNameBase.split(' ')[0].toUpperCase();
+
+              var contact4NewCs = contact4NewCsNameBaseFirstName + ' +' + (contact4NewCsNamesL - 1).toString();
+            } else {
+              var contact4NewCs = contact4NewCs.split(' ')[0].toUpperCase();
+            }
+          }
+
+          var contactWithStatus = contact4NewCs + ' NEW-';
+        } else if (csAndCustomer == 'SELECTINOLDPROJECTS') {
+          // csAndCustomer includes 3 years (yearY4 - 2) as in function csAndCustomer
+          var contactOfOldProject = cflLib.cfl2Str(
+            oldProjects,
+            'Selecione o Projectos antigo de antes de ' + (yearY4 - 2),
+            oldProjects[0]
+          );
+
+          var contactWithStatus = contactOfOldProject + '-';
+
+          var filter1 = contactOfOldProject.split(' ')[0];
+        }
+
+        var eventCategoryCode = contactWithStatus + eventCategory[0] + '5';
+      } else {
+        var csAndCustomerItems = csAndCustomer.split(' ');
+        var csAndCustomerItemsL = csAndCustomerItems.length;
+
+        var cs = csAndCustomerItems[csAndCustomerItemsL - 1];
+        var customerNameItems = csAndCustomerItems.slice(0, csAndCustomerItemsL - 1);
+
+        var filter1 = customerNameItems[0];
+
+        if (customerNameItems.length == 1) {
+          var customerName = customerNameItems[0];
+        } else {
+          var customerName = getCustomerAndCsOptions(
+            [csAndCustomer],
+            1,
+            `Opções do nome do cliente\n`,
+            'csAtEnd',
+            'nameWithoutCs'
+          );
+        }
+
+        var eventCategoryCode = customerName + ' ' + cs;
+      }
+
+      var consultancyL = eventCategory[0];
+
+      var commonSections = ['Gestão', 'Levantamento', 'Retomada'];
+
+      if (consultancyL == 'P') {
+        var eventSection = cflLib.cfl2Str(['Apresentação', 'Entrega'].concat(commonSections), 'Tipo do evento', 'Levantamento');
+      } else if (consultancyL == 'C' || consultancyL == 'T') {
+        var eventSection = cflLib.cfl2Str(
+          ['Assistência Pontual', '--------------', 'Entrega', 'Visita de Arranque'].concat(commonSections),
+          'Tipo do evento',
+          'Gestão'
+        );
+      } else if (consultancyL == 'E' || consultancyL == 'F') {
+        var eventSection = cflLib.cfl2Str(
+          ['Consignação', 'Entrega Provisória', 'Entrega Definitiva', 'Visita Obrigatória', 'Vistoria', '--------------'].concat(
+            commonSections
+          ),
+          'Tipo do evento',
+          'Gestão'
+        );
+      }
+    } else if (eventCategory == 'Imobiliária' || eventCategory == 'Rebanho' || eventCategory == 'Gestão') {
+      if (eventCategory == 'Gestão') {
+        var filtersStr = dialog(
+          'Filtros | Separá-los por vírgula\n\n\n❗️Se for sem Contacto, filtro deve ser "z"!',
+          'filtro1, filtro2'
+        );
+
+        var filtersStr = documentLib.ensureSpaceAfterCommaInStr(filtersStr);
+      } else if (eventCategory == 'Imobiliária') {
+        var filtersStr = 'iw5y'; // For IW5, for more I5 configure in the future
+      } else if (eventCategory == 'Rebanho') {
+        var filtersStr = 'rw1';
+      }
+
+      var otherPeople = ' ' + contactLib.getContactInfo(filtersStr, 'Selecione o(s) conctacto(s)', ', ', 'Event', 'One', 'Names');
+
+      if (otherPeople.includes('RETURNFULLINNEW')) {
+        var otherPeople = otherPeople.toUpperCase().replace(' RETURNFULLINNEW', '');
+      }
+
+      if (eventCategory == 'Imobiliária') {
+        if (otherPeople.includes('Novo')) {
+          var eventSection = cflLib.cfl2Str(['Negociação', 'Contrato'], 'Tipo do evento', 'Negociação');
+        } else {
+          var eventSection = cflLib.cfl2Str(['Escrever', 'Gestão', 'Pagamento', 'Visita'], 'Tipo do evento', 'Gestão');
+        }
+      } else if (eventCategory == 'Rebanho') {
+        // XR5 Jaime Muthuque / undefined / N
+        var eventSection = cflLib.cfl2Str(['Escrever', 'Call'], 'Tipo do evento', 'Call');
+      } else if (eventCategory == 'Gestão') {
+        if (otherPeople.includes('UFSA')) {
+          var eventSection = cflLib.cfl2Str(
+            [
+              'Escrever',
+              '---------------',
+              'Entrega - Cadastro ' + dateYYStart,
+              'Levantamento - Cadastro ' + dateYYStart + ' (15d U)',
+            ],
+            'Tipo do evento',
+            'Levantamento - Cadastro ' + dateYYStart + ' (15d U)'
+          );
+        } else if (xg5OtherPersonStr.includes(otherPeople.toLowerCase())) {
+          var eventSection = cflLib.cfl2Str(
+            ['Escrever', '---------------', 'Contrato', 'Gestão', 'Negociação'],
+            'Tipo do evento',
+            'Gestão'
+          );
+        } else {
+          var eventSection = cflLib.cfl2Str(
+            [
+              'Escrever',
+              '---------------',
+              'Gestão',
+              'Pagamento',
+              'Subsrcição',
+              '---------------',
+              'Expo FACIM',
+              '---------------',
+              'Anelamento',
+              'Casamento',
+              'Conversa',
+              'Festa',
+              'Missa',
+              'Visita',
+            ],
+            'Tipo do evento\n\n• Anelamento é mesmo que lobolo',
+            'Visita'
+          );
+        }
+      }
+
+      if (eventSection == 'Escrever') {
+        var eventSection = dialog('Escrever o evento', ''); //summary.replace("Escrever", )
+      }
+    }
+
+    if (services.includes(eventCategory)) {
+      if (csAndCustomer == 'NEW') {
+        if (contact4NewCsMoreThanOneClientTrack.includes(',')) {
+          var moreAttendeesStatusExtraTitle = `\n—\nSão ${contact4NewCsNamesL} clientes para mesmo objecto, rigorosamente escolher quem vai participar no encontro.\n`;
+        } else {
+          var moreAttendeesStatusExtraTitle = '';
+        }
+      } else {
+        var moreAttendeesStatusExtraTitle = '';
+      }
+
+      if (hasMoreAttendees(eventSection)) {
+        var moreAttendeesStatus = 'Sim';
+      } else {
+        var moreAttendeesStatus = cflLib.cfl2Str(
+          ['Não', 'Sim'],
+          'Tem participantes específicos?\n' + moreAttendeesStatusExtraTitle,
+          'Sim'
+        );
+      }
+
+      if (moreAttendeesStatus == 'Sim') {
+        if (csAndCustomer == 'NEW') {
+          if (contact4NewCsMoreThanOneClientTrack.includes(',')) {
+            var contact4NewCsForFiltersD = [];
+
+            for (var j = 0; j < contact4NewCsNamesL; j++) {
+              contact4NewCsForFiltersD.push(contact4NewCsNames[j].split(' ')[0]);
+            }
+
+            var filtersStrD = contact4NewCsForFiltersD.join(', ') + ', filtro' + (contact4NewCsNamesL + 1).toString();
+          } else {
+            var filtersStrD = filter1 + ', filtro2';
+          }
+        } else {
+          var projectDefaultNames4EventStr = '';
+
+          alert(
+            `🔴🔴🔴 ACTUALIZAR CODE`,
+            `A função getServiceNoteText já não existe em ProjectLib e deve estar em NotesLib mas com novo nome.`
+          );
+
+          var projectNoteText = getServiceNoteText(cs);
+
+          if (projectNoteText == undefined) {
+            projectDefaultNames4EventStr = `CreateNoteAndAddDefaultNames4Event`;
+          } else {
+            var projectDefaultNames4Event = getServiceDefaultNames4Event(projectNoteText);
+
+            if (projectDefaultNames4Event == null) {
+              projectDefaultNames4EventStr = `AddDefaultNames4Event_InNote`;
+            } else {
+              var projectDefaultNames4EventStr = projectDefaultNames4Event.split(' | ')[1].toLowerCase();
+            }
+          }
+
+          var filtersStrD = filter1.toLowerCase() + ', ' + projectDefaultNames4EventStr;
+        }
+
+        var filtersStr = dialog('Filtros | Separá-los por vírgula', filtersStrD);
+
+        var filtersStr = documentLib.ensureSpaceAfterCommaInStr(filtersStr);
+
+        var moreAttendees = contactLib.getContactInfo(filtersStr, 'Selecione o(s) conctacto(s)', ', ', 'Event', 'One', 'Names');
+      }
+    }
+
+    var descriptionStr = dialog('Notas', '');
+
+    if (otherPeople == undefined) {
+      // Para tudo menos Gestão
+      var otherPeople = '';
+      var otherPeopleNum = '';
+    } else if (otherPeople == ' withoutContact') {
+      // Para Gestão sem Contacto
+      var otherPeople = '';
+      var otherPeopleNum = '';
+    } else {
+      // Para Gestão com Contacto
+
+      var otherPeopleNum = otherPeople.split(', ').length;
+
+      if (otherPeopleNum > 1) {
+        var otherPeopleNum = ' / ' + otherPeopleNum;
+      } else {
+        var otherPeopleNum = '';
+      }
+    }
+
+    if (moreAttendees) {
+      var moreAttendeesNum = moreAttendees.split(', ').length;
+      var moreAttendees = 'Participantes — ' + moreAttendeesNum + ' / ' + moreAttendees;
+    } else {
+      var moreAttendees = 'Participantes — ';
+      var moreAttendeesNum = '';
+    }
+
+    if (descriptionStr) {
+      var descriptionStrStatus = 'N'; // N de notas, significa que existem notas
+    } else {
+      var descriptionStrStatus = '';
+    }
+
+    if (moreAttendeesNum != '' || moreAttendeesNum > 0 || descriptionStrStatus != '') {
+      var extraInfoSeparator = ' / ';
+    } else {
+      var extraInfoSeparator = '';
+    }
+
+    var descriptionStrFinal = moreAttendees + '\n\n-----\n' + descriptionStr;
+
+    var summary =
+      eventCategoryCode +
+      otherPeople +
+      ' / ' +
+      eventSection +
+      otherPeopleNum +
+      extraInfoSeparator +
+      moreAttendeesNum +
+      descriptionStrStatus;
+
+    /*
+		if (summary.includes("Escrever")) {
+			var summary = summary.replace("Escrever", dialog("Escrever o evento", ""))
+		}
+		*/
+
+    if (otherPeople == '') {
+      // From " withoutContact"
+      var summary = summary.replace('XG5 /', 'XG5');
+    }
+
+    var summary = dialog('Título', summary);
+
+    if (descriptionStrFinal == undefined) {
+      var descriptionStrFinal = '';
+    }
+
+    let recurrenceRule;
+
+    if (hasRecurrence) {
+      recurrenceRule = {
+        frequencyStandard: recurrenceOption,
+        interval: recurrenceInterval,
+      };
+    }
+
+    createCalendarEvent('Plano Plus', summary, dateStart, dateEnd, descriptionStrFinal, recurrenceRule, alarmInputs);
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function hasMoreAttendees(eventSection) {
+  if (
+    eventSection == 'Apresentação' ||
+    eventSection == 'Consignação' ||
+    eventSection == 'Entrega Provisória' ||
+    eventSection == 'Entrega Definitiva' ||
+    eventSection == 'Retomada' ||
+    eventSection.includes('Visita') ||
+    eventSection == 'Vistoria'
+  ) {
+    return true;
+  }
+}

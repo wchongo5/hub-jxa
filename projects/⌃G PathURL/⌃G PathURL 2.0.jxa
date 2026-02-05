@@ -1,0 +1,39 @@
+
+
+// v2.0
+
+var currentApp = Application.currentApplication();
+var saApp = (currentApp.includeStandardAdditions = true, currentApp);
+var systemEventsApp = Application("System Events");
+
+var safariApp = Application("Safari");
+
+safariApp.activate()
+delay(0.3)
+
+var CurrentURL = getURL()
+delay(0.3)
+
+// Exclude selectorPath if exist
+var CurrentURLCleaned = CurrentURL.split("#")[0]
+delay(0.3)
+
+// Cópia Manual e depois executa o App: Copy > Selector Path
+
+var selectorPathCopied = saApp.theClipboard();
+delay(0.5)
+
+var selectorPath = CurrentURLCleaned + selectorPathCopied.split(' > ')[0]
+delay(0.3)
+
+saApp.setTheClipboardTo(selectorPath);
+
+
+
+
+// ------------------------------------------ FUNCTIONS
+
+function getURL() {
+	var CurrentURLCleaned = safariApp.windows[0].currentTab.url()
+	return CurrentURLCleaned
+}

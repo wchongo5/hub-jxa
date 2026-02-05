@@ -1,0 +1,93 @@
+// v1.0.2
+
+const displayLib = Library('displayLib');
+const finderLib = Library('finderLib');
+const { formatDateV3 } = Library('datetimeLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const finderApp = Application('Finder');
+const mailApp = Application('Mail');
+
+const destinyFolderStr = finderLib.getFinderFolderPathSr();
+const contratFolderInfo = finderLib.getContratFolderInfo(destinyFolderStr);
+const entity4Folders = contratFolderInfo.entity4Folders;
+
+const messages = mailApp.selection();
+const messagesL = messages.length;
+
+let processAll = true;
+
+if (messagesL > 1) {
+  var wichMessagesToProcess = displayLib.dialog(
+    `Tem acima de 1 mensagem (${messagesL}), coloca o número da mensagem ou deixa "All".\n\n—\n• Numeração de cima para baixo.`,
+    `All`
+  );
+
+  if (wichMessagesToProcess != 'All') {
+    //var messages = messages[Number(wichMessagesToProcess)]
+
+    //var messages = messages[0]
+
+    var messageIndex = Number(wichMessagesToProcess) - 1;
+
+    processAll = false;
+  }
+}
+
+messages.sort(function (a, b) {
+  return b.dateReceived() - a.dateReceived();
+});
+
+//for (var message of messages) {
+
+for (var h = 0; h < messagesL; h++) {
+  if (processAll || h == messageIndex) {
+    var message = messages[h];
+
+    var sender = message.sender();
+
+    if (sender.includes('<')) {
+      var senderEmail = sender.split('<')[1].split('>')[0];
+    } else {
+      var senderEmail = sender;
+    }
+
+    var senderEmail = senderEmail.toLowerCase();
+    var messageDateReceived = message.dateReceived();
+
+    var messageDateReceivedFormatted = formatDateV3(messageDateReceived);
+
+    if (!messageDateReceivedFormatted) {
+      throw new Error(`"Data" inválida`);
+    }
+
+    const { dateY4M2D2__H2M2S2 } = messageDateReceivedFormatted.formats;
+
+    var attachmentsList = message.mailAttachments();
+
+    for (var i = 0; i < attachmentsList.length; i++) {
+      var originalName = attachmentsList[i].name(); //.split(".")
+
+      var attachmentExtensionWithtDot = originalName.match(/\.\w*$/)[0]; //originalNameItems[1]
+
+      var senderFirstName = message.sender().split(' ')[0].replace(/"/g, '').replace(/,/g, '');
+
+      if (senderFirstName.includes('Walter')) {
+        var companySender = 'X-DIM';
+      } else {
+        var companySender = entity4Folders;
+      }
+
+      var savePath = Path(
+        `${destinyFolderStr}/${dateY4M2D2__H2M2S2} ${originalName.replace(
+          attachmentExtensionWithtDot,
+          ''
+        )} _ ${companySender}${attachmentExtensionWithtDot}`
+      );
+
+      attachmentsList[i].save({ in: savePath });
+      finderApp.reveal(savePath).extensionHidden = true;
+    }
+  }
+}

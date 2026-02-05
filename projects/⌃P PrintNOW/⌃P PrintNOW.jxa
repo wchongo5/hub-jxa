@@ -1,0 +1,21 @@
+
+
+var seApp = Application("System Events");
+
+var previewAppControllerP = seApp.processes["Preview"]
+//var previewAppControllerP = seApp.applicationProcesses.byName("Preview")
+
+seApp.keystroke("p", { using: "command down" })
+delay(1) //3 // Antes 0.3
+
+// PRINTER
+previewAppControllerP.windows[0].sheets[0].popUpButtons[0].click() // Printer
+delay(0.3)
+previewAppControllerP.windows[0].sheets[0].popUpButtons[0].menus[0].menuItems["HP LaserJet P2055"].click() // Select Printer
+delay(0.3)
+
+// PAPER
+previewAppControllerP.windows[0].sheets[0].popUpButtons[2].click()
+delay(0.3)
+previewAppControllerP.windows[0].sheets[0].popUpButtons[2].menus[0].menuItems["US Letter"].click()
+delay(0.3)

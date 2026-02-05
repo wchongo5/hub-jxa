@@ -1,0 +1,4037 @@
+// v1.0
+
+// var cflLib = Library("cflLib")
+
+// --------------------------------------- TEMPORAY
+
+// var cflLib = Library("cflLib")
+
+var objCLib = Library('objCLib');
+
+const { getUniqueItems, sortArray } = Library('appLib');
+const { formatDateV3, timeElapsed } = Library('datetimeLib');
+const { alert } = Library('displayLib');
+const { getColors } = Library('colorsLib');
+const { getND, getPathStrsFromPathStr, moveItems, renameItem } = Library('finderLib');
+const {
+  alignHorizontal,
+  alignVertical,
+  applyBackgroundColor,
+  applyFontSize,
+  applyFormulaResults,
+  bold,
+  clearRange,
+  deleteColumns,
+  deleteRows,
+  deleteTablesByName,
+  getCellNamePartColumnOrRow,
+  hideRows,
+  hideRowsRange,
+  numbersSaveAsPDF,
+  mergeCells,
+  rowPopulateItems,
+  rowsSelectionNumInColumn,
+  selectionRange,
+  setDecimals,
+  sumFromSelectionRange,
+  tableDelimeterUpdate,
+  thousandsSeparator,
+  thousandsSeparatorWithCopyPaste,
+} = Library('iWorkLib');
+const { copy, doMenu, paste, setClipboard } = Library('menuLib');
+const { addZero, formatNumber, sumAllByReduce } = Library('numberLib');
+const { getNumXA5PathStr, getP5PathStr, getP5PathStrWithSuffixP5, getXa5TemporayPathStr } = Library('pathLib');
+const { getBuildingsGroupIDAndNames, getConsultancyPathStrs, getProjectInProcessInfo, getEstimatesPathStrs } =
+  Library('projectLib');
+const { pressDelete } = Library('systemLib');
+
+var currentApp = Application.currentApplication();
+//currentApp.includeStandardAdditions = true
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var numbersApp = Application('Numbers');
+var numbersAppControllerP = seApp.processes['Numbers'];
+
+// ---------------------------------------
+const ND = getND();
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3;
+var d1 = 1;
+var d2 = 2;
+//var d1p5 = 1.5
+var d3 = 3;
+var d5 = 5;
+//var d7 = 7
+var d10 = 10;
+
+// ---------------------------------------
+
+function run(input, parameters) {
+  var orifinalsDel5FolderStr = '+ DEL5';
+  var onlyTotalsStr = 'Apenas totais. Detalhes de cálculos disponíveis, solicite se necessário.';
+
+  var xa5TemporayPathStr = getXa5TemporayPathStr();
+  var wfEstimateA5PathStr = `${xa5TemporayPathStr}/TF 00 ${ND} WF_ESTIMATE A5E`;
+  var wfEstimateA5InProcessPathStr = `${xa5TemporayPathStr}/TF 00 ${ND} WF_ESTIMATE A5E - InPROCESS`;
+
+  var p5PathStrWithSuffixP5 = getP5PathStrWithSuffixP5();
+  var numXA5PathObj = Path(getNumXA5PathStr());
+
+  var docNumXA5 = numbersApp.open(numXA5PathObj);
+
+  var {
+    customerName,
+    invoiceCs,
+    numberOfTxtFilesToProcess,
+    includeCost,
+    savePdf,
+    hideBarsSurfacesVolumesDetails,
+    filteredBuildingsToProcessInEstimateByM,
+    writeQuantitiesInEstimateByQ,
+    filteredBuildingsToWriteQuantitiesInEstimateByQ,
+  } = getProjectInProcessInfo(docNumXA5);
+
+  var filePathStrsFromWfEstimateA5PathStr = getPathStrsFromPathStr(wfEstimateA5PathStr, 'files');
+
+  var filePathStrsFromWfEstimateA5PathStrL = filePathStrsFromWfEstimateA5PathStr.length;
+
+  // alert(`${filePathStrsFromWfEstimateA5PathStrL}\n\n${numberOfTxtFilesToProcess}`, ``);
+
+  if (filePathStrsFromWfEstimateA5PathStrL == numberOfTxtFilesToProcess) {
+    moveItems(filePathStrsFromWfEstimateA5PathStr, wfEstimateA5InProcessPathStr);
+
+    numbersApp.activate();
+    delay(d1);
+
+    var filePathStrsFromFolderInProcess = getPathStrsFromPathStr(wfEstimateA5InProcessPathStr, 'files');
+
+    for (var f = 0; f < filePathStrsFromFolderInProcess.length; f++) {
+      var startDateTime = new Date();
+
+      // --------------------------------------- COLORS
+      const {
+        // ----- COST ROWS
+        orangeLight: costRowsColor,
+
+        // ----- GRAND TOTAL - PAREDES
+        cyanLight,
+        greenLight,
+        magentaLight,
+        redLight,
+        yellowLight,
+        grayLight1,
+      } = getColors();
+
+      var rowPrimaryColor = redLight;
+      var rowSecondaryColor = grayLight1;
+
+      var rowPrimaryColorsAlternate = [redLight, greenLight]; // Light red
+
+      var grandTotalRangeColor_General = cyanLight; //"cyan"
+      var grandTotalRangeColor_Cement = greenLight; // "green"
+
+      var grandTotalRangeColor_Sand = yellowLight; //"yellow"
+
+      var grandTotalRangeColor_Water = magentaLight; //"magenta"
+
+      // ----- GRAND TOTAL - VOLUMES AND SURFACES
+      var grandTotalRangeColor = yellowLight; // "yellow"
+
+      // ----- GRAND TOTAL - PAREDES
+      var slabBarsSubTotalAndTotalColor = cyanLight; // "cyan"
+      var shoeColumnBeamBarsTotalColor = yellowLight; // "yellow"
+
+      // --------------------------------------- COSTS (METICAIS)
+
+      // ----- GENERAL
+      var priceCementUnit = 350.0;
+      var priceGrossSandM3 = 1050.0;
+      var priceWaterL = 0.65; // 0.45 considerarndo MZN10.00 25L
+
+      // ----- OPENINGS
+
+      // 🔴🔴🔴 Qual é o vão mais caro - de alumínio ou madeira?????
+      /// Abaxio assumi que madeira é mais cara
+
+      var openingPriceK = 1.0; // 1.00
+
+      // 12750.37 is price for door of 1.89m2 (0.90x2.10)
+      var doorAluminium900By2100Price = (22779.79 / 1.89) * openingPriceK;
+      var doorWood900By2100Price = (24779.79 / 1.89) * openingPriceK;
+
+      var windowAluminium2000By1200Price = (35124.52 / 2.4) * openingPriceK;
+      var windowWood2000By1200Price = (37124.52 / 2.4) * openingPriceK;
+
+      // Substituir 0.00 com preço
+      var gridConcrete1000By1000Price = (0.0 / 1.0) * openingPriceK;
+      var ventilatorPVC300By300Price = (0.0 / 0.09) * openingPriceK;
+
+      var openningPricesKByMaterial = {
+        'Grelha Betão': gridConcrete1000By1000Price,
+        'Janela Alumínio': windowAluminium2000By1200Price,
+        'Janela Madeira': windowWood2000By1200Price,
+        'Porta Alumínio': doorAluminium900By2100Price,
+        'Porta Madeira': doorWood900By2100Price,
+        'Ventilador PVC': ventilatorPVC300By300Price,
+      };
+
+      // ----- VOLUMES
+      var priceRockfill = 1400.0;
+      var priceStoneM3 = 1650.0;
+      var priceFineSandM3 = 1350.0;
+      var priceRedSandM3 = 130.0;
+
+      // ----- SURFACES
+      var priceStoneCoatingM2 = 355.0;
+      var pricePaintExteriorM2 = 215.0;
+      var pricePaintInteriorM2 = 175.0;
+      var pricePaintCeilingM2 = 195.0;
+
+      var priceFloorTilesM2 = 1500.0;
+      var priceWallTilesM2 = 1350.0;
+      var priceSkirtingML = 423.32; // Em ml, antes era 1350.00 para m2
+
+      // ----- BARS
+      // --- COEFICIENTE PARA VALOR DE STRIBOS
+      // 0.64 (160x160) está para MZN7.50 / 0.84 (160x260) está para X
+      // X = (7.50*0.84)/0.64 o mesmo que (7.50/0.64) * 0.84
+      // O mesmo que multiplicar qualquer comprimento do estribo por 11.72 (7.50/0.64)
+      var stirrup160By160Cost = 7.5;
+      var stirrupCoecientCost = stirrup160By160Cost / 0.64; // 0.64 (160x160) de stirrup160By160Cost
+      // ---
+      var bar6Cost = 120.0;
+      var bar8Cost = 210.0;
+      var bar10Cost = 280.0;
+      var bar12Cost = 320.0;
+
+      // ----- WALL
+      var priceBrick100 = 12.0;
+      var priceBrick150 = 17.0;
+      var priceBrick200 = 25.0;
+      // var priceCementUnit = 350.00
+      // var priceGrossSandM3 = 1350.00
+      // var priceWaterL = 0.65 // 0.45 considerarndo MZN10.00 25L
+
+      // --------------------------------------- QUOCIENTS
+
+      // ----- MARGEM DE ERRO
+      // 🔴🔴🔴 Because I sue conditional statement before apply it I was forced to put it inside run(input, parameters) function
+      var marginOfError = 1.1; // 10%
+
+      // --------------- INFO FROM #P51A _ DESENHO & ESPECIFICAÇÕES > PROGRAMAÇÃO
+      // // ----- SCREED
+      // var screedK_CementBy1m3 = 5.93 // E18
+      // var screedK_SandBy1m3 = 0.42 // E20
+      // var screedK_StoneBy1m3 = 0.85 // E22
+      // var screedK_WaterBy1m3 = 222.46 // E23
+
+      // ----- PLASTER
+      var plasterK_CementBy1m3 = 11.81; // B33
+      var plasterK_FineSandBy1m3 = 1.05; // B35
+      var plasterK_WaterBy1m3 = 221.52; // B37
+
+      // ----- LIGHT CONCRET
+      var concretK_CementBy1m3 = 5.93; // E18
+      var concretK_GrossSandBy1m3 = 0.42; // E20
+      var concretK_StoneBy1m3 = 0.85; // E22
+      var concretK_WaterBy1m3 = 222.46; // E23
+
+      // ----- REINFORCED CONCRET
+      var reinforcedConcreteK_CementBy1m3 = 5.87; // E33
+      var reinforcedConcreteK_SandBy1m3 = 0.52; // E35
+      var reinforcedConcreteK_StoneBy1m3 = 0.73; // E37
+      var reinforcedConcreteK_WaterBy1m3 = 220.13; // E39
+
+      // --------------------------------------- BOOLEAN
+
+      var hideRows = true; // true
+
+      // ---------------------------------------
+
+      var filePathStr = filePathStrsFromFolderInProcess[f];
+      var filePathStrItems = filePathStr.split('/');
+      var txtFileName = filePathStrItems.pop();
+      var folderActionName = filePathStrItems.pop();
+
+      // saveEstimateByMPdf
+      if (invoiceCs[2] == 'W') {
+        var saveEstimateByMPdf = true;
+      } else {
+        var saveEstimateByMPdf = savePdf;
+      }
+
+      // Use marginOfError 1.00
+      if (invoiceCs[2] != 'W') {
+        var marginOfError = 1.0; // 1.100
+      }
+
+      var buildingsGroupIDAndNames = getBuildingsGroupIDAndNames(invoiceCs);
+
+      var buildingsGroupIDAndNamesL = buildingsGroupIDAndNames.length;
+
+      var { consultancyPathStr, originalsPathStr, materialPathStr } = getConsultancyPathStrs(p5PathStrWithSuffixP5, invoiceCs);
+
+      // var originalsPathStr = consultancyPathStr + '/00A5D ORIGINAIS iWORK';
+
+      try {
+        var { estimateByMPathStr, estimateByQPathStr } = getEstimatesPathStrs(originalsPathStr, invoiceCs);
+
+        var estimateByMDocNumName = estimateByMPathStr.split('/').slice(-1)[0].replace('.numbers', '');
+
+        var estimateByMDocNum = numbersApp.open(Path(estimateByMPathStr));
+
+        var quantityGroupIDAndName = txtFileName.match(/(00X00\w*\s.*).txt/)[1].toUpperCase(); //[1]
+
+        // .slice(0, 10) para SUPERFÍCIES, VARÃO sem acentuação
+        var quantityGroupIDAndNameSliced13 = quantityGroupIDAndName.slice(0, 10);
+
+        var sheetsNames = estimateByMDocNum.sheets.name();
+
+        // name.slice(0,13) => "Superf" para contornar acentuação em Superfícies, …
+        var sheetName = sheetsNames.filter(
+          name => name.slice(0, 13).includes(quantityGroupIDAndNameSliced13) && !name.includes('CYPECAD')
+        )[0];
+
+        // 00X00E VAR
+
+        // 🔴🔴🔴🔴 -------------- EXCLUDE COST IN SHEETS DON'T HAVE CALCULATIONS YET
+
+        if (
+          sheetName.includes('AREAS') ||
+          sheetName.includes('COBERTURA') ||
+          sheetName.includes('ESPECIALIDADES') ||
+          sheetName.includes('VAOS')
+        ) {
+          var includeCost = false;
+        }
+
+        const estimateByMSummaryTable = estimateByMDocNum.sheets['00X00 RESUMO'].tables['TODOS GRUPOS'];
+
+        var estimateByMSheet = estimateByMDocNum.sheets[sheetName];
+        var headerTable = estimateByMSheet.tables['TableHeader'];
+
+        headerTable.position = { x: 0, y: 75 };
+
+        if (sheetName.includes('VOLUMES') || sheetName.includes('SUPERF') || sheetName.includes('VAR')) {
+          if (hideBarsSurfacesVolumesDetails) {
+            headerTable.cells['E5'].value = onlyTotalsStr;
+          } else {
+            headerTable.cells['E5'].value = '';
+          }
+        }
+
+        // -------------- DELETE COST ROWS IF includeCost IS FALSE
+        if (!includeCost) {
+          deleteBuildingCostEstimateInfo(headerTable);
+        }
+
+        // .replace(/## /g, "") SUPERFICIES TEM NOMES COM INCICAIAS ##
+        // 🔴🔴🔴 SE ACTUALIZAR NO ARCHICAD, VIR ACTUALIZAR AQUI
+
+        var buildingsText = objCLib
+          .readFile(filePathStr)
+          .replace(/### |## |# /g, '')
+          .replace(/---|, ---|, -/g, '');
+
+        // finderApp.move(Path(filePathStr), {to: Path(wfEstimateA5InProcessPathStr)})
+
+        /*         var buidingGroupTypes = buildingsText.match(/G\d{3}/g).map(item => item.slice(0, 2) + '00');
+
+        var buidingGroupTypesUniques = getUniqueItems(buidingGroupTypes); */
+
+        var processedBuildingsInfo = [];
+        var buildingsNamesAndGroupID = [];
+
+        var savePdfAndMoveAndRenameTXT = false;
+
+        // -------------- FIXING ERROR
+
+        // TODO:
+
+        // var buidingGroupTypesUniquesL = buidingGroupTypesUniques.length;
+
+        if (filteredBuildingsToProcessInEstimateByM) {
+          var buidingGroupTypes = filteredBuildingsToProcessInEstimateByM.map(item => `G${item.slice(0, 2)}00`);
+
+          var buidingGroupTypesUniques = getUniqueItems(buidingGroupTypes);
+
+          var buidingGroupTypesUniquesL = filteredBuildingsToProcessInEstimateByM.length;
+        } else {
+          var buidingGroupTypes = buildingsText.match(/G\d{3}/g).map(item => item.slice(0, 2) + '00');
+
+          var buidingGroupTypesUniques = getUniqueItems(buidingGroupTypes);
+
+          var buidingGroupTypesUniquesL = buidingGroupTypesUniques.length;
+        }
+
+        // --------------
+
+        var positionX = 0;
+        // 330 position of first table without any row estimate summary
+        // 21 is row height
+        // buildingsGroupIDAndNamesL number os buildings (menos 1 row, last empty never used)
+        // var positionY = 330 + (includeCost ? 21 * (buildingsGroupIDAndNamesL - 1) : 0)
+        var positionY = 330 + (includeCost ? 21 * buildingsGroupIDAndNamesL : 0);
+
+        for (var g = 0; g < buidingGroupTypesUniquesL; g++) {
+          var buidingGroupTypeUnique = buidingGroupTypesUniques[g];
+
+          // 99 Limite de G399, parece que vai aceitar mais G3120
+          for (var h = 1; h < 99; h++) {
+            var buildingGroupId = buidingGroupTypeUnique.slice(0, 2) + addZero(h);
+
+            var buildingNum = buildingGroupId.replace('G', '');
+
+            var re_buildingGroupId = new RegExp(`${buildingGroupId}`, `g`);
+            var re_buildingGroupIds = buildingsText.match(re_buildingGroupId);
+
+            if (!re_buildingGroupIds) {
+              if (!re_buildingGroupIds && g == buidingGroupTypesUniquesL - 1) {
+                var savePdfAndMoveAndRenameTXT = true;
+                break;
+              } else {
+                continue;
+              }
+            }
+
+            // ----------- NEW THANKS GOD!
+            if (filteredBuildingsToProcessInEstimateByM) {
+              if (!filteredBuildingsToProcessInEstimateByM.includes(buildingNum)) {
+                continue;
+              }
+            }
+            // -----------
+
+            //
+            // 🔴🔴🔴 Não pode estar acima de <if (!re_buildingGroupIds) {>, pois deve obedecer os 99 LOOPS se for objectos não existes (se não existir, G102, G103, G104, …), que geralmente o <continue> acima faz skip e acelera
+
+            // Used when comes from DocNum Estimate byQ
+            delay(d1);
+            try {
+              doMenu('Numbers', 'Window', estimateByMDocNumName);
+            } catch (error) {
+              // File with extension unhidden
+
+              doMenu('Numbers', 'Window', `${estimateByMDocNumName}.numbers`);
+            }
+            delay(d1);
+
+            // var buildingGroupIDAndNameItems = buildingsGroupIDAndNames.filter(name => name.includes(buildingGroupId))[0].split(" ")
+
+            var buildingGroupIDAndName = buildingsGroupIDAndNames.filter(name => name.includes(buildingGroupId));
+
+            if (buildingGroupIDAndName.length == 1) {
+              var buildingGroupIDAndNameItems = buildingGroupIDAndName[0].split(' ');
+            } else {
+              alert(`Erro — o ficheiro TXT "EDIFICAÇÕES" não inclui "${buildingGroupId}"!`, ``);
+
+              break;
+            }
+
+            var buildingNameAndGroupID = buildingGroupIDAndNameItems.slice(1).join(' ') + ` (${buildingGroupIDAndNameItems[0]})`;
+
+            buildingsNamesAndGroupID.push(buildingNameAndGroupID);
+
+            var tablesNames = estimateByMSheet.tables.name();
+
+            var tableName = tablesNames.filter(name => name.includes(buildingGroupId))[0];
+
+            if (g == 0 && h == 1) {
+              var tablesNamesOfBuildings = getTablesNamesOfBuildings(tablesNames);
+
+              distributeTablesRightVertically(estimateByMSheet, tablesNamesOfBuildings, '2000');
+            }
+
+            if (tableName == undefined) {
+              var estimateByMTableRefToCreateNew = getTablesOfBuildings(estimateByMSheet.tables())[0];
+
+              selectionRange(estimateByMTableRefToCreateNew, 'A6');
+              doMenu('Numbers', 'Edit', 'Duplicate Selection');
+
+              var tableNameNew = getTablesNamesOfBuildings(estimateByMSheet.tables.name()).filter(item =>
+                item.includes(')-1')
+              )[0];
+
+              var tableName = tableNameNew;
+            }
+
+            var estimateByMTable = estimateByMSheet.tables[tableName];
+
+            estimateByMTable.position = { x: positionX, y: positionY };
+
+            if (sheetName.includes('AREAS')) {
+              var buildingText = getBuildingTextType2(buildingsText, buildingGroupId);
+            } else if (sheetName.includes('PAREDES')) {
+              var buildingText = getBuildingTextType1(buildingsText, buildingGroupId);
+
+              var textInfoItems1 = buildingText.split('\n');
+
+              var textInfoBeforeLast = textInfoItems1[textInfoItems1.length - 2];
+
+              // REMOVE TOTAL ROW IF IS LAST BUILDING THAT INCLUDES IT
+              if (textInfoBeforeLast.includes('m')) {
+                // "m" from "m²"
+                textInfoItems1.pop();
+                var buildingText = textInfoItems1.join('\n');
+              }
+
+              // ADD ROW TOTAL BY BUILDING
+              var textInfoItems2 = buildingText.split('\n');
+              var textInfoItemsTotals = textInfoItems2.filter(item => item.includes('m²'));
+
+              var wallTotal = getWallTotals(textInfoItemsTotals, 2);
+              var wallAreaTotal = getWallTotals(textInfoItemsTotals, 3);
+              var bricksTotal = getWallTotals(textInfoItemsTotals, 4);
+              var cementLayingTotal = getWallTotals(textInfoItemsTotals, 5);
+              var cementFillingTotal = getWallTotals(textInfoItemsTotals, 6);
+              var sandLayingTotal = getWallTotals(textInfoItemsTotals, 7);
+              var sandFillingTotal = getWallTotals(textInfoItemsTotals, 8);
+              var waterLayingTotal = getWallTotals(textInfoItemsTotals, 9);
+              var waterFillingTotal = getWallTotals(textInfoItemsTotals, 10);
+
+              // O primeiro \t é de edificação "G301"
+              var totalRow = `\t\t${wallTotal}\t${wallAreaTotal} m²\t${bricksTotal}\t${cementLayingTotal}\t${cementFillingTotal}\t${sandLayingTotal}\t${sandFillingTotal}\t${waterLayingTotal}\t${waterFillingTotal}`;
+
+              textInfoItems2.push(totalRow);
+              var buildingText = textInfoItems2.join('\n');
+
+              // } else if (sheetName.includes("COBERTURA") ||  sheetName.includes("SUPERF") || sheetName.includes("VOLUMES")) {
+
+              // 🔴🔴🔴 ADDED NOW TO FIX ERRROR
+              // "ESPECIALIDADES"
+              // "VAOS"
+            } else if (
+              sheetName.includes('COBERTURA') ||
+              sheetName.includes('ESPECIALIDADES') ||
+              sheetName.includes('SUPERF') ||
+              sheetName.includes('VAOS') ||
+              sheetName.includes('VOLUMES')
+            ) {
+              var buildingText = getBuildingTextType1(buildingsText, buildingGroupId);
+            } else if (sheetName.includes('VAR')) {
+              var buildingText = getBuildingTextType1(buildingsText, buildingGroupId);
+
+              var textInfoItems1 = buildingText.split('\n');
+
+              var textInfoLast = textInfoItems1[textInfoItems1.length - 1];
+              var textInfoLastItems = textInfoLast.split('\t');
+
+              textInfoLastItems[2];
+
+              // REMOVE TOTAL ROW IF IS LAST BUILDING THAT INCLUDES IT
+              if (textInfoLastItems[2] == '') {
+                // "m" from "m²"
+                textInfoItems1.pop();
+                var buildingText = textInfoItems1.join('\n');
+              }
+
+              // 🔴🔴🔴 ADD ROW TOTAL BY BUILDING BUT WILL BE DELETE BEFORE PROCESS. KEET IT!
+              var textInfoItems2 = buildingText.split('\n');
+
+              var shoeBarsTotal = getBarsTotals(textInfoItems2, 4);
+
+              var columnBarsTotal = getBarsTotals(textInfoItems2, 5);
+              var columnStirrupsTotal = getBarsTotals(textInfoItems2, 6);
+
+              var beamBarsTotal = getBarsTotals(textInfoItems2, 7);
+              var beamStirrupsTotal = getBarsTotals(textInfoItems2, 8);
+
+              var slabBars6Total = getBarsTotals(textInfoItems2, 9);
+              var slabBars8Total = getBarsTotals(textInfoItems2, 10);
+              var slabBars10Total = getBarsTotals(textInfoItems2, 11);
+              var slabBars12Total = getBarsTotals(textInfoItems2, 12);
+
+              // "\t" coluns before
+              var totalRow = `\t\t\t${shoeBarsTotal}\t${columnBarsTotal}\t${columnStirrupsTotal}\t${beamBarsTotal}\t${beamStirrupsTotal}\t${slabBars6Total}\t${slabBars8Total}\t${slabBars10Total}\t${slabBars12Total}`;
+
+              // var totalRow = `			${shoeBarsTotal}	${columnBarsTotal}	${columnStirrupsTotal}	${beamBarsTotal}	${beamStirrupsTotal}	${slabBars6Total}	${slabBars8Total}	${slabBars10Total}	${slabBars12Total}`
+
+              textInfoItems2.push(totalRow);
+
+              var buildingText = textInfoItems2.join('\n');
+            }
+
+            setClipboard(buildingText); // ---
+
+            var estimateByMTableRowsL1 = estimateByMTable.rowCount();
+
+            if (estimateByMTableRowsL1 > 6) {
+              // Table with info
+              selectionRange(estimateByMTable, 'A7:A' + estimateByMTableRowsL1);
+              doMenu('Numbers', 'Table', 'Delete Rows');
+            }
+
+            estimateByMTable.cells['A6'].addRowBelow();
+
+            selectionRange(estimateByMTable, 'A7:A7');
+
+            // 🔴🔴🔴 INSERIR Coluna de Nível, vem no Export e no Archicad vem apenas em Header
+
+            if (sheetName.includes('AREAS')) {
+              estimateByMTable.cells['A7'].addColumnBefore();
+            } else if (
+              sheetName.includes('COBERTURA') ||
+              sheetName.includes('ESPECIALIDADES') ||
+              sheetName.includes('PAREDES') ||
+              sheetName.includes('SUPERF') ||
+              sheetName.includes('VAOS') ||
+              sheetName.includes('VAR') ||
+              sheetName.includes('VOLUMES')
+            ) {
+              estimateByMTable.cells['B7'].addColumnBefore();
+            }
+
+            if (sheetName.includes('VAR') || sheetName.includes('SUPERF') || sheetName.includes('VOLUMES')) {
+              estimateByMTable.cells['B7'].addColumnBefore();
+
+              if (sheetName.includes('SUPERF')) {
+                estimateByMTable.cells['B7'].addColumnBefore();
+              }
+            }
+
+            selectionRange(estimateByMTable, 'A7:A7');
+            doMenu('Numbers', 'Edit', 'Paste and Match Style');
+
+            // UPDATE TABLE DELIMETERS
+            if (sheetName.includes('PAREDES') || sheetName.includes('VAR') || sheetName.includes('VOLUMES')) {
+              if (sheetName.includes('PAREDES')) {
+                var wallTableDelimeterTrack = estimateByMTable.cells['K8'].value();
+              } else if (sheetName.includes('VAR')) {
+                var barsTableDelimeterTrack = estimateByMTable.cells['A8'].value();
+              } else if (sheetName.includes('VOLUMES')) {
+                var volumeTableDelimeterTrack = estimateByMTable.cells['F8'].value();
+              }
+
+              if (
+                (sheetName.includes('PAREDES') && wallTableDelimeterTrack == null) ||
+                (sheetName.includes('VAR') && barsTableDelimeterTrack != null) ||
+                (sheetName.includes('VOLUMES') && volumeTableDelimeterTrack != null)
+              ) {
+                // If this cell is null, update
+                tableDelimeterUpdate(numbersAppControllerP, estimateByMTable);
+              }
+            }
+
+            var estimateByMTableRowsL2 = estimateByMTable.rowCount();
+
+            if (sheetName.includes('AREAS')) {
+              // First colum of G09
+              deleteColumns(estimateByMTable, 1, 0);
+            } else if (
+              sheetName.includes('COBERTURA') ||
+              sheetName.includes('ESPECIALIDADES') ||
+              sheetName.includes('PAREDES') ||
+              sheetName.includes('SUPERF') ||
+              sheetName.includes('VAOS') ||
+              sheetName.includes('VAR') ||
+              sheetName.includes('VOLUMES')
+            ) {
+              // 🔴🔴🔴 DELETE Coluna de Nível, vem no Export e no Archicad vem apenas em Header
+              deleteColumns(estimateByMTable, 1, 1);
+            }
+
+            if (sheetName.includes('AREAS')) {
+              var rowSecondaryColorForAreas = greenLight;
+
+              // Delete last Empty Column
+              // deleteColumns(estimateByMTable, 1, 7) // Era 5 no 7
+              deleteColumns(estimateByMTable, 1, 7); // Era 5 no 7
+
+              alignVertical(estimateByMTable, 'A7:G' + estimateByMTableRowsL2, 'center');
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              thousandsSeparatorWithCopyPaste(numbersAppControllerP, estimateByMTable, 'B7:G' + estimateByMTableRowsL3, 1);
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+
+                if (columnA_Track == 'Cabouco' || columnA_Track == 'Implantação Obra' || columnA_Track == 'Limpeza Terreno') {
+                  applyBackgroundColor(estimateByMTable, 'A' + iSum, rowSecondaryColorForAreas);
+
+                  if (columnA_Track == 'Cabouco') {
+                    applyBackgroundColor(estimateByMTable, 'C' + iSum, rowSecondaryColorForAreas);
+                  } else if (columnA_Track == 'Implantação Obra') {
+                    applyBackgroundColor(estimateByMTable, 'F' + iSum, rowSecondaryColorForAreas);
+                  } else if (columnA_Track == 'Limpeza Terreno') {
+                    applyBackgroundColor(estimateByMTable, 'G' + iSum, rowSecondaryColorForAreas);
+                  }
+                } else if (columnA_Track == 'Laje Cobertura' || columnA_Track == 'Laje Piso') {
+                  applyBackgroundColor(estimateByMTable, 'A' + iSum + ':B' + iSum, rowSecondaryColorForAreas);
+
+                  if (columnA_Track == 'Laje Cobertura') {
+                    applyBackgroundColor(estimateByMTable, 'D' + iSum, rowSecondaryColorForAreas);
+                  }
+                } else if (columnA_Track == 'Laje Piso Térreo') {
+                  applyBackgroundColor(estimateByMTable, 'A' + iSum + ':E' + iSum, rowSecondaryColorForAreas);
+                } else if (columnA_Track == 'Pilar' || columnA_Track == 'Sapata' || columnA_Track == 'Viga') {
+                  applyBackgroundColor(estimateByMTable, 'A' + iSum + ':B' + iSum, rowSecondaryColorForAreas);
+                }
+
+                var letters = ['B', 'C', 'D', 'E', 'F', 'G'];
+
+                for (var j = 0; j < letters.length; j++) {
+                  var quantity = estimateByMTable.cells[letters[j] + iSum].value();
+
+                  if (quantity == 0 || quantity == null) {
+                    estimateByMTable.cells[letters[j] + iSum].value = '';
+                  } else {
+                    estimateByMTable.cells[letters[j] + iSum].value = formatNumber(quantity * marginOfError, 2, 2);
+                  }
+                }
+              }
+
+              estimateByMTable.cells['A' + iSum].addRowBelow();
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              estimateByMTable.cells['C' + (iSum + 1)].value = '=SUM(C7:C' + iSum + ')';
+              estimateByMTable.cells['E' + (iSum + 1)].value = '=SUM(E7:E' + iSum + ')';
+              estimateByMTable.cells['F' + (iSum + 1)].value = '=SUM(F7:F' + iSum + ')';
+              estimateByMTable.cells['G' + (iSum + 1)].value = '=SUM(G7:G' + iSum + ')';
+
+              applyBackgroundColor(estimateByMTable, 'A' + (iSum + 1) + ':D' + (iSum + 1), 'white');
+
+              applyBackgroundColor(estimateByMTable, 'C' + (iSum + 1), rowPrimaryColor);
+
+              applyBackgroundColor(estimateByMTable, 'E' + (iSum + 1), rowPrimaryColor);
+
+              applyBackgroundColor(estimateByMTable, 'F' + (iSum + 1) + ':G' + (iSum + 1), rowPrimaryColor);
+
+              var areasQuantities = {};
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var elementName = estimateByMTable.cells['A' + iSum].value();
+                var quantity = estimateByMTable.cells['B' + iSum].value();
+
+                if (quantity != null) {
+                  var elementName = 'Cofragem ' + elementName;
+
+                  if (elementName.includes('Laje')) {
+                    var elementName = 'Cofragem Laje';
+                  }
+
+                  if (areasQuantities[elementName] === undefined) {
+                    areasQuantities[elementName] = quantity;
+                  } else {
+                    areasQuantities[elementName] += quantity;
+                  }
+                }
+              }
+
+              // ------------- Tratamento Anti-Térmitas
+              var antiTermitesQuantity = estimateByMTable.cells['C' + estimateByMTableRowsL3].value();
+
+              areasQuantities['Tratamento Anti-Térmitas'] = antiTermitesQuantity;
+
+              // ------------- Malhassol
+              var meshIronQuantity = estimateByMTable.cells['E' + estimateByMTableRowsL3].value();
+
+              areasQuantities['Malhassol'] = meshIronQuantity;
+
+              // ------------- Implantação
+              var implantationQuantity = estimateByMTable.cells['F' + estimateByMTableRowsL3].value();
+
+              areasQuantities['Implantação Obra'] = implantationQuantity;
+
+              // ------------- Limpeza do Terreno
+              var cleaningTerrainQuantity = estimateByMTable.cells['G' + estimateByMTableRowsL3].value();
+
+              areasQuantities['Limpeza Terreno'] = cleaningTerrainQuantity;
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var elementName = estimateByMTable.cells['A' + iSum].value();
+                var quantity = estimateByMTable.cells['D' + iSum].value();
+
+                if (quantity != null) {
+                  var elementName = 'Impermeabilização ' + elementName;
+
+                  if (areasQuantities[elementName] === undefined) {
+                    areasQuantities[elementName] = quantity;
+                  } else {
+                    areasQuantities[elementName] += quantity;
+                  }
+                }
+              }
+
+              var estimateInfoToFill = areasQuantities;
+            } else if (sheetName.includes('COBERTURA') || sheetName.includes('ESPECIALIDADES')) {
+              if (sheetName.includes('COBERTURA')) {
+                var rowsToDelete = 1;
+              } else if (sheetName.includes('ESPECIALIDADES')) {
+                var rowsToDelete = 3;
+              }
+
+              alignVertical(estimateByMTable, 'A7:D' + estimateByMTableRowsL2, 'center');
+
+              alignHorizontal(estimateByMTable, 'C7:C' + estimateByMTableRowsL2, 'center');
+
+              // deleteRows(estimateByMTable, 2, 6)
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              thousandsSeparatorWithCopyPaste(numbersAppControllerP, estimateByMTable, 'D7:D' + estimateByMTableRowsL3, 3);
+
+              var generalQuantities = {};
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+                var elementName = estimateByMTable.cells['B' + iSum].value();
+                var elementUnit = estimateByMTable.cells['C' + iSum].value();
+                var quantityTrack = estimateByMTable.cells['D' + iSum].value();
+
+                if (columnA_Track) {
+                  var columnA_Track = columnA_Track.replace(/G\d{3},\s/g, '');
+                  estimateByMTable.cells['A' + iSum].value = columnA_Track;
+
+                  applyBackgroundColor(estimateByMTable, 'A' + iSum + ':D' + iSum, rowPrimaryColor);
+
+                  if (sheetName.includes('ESPECIALIDADES')) {
+                    var specialityId = columnA_Track.match(/\((\d\w*)\)/)[1];
+                  }
+                }
+
+                if (quantityTrack != null) {
+                  if (elementUnit == 'un' || elementName.includes('ApplyInDocNumProcess_UN')) {
+                    // Quantidades unitárias sem margem de erro
+                    var marginOfErrorLocal = 1.0;
+                  } else {
+                    var marginOfErrorLocal = marginOfError;
+                  }
+
+                  var quantity = quantityTrack * marginOfErrorLocal;
+
+                  //estimateByMTable.cells["D" + iSum].value = "=" + quantityTrack + "*" + marginOfErrorLocal
+                  estimateByMTable.cells['D' + iSum].value = quantity;
+
+                  if (sheetName.includes('ESPECIALIDADES')) {
+                    // if (elementUnit == "m2" || elementUnit == "ml") {
+
+                    if (elementUnit == 'ml') {
+                      // if (sheetName.includes("ESPECIALIDADES")) { // Only ml
+                      // 	var quantityToMoveToRowC_Track = estimateByMTable.cells["E" + iSum].value()
+
+                      // }
+
+                      if (elementName.includes('ApplyInDocNumProcess_UN')) {
+                        var elementName = elementName.replace(' // ApplyInDocNumProcess_UN', '');
+                        var elementUnit = 'un'; // was "ml"
+
+                        estimateByMTable.cells['B' + iSum].value = elementName;
+                        estimateByMTable.cells['C' + iSum].value = elementUnit;
+                      } else {
+                        var quantityToMoveToRowC_Track = estimateByMTable.cells['E' + iSum].value();
+
+                        var areaToMoveToRowC = quantityToMoveToRowC_Track * marginOfErrorLocal;
+
+                        estimateByMTable.cells['D' + iSum].value = areaToMoveToRowC;
+
+                        var quantity = areaToMoveToRowC;
+                      }
+                    }
+                  }
+
+                  if (sheetName.includes('ESPECIALIDADES')) {
+                    var elementNameWithUnit = `${specialityId} | ${elementName} | ${elementUnit}`;
+                  } else {
+                    var elementNameWithUnit = `${elementName} | ${elementUnit}`;
+                  }
+
+                  if (generalQuantities[elementNameWithUnit] === undefined) {
+                    generalQuantities[elementNameWithUnit] = quantity;
+                  } else {
+                    generalQuantities[elementNameWithUnit] += quantity;
+
+                    // -------------- 🔴🔴🔴 THIS IS ONLY USEFUL FOR COBERTURA THAT DOES NOT ACCPET MERGE ITEMS IN ARCHICAD BECAUSE QUANTITY COMES FROM EXPRESSION (has not in TXT file)
+
+                    estimateByMTable.cells['D' + (iSum - 1)].value = generalQuantities[elementNameWithUnit];
+
+                    deleteRows(estimateByMTable, 1, i);
+
+                    i -= 1;
+
+                    estimateByMTableRowsL3 -= 1;
+                  }
+                }
+              }
+
+              // Delete last Empty Column
+              // Delelte after process to move Area quantities during process
+              deleteColumns(estimateByMTable, rowsToDelete, 4);
+            } else if (sheetName.includes('PAREDES')) {
+              // 🔴🔴🔴 DELETE Coluna de Nível, vem no Export e no Archicad vem apenas em Header
+              //deleteColumns(estimateByMTable, 1, 1)
+
+              deleteColumns(estimateByMTable, 1, 10); // Delete last Empty Column
+
+              alignVertical(estimateByMTable, 'A7:J' + estimateByMTableRowsL2, 'center');
+
+              // 🔴🔴🔴 No ROWS to delete in new version
+              // deleteRows(estimateByMTable, 3, 6)
+
+              // // 🔴🔴🔴 ADD ROW IN LAST ROW in new VERSION
+              // estimateByMTable.cells["A" + estimateByMTableRowsL2].addRowBelow()
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              // Numbers 12.2 não aceita Thousands se for "Automatic" por isso mudei para "Number"
+              // Tive que criar funcão thousandsSeparatorWithCopyPaste
+              //thousandsSeparator(numbersAppControllerP, estimateByMTable, "C7:J" + estimateByMTableRowsL3, "Number")
+
+              // 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 POR VEZES DÁ ERRO AINDA NAO PERCEBIDO, FECHANDO NUMBERS E ABRIR RESOLVE
+              // Acho que o error mencionado acima já foi resolvido em thousandsSeparatorWithCopyPaste, tendo aumentado delay em pressDelete de d0p1 apar d0p3
+
+              thousandsSeparatorWithCopyPaste(numbersAppControllerP, estimateByMTable, 'C7:J' + estimateByMTableRowsL3, 1);
+
+              alignHorizontal(estimateByMTable, 'C7:C' + estimateByMTableRowsL3, 'right');
+
+              alignHorizontal(estimateByMTable, 'B7:B' + estimateByMTableRowsL3, 'left');
+
+              var [subtotalLineSumNamesCement, subtotalLineSumNamesGrossSand, subtotalLineSumNamesWater] = [[], [], []];
+
+              // var wallThicknesses = []
+              var wallThicknessesToHideSubtotal2 = [];
+              var bricksQuantityByThickness = {};
+
+              var rowStartNumToHide = 0;
+
+              var letters = ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+              // var marginOfError = 1.10
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+
+                // APPLY marginOfError
+                for (var j = 0; j < letters.length; j++) {
+                  var letter = letters[j];
+                  var quantity_Track = estimateByMTable.cells[letter + iSum].value();
+
+                  if (quantity_Track == 0) {
+                    estimateByMTable.cells[letter + iSum].value = '';
+                  }
+
+                  var columnC_Track = estimateByMTable.cells['C' + iSum].value();
+
+                  if (quantity_Track) {
+                    // var columnC_TrackStr = columnC_Track.toString()
+
+                    var quantity_TrackStr = quantity_Track.toString();
+
+                    if (quantity_TrackStr.includes('m')) {
+                      var quantity = Number(quantity_TrackStr.split('m')[0].replace(/,/g, ''));
+                    } else {
+                      var quantity = quantity_Track;
+                    }
+
+                    var quantityWithMarginOfError = quantity * marginOfError;
+
+                    if (quantity_TrackStr.includes('m')) {
+                      var quantityWithMarginOfError = formatNumber(quantityWithMarginOfError, 2, 2) + ' m²';
+                    }
+
+                    // Change Cells info, only if marginOfError is not 1.00 obviuosly
+                    if (marginOfError != 1.0) {
+                      estimateByMTable.cells[letter + iSum].value = quantityWithMarginOfError;
+                    }
+
+                    // if (iSum > 7 && letter == "F") {
+                    // 	alert(`${quantityWithMarginOfError}`, `quantityWithMarginOfError`)
+                    // }
+                  }
+                }
+
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+                var columnB_Track = estimateByMTable.cells['B' + iSum].value();
+                var columnF_Track = estimateByMTable.cells['F' + iSum].value();
+
+                if (columnB_Track != null) {
+                  if (rowStartNumToHide == 0) {
+                    var rowStartNumToHide = iSum;
+                  }
+
+                  var bricksQuantity = estimateByMTable.cells['D' + iSum].value();
+
+                  if (columnC_Track && !columnC_Track.toString().includes('m')) {
+                    var columnB_TrackStr = 'Bloco ' + columnB_Track;
+
+                    if (columnF_Track > 0) {
+                      columnB_TrackStr += ` (Amaciçados)`;
+                    }
+
+                    if (bricksQuantityByThickness[columnB_TrackStr] === undefined) {
+                      bricksQuantityByThickness[columnB_TrackStr] = bricksQuantity;
+                    } else {
+                      bricksQuantityByThickness[columnB_TrackStr] += bricksQuantity;
+                    }
+                  }
+                }
+
+                if (columnA_Track != null) {
+                  var columnA_TrackItems = columnA_Track.split(', ');
+
+                  // Remove G301
+                  estimateByMTable.cells['A' + iSum].value = columnA_TrackItems.slice(1, columnA_TrackItems.length).join(', ');
+
+                  if (i > 6) {
+                    // Não no primeiro columnA_Track
+
+                    estimateByMTable.cells['A' + i].addRowBelow();
+
+                    i += 1;
+                    estimateByMTableRowsL3 += 1;
+
+                    // ----------------- FUNCTION
+                    var subtotalLineSumNames = [
+                      subtotalLineSumNamesCement,
+                      subtotalLineSumNamesGrossSand,
+                      subtotalLineSumNamesWater,
+                    ];
+
+                    wallCalculationsSubtotal2(estimateByMTable, iSum, subtotalLineSumNames, wallThicknessesToHideSubtotal2);
+
+                    // Reset
+                    var wallThicknessesToHideSubtotal2 = [];
+
+                    // Bold row
+                    bold(estimateByMTable, 'A' + (iSum + 1) + ':J' + (iSum + 1));
+                    applyBackgroundColor(estimateByMTable, 'A' + (iSum + 1) + ':J' + (iSum + 1), rowPrimaryColor);
+                  } else {
+                    // Bold row
+                    bold(estimateByMTable, 'A' + iSum + ':J' + iSum);
+                    applyBackgroundColor(estimateByMTable, 'A' + iSum + ':J' + iSum, rowPrimaryColor);
+                  }
+
+                  // Reseting
+                  var [subtotalLineSumNamesCement, subtotalLineSumNamesGrossSand, subtotalLineSumNamesWater] = [[], [], []];
+                }
+
+                try {
+                  // columnC_Track.includes("m") raise error if is null
+                  if (columnC_Track.includes('m')) {
+                    estimateByMTable.cells['A' + iSum].addRowBelow();
+
+                    i += 1;
+                    estimateByMTableRowsL3 += 1;
+
+                    // Cimento
+                    var subTotalLineSumNameCement = estimateByMTable.cells['E' + (iSum + 1)].name();
+                    subtotalLineSumNamesCement.push(subTotalLineSumNameCement);
+
+                    // Areia Grossa
+                    var subTotalLineSumNameGrossSand = estimateByMTable.cells['G' + (iSum + 1)].name();
+                    subtotalLineSumNamesGrossSand.push(subTotalLineSumNameGrossSand);
+
+                    // Água
+                    var subTotalLineSumNameWater = estimateByMTable.cells['I' + (iSum + 1)].name();
+                    subtotalLineSumNamesWater.push(subTotalLineSumNameWater);
+
+                    // ----------------- FUNCTION
+                    wallCalculationsSubtotal1(estimateByMTable, estimateByMTableRowsL3, i, iSum, rowSecondaryColor, hideRows);
+
+                    // ----- HIDE ROWS
+
+                    var thisWallThikness = estimateByMTable.cells['B' + (iSum - 1)].value();
+
+                    if (hideRows) {
+                      var numOfRowsToHide = estimateByMTable.cells['B' + iSum].value();
+                      var rowEndNumToHide = rowStartNumToHide + numOfRowsToHide - 1;
+
+                      hideRowsRange(estimateByMTable, numOfRowsToHide, 'A' + rowStartNumToHide + ':A' + rowEndNumToHide);
+
+                      // In Numbers replace Quantity (numOfRowsToHide) of Walls with its thickness
+                      // var thisWallThikness = estimateByMTable.cells["B" + (iSum - 1)].value()
+                      estimateByMTable.cells['B' + iSum].value = thisWallThikness;
+
+                      // Reseting
+                      var rowStartNumToHide = 0;
+                    }
+
+                    if (thisWallThikness) {
+                      wallThicknessesToHideSubtotal2.push(thisWallThikness);
+                    }
+                  }
+                } catch {}
+
+                if (i == estimateByMTableRowsL3 - 1) {
+                  // 🔴🔴🔴 IN OLD VERSION
+                  estimateByMTable.cells['A' + (i - 1)].addRowBelow();
+
+                  // // 🔴🔴🔴 IN NEW VERSION
+                  // estimateByMTable.cells["A" + (i)].addRowBelow()
+
+                  i += 1;
+                  estimateByMTableRowsL3 += 1;
+
+                  // ----------------- FUNCTION / TOTAL
+                  var subtotalLineSumNamesAndColors = [
+                    [subtotalLineSumNamesCement, grandTotalRangeColor_Cement],
+                    [subtotalLineSumNamesGrossSand, grandTotalRangeColor_Sand],
+                    [subtotalLineSumNamesWater, grandTotalRangeColor_Water],
+                  ];
+
+                  var bricksQuantityByThicknessArrayProcessed = Object.entries(bricksQuantityByThickness).map(item =>
+                    item.join(': ')
+                  );
+
+                  const wallMatetialStr = wallWriteTotal(
+                    estimateByMTable,
+                    estimateByMTableRowsL3,
+                    iSum,
+                    subtotalLineSumNamesAndColors,
+                    grandTotalRangeColor_General,
+                    rowPrimaryColor,
+                    hideRows,
+                    bricksQuantityByThicknessArrayProcessed,
+                    wallThicknessesToHideSubtotal2
+                  );
+
+                  if (includeCost) {
+                    var wallCostInfo = wallCost(
+                      estimateByMTable,
+                      buildingNameAndGroupID,
+                      iSum,
+                      bricksQuantityByThicknessArrayProcessed,
+                      priceBrick100,
+                      priceBrick150,
+                      priceBrick200,
+                      priceCementUnit,
+                      priceGrossSandM3,
+                      priceWaterL,
+                      costRowsColor
+                    );
+
+                    processedBuildingsInfo.push(wallCostInfo);
+                  }
+
+                  // ----------------- WRITE SUMMARY
+                  estimateByMSummaryTable.cells['B2'].value = wallMatetialStr;
+                }
+              }
+
+              var estimateInfoToFill = bricksQuantityByThickness;
+            } else if (sheetName.includes('SUPERF')) {
+              // 🔴🔴🔴 DELETE Coluna de Elemento, vem no Export e no Archicad vem apenas em Header
+              //deleteColumns(estimateByMTable, 1, 1)
+              deleteColumns(estimateByMTable, 2, 1);
+
+              // // 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 OUTRA SOLUÇÃO SERIA USAR O CONCEITO DE ELIMINAR A ÚLTIMA COLUNA QUE ESTÁ EM Tex A5 Programa de Necessidades - USA REMOVE LAST TAB - 🔴🔴🔴 PARECE QUE É MELHOR DEIXAR ASSIM AQUI
+              // deleteColumns(estimateByMTable, 1, 3) // Empty Column
+
+              alignVertical(estimateByMTable, 'A7:C' + estimateByMTableRowsL2, 'center');
+
+              // deleteRows(estimateByMTable, 2, 6)
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              setDecimals(numbersAppControllerP, estimateByMTable, 'C7:C' + estimateByMTableRowsL3, 1, 'Up');
+
+              thousandsSeparator(numbersAppControllerP, estimateByMTable, 'C7:C' + estimateByMTableRowsL3, 'Number');
+
+              var levelNames = [];
+
+              var rowPrimaryColorsIndex = 0;
+              var hideRowDetailsStartNum = 7;
+              //var quantitiesNoProcessPartial = {};
+              var surfaceQuantitiesTotal = {};
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+                var columnB_Track = estimateByMTable.cells['B' + iSum].value();
+                var columnC_Track = estimateByMTable.cells['C' + iSum].value();
+
+                var columnD_Track = estimateByMTable.cells['D' + iSum].value();
+                var columnE_Track = estimateByMTable.cells['E' + iSum].value();
+
+                if (columnC_Track != null) {
+                  if (columnE_Track) {
+                    // 01P description colum
+
+                    // 🔴🔴🔴 columnC_Track is quantity
+                    // columnD_Track is 01P quantity
+                    var columnC_Track = columnD_Track;
+                    estimateByMTable.cells['B' + iSum].value = columnE_Track;
+                    var columnB_Track = columnE_Track;
+                  }
+
+                  estimateByMTable.cells['C' + iSum].value = '=' + columnC_Track + '*' + marginOfError;
+
+                  var columnC_Track = columnC_Track * marginOfError;
+                }
+
+                if (columnA_Track != null) {
+                  var columnA_TrackItems = columnA_Track.split(', ');
+                  var levelName = columnA_TrackItems.slice(0, 2).join(' '); // G301 B Piso 1
+                  var spaceName = columnA_TrackItems[columnA_TrackItems.length - 1];
+
+                  // Remove G301
+                  estimateByMTable.cells['A' + iSum].value = columnA_TrackItems.slice(1, columnA_TrackItems.length).join(', ');
+
+                  // Não no primeiro columnA_Track
+                  if (i > 6 && levelNames[0] != levelName) {
+                    var levelNames = [];
+
+                    if (rowPrimaryColorsIndex == 0) {
+                      var rowPrimaryColorsIndex = 1;
+                    } else if (rowPrimaryColorsIndex == 1) {
+                      var rowPrimaryColorsIndex = 0;
+                    }
+                  }
+
+                  applyBackgroundColor(
+                    estimateByMTable,
+                    'A' + iSum + ':C' + iSum,
+                    rowPrimaryColorsAlternate[rowPrimaryColorsIndex]
+                  );
+
+                  if (!levelNames.includes(levelName)) {
+                    levelNames.push(levelName);
+                  }
+                }
+
+                if (columnB_Track != null) {
+                  var quantity = Number(formatNumber(columnC_Track, 2, 2).replace(/,/g, ''));
+
+                  if (columnB_Track.includes('Tijoleira') && !columnB_Track.includes('Rodapé')) {
+                    columnB_Track += ' - ' + spaceName;
+                  }
+
+                  // CONVERSÃO DE ÁREA PARA METRO LINEAR DE RODAPÉ
+                  if (columnB_Track.includes('Rodapé')) {
+                    columnB_Track += ` (ml)`;
+                    // 0.10 altura de rodapé no Archicad
+                    var quantity = quantity / 0.1;
+
+                    estimateByMTable.cells['B' + iSum].value = columnB_Track;
+                    estimateByMTable.cells['C' + iSum].value = quantity;
+                  }
+
+                  if (surfaceQuantitiesTotal[columnB_Track] === undefined) {
+                    surfaceQuantitiesTotal[columnB_Track] = quantity;
+                  } else {
+                    surfaceQuantitiesTotal[columnB_Track] += quantity;
+                  }
+                }
+
+                if (i == estimateByMTableRowsL3 - 1) {
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+
+                  i += 2;
+                  estimateByMTableRowsL3 += 2;
+
+                  estimateByMTable.cells['A' + estimateByMTableRowsL3].value = 'TOTAL';
+
+                  var surfaceQuantitiesTotalArray = Object.entries(surfaceQuantitiesTotal);
+
+                  // Sem formatNumber cria deciamis estranhas (313.15000000000003) mesmo com form antes de somar para dictionary
+
+                  // var surfaceQuantitiesTotalArrayProcessed = surfaceQuantitiesTotalArray.map(item => "• " + item[0] + ": " + formatNumber(item[1], 2, 2))
+                  var surfaceQuantitiesTotalArrayProcessed = surfaceQuantitiesTotalArray.map(
+                    item => '• ' + item[0] + ': ' + formatNumber(Math.ceil(item[1]), 0, 0)
+                  );
+
+                  var surfaceQuantitiesTotalArrayTxt = surfaceQuantitiesTotalArrayProcessed.sort().join('\n');
+
+                  estimateByMTable.cells['B' + estimateByMTableRowsL3].value = surfaceQuantitiesTotalArrayTxt;
+
+                  bold(estimateByMTable, 'A' + estimateByMTableRowsL3);
+
+                  applyBackgroundColor(
+                    estimateByMTable,
+                    'A' + estimateByMTableRowsL3 + ':C' + estimateByMTableRowsL3,
+                    grandTotalRangeColor
+                  );
+
+                  // ----- NEW
+
+                  if (hideBarsSurfacesVolumesDetails) {
+                    var numOfRowsToHide = i + 1 - hideRowDetailsStartNum;
+
+                    hideRowsRange(estimateByMTable, numOfRowsToHide, 'A' + hideRowDetailsStartNum + ':A' + i);
+                  }
+
+                  if (includeCost) {
+                    var surfaceCostInfo = surfaceCost(
+                      estimateByMTable,
+                      buildingNameAndGroupID,
+                      iSum,
+                      surfaceQuantitiesTotalArrayProcessed,
+                      priceStoneCoatingM2,
+                      pricePaintExteriorM2,
+                      pricePaintInteriorM2,
+                      pricePaintCeilingM2,
+                      priceFloorTilesM2,
+                      priceWallTilesM2,
+                      priceSkirtingML,
+                      costRowsColor
+                    );
+
+                    processedBuildingsInfo.push(surfaceCostInfo);
+                  }
+
+                  // ----------------- WRITE SUMMARY
+                  estimateByMSummaryTable.cells['B5'].value = surfaceQuantitiesTotalArrayTxt;
+                }
+              }
+
+              // NEW POSITIO
+
+              // 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 OUTRA SOLUÇÃO SERIA USAR O CONCEITO DE ELIMINAR A ÚLTIMA COLUNA QUE ESTÁ EM Tex A5 Programa de Necessidades - USA REMOVE LAST TAB - 🔴🔴🔴 PARECE QUE É MELHOR DEIXAR ASSIM AQUI
+              deleteColumns(estimateByMTable, 3, 3); // Empty Column
+
+              var estimateInfoToFillArray = Object.entries(surfaceQuantitiesTotal);
+
+              var estimateInfoToFillNormal = {};
+              var estimateInfoToFillGeneral = {};
+
+              for (var i = 0; i < estimateInfoToFillArray.length; i++) {
+                var item = estimateInfoToFillArray[i];
+                var element = item[0];
+                var quantity = Number(item[1]);
+
+                if (
+                  element.includes('Pintura') &&
+                  (element.includes('Tecto') || element.includes('Exterior') || element.includes('Interior'))
+                ) {
+                  var elementItems = element.split(' - ');
+
+                  var element = elementItems[0] + ' - ' + elementItems.slice(2, 4).join(' - ');
+                }
+
+                if (element.includes('Tijoleira') && element.includes('Laje')) {
+                  var elementItems = element.split(' - ');
+
+                  // var element = elementItems[0].split(" ")[0] + " - " + elementItems[1].split(" ")[1]
+                  var element = elementItems[0] + ' - Piso Térreo'; //+ elementItems[1].split(" ")[1]
+                }
+
+                if (element.includes('Pintura') || element.includes('Rodapé')) {
+                  if (estimateInfoToFillNormal[element] === undefined) {
+                    estimateInfoToFillNormal[element] = quantity;
+                  } else {
+                    estimateInfoToFillNormal[element] += quantity;
+                  }
+                } else {
+                  element += ' | m2';
+
+                  if (estimateInfoToFillGeneral[element] === undefined) {
+                    estimateInfoToFillGeneral[element] = quantity;
+                  } else {
+                    estimateInfoToFillGeneral[element] += quantity;
+                  }
+                }
+              }
+
+              // var fillIdStart = "GeralSuperfícies"
+              // var fillIdEnd = "Pavimentos"
+              // var columnB_Track2ID = "PAVIMENTOS"
+
+              var estimateInfoToFill = estimateInfoToFillNormal;
+              // var estimateInfoToFillGeneral = Object.entries(estimateInfoToFillGeneral)
+            } else if (sheetName.includes('VAOS')) {
+              if (openingPriceK != 1.0) {
+                alert(`O coeficiente de preço de "Vãos" é diferente de 1.00 (${openingPriceK})!`, ``);
+
+                numbersApp.activate();
+              }
+
+              deleteColumns(estimateByMTable, 1, 4); // Delete last Empty Column
+
+              alignHorizontal(estimateByMTable, 'C7:C' + estimateByMTableRowsL2, 'center');
+
+              alignVertical(estimateByMTable, 'A7:D' + estimateByMTableRowsL2, 'center');
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              thousandsSeparatorWithCopyPaste(numbersAppControllerP, estimateByMTable, 'D7:D' + estimateByMTableRowsL3, 3);
+
+              var openingType = '';
+              var windowsInfo = [];
+              var doorsInfo = [];
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+                var columnB_Track = estimateByMTable.cells['B' + iSum].value();
+
+                if (columnB_Track && columnB_Track.includes(' ##')) {
+                  var columnB_Track = columnB_Track.replace(' ##', '');
+                  estimateByMTable.cells['B' + iSum].value = columnB_Track;
+                }
+
+                if (columnA_Track != null) {
+                  var columnA_Track = columnA_Track.replace(/G\d{3},\s/g, '');
+                  estimateByMTable.cells['A' + iSum].value = columnA_Track;
+
+                  var openingType = columnA_Track;
+
+                  applyBackgroundColor(estimateByMTable, 'A' + iSum + ':D' + iSum, rowPrimaryColor);
+                }
+
+                if (columnB_Track) {
+                  var openingDimensions = columnB_Track
+                    .match(/(\d[0-9,.]*)\sx\s(\d[0-9,.]*)/)
+                    .slice(1)
+                    // 1000 para metros
+                    .map(item => Number(item.replace(/,/g, '')) / 1000);
+
+                  var openingArea = openingDimensions[0] * openingDimensions[1];
+
+                  var material = columnB_Track.split(', ')[1].split(' ')[0];
+                  var openingTypeAndMaterial = `${openingType} ${material}`;
+
+                  var openningPriceKByMaterial = openningPricesKByMaterial[openingTypeAndMaterial];
+
+                  if (!openningPriceKByMaterial) {
+                    var openningPriceKByMaterial = 0;
+                  }
+
+                  estimateByMTable.cells['D' + iSum].value = formatNumber(openingArea * openningPriceKByMaterial, 2, 2);
+
+                  // --------------- COLLECT INFO
+                  var quantity = estimateByMTable.cells['C' + iSum].value();
+                  var priceUnit = estimateByMTable.cells['D' + iSum].value();
+
+                  if (
+                    openingType == 'Bloco de Vidro' ||
+                    openingType == 'Grade Janela' ||
+                    openingType == 'Grelha' ||
+                    openingType == 'Janela' ||
+                    openingType == 'Ventilador'
+                  ) {
+                    // windowsInfo.push(["Janela", columnB_Track, quantity, priceUnit])
+
+                    windowsInfo.push([columnB_Track + ' | ' + priceUnit, quantity]);
+                  } else if (openingType == 'Grade Porta' || openingType == 'Porta' || openingType == 'Portão') {
+                    // doorsInfo.push(["Porta", columnB_Track, quantity, priceUnit])
+
+                    doorsInfo.push([columnB_Track + ' | ' + priceUnit, quantity]);
+                  }
+                }
+              }
+
+              // var estimateInfoToFill = windowsInfo.concat(doorsInfo)
+            } else if (sheetName.includes('VAR')) {
+              deleteColumns(estimateByMTable, 1, 12); // Delete last Empty Column
+
+              // 🔴🔴🔴 DELETE Coluna de Elemento, vem no Export e no Archicad vem apenas em Header
+              deleteColumns(estimateByMTable, 1, 1);
+
+              alignHorizontal(estimateByMTable, 'C7:K' + estimateByMTableRowsL2, 'center');
+
+              alignVertical(estimateByMTable, 'A7:K' + estimateByMTableRowsL2, 'center');
+
+              // Delete Last Rows - is for TOTALS from Schedules
+              deleteRows(estimateByMTable, 1, estimateByMTableRowsL2 - 1);
+
+              // NOT NECESSARY IN NEW VERSION
+              // deleteRows(estimateByMTable, 3, 6)
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              setDecimals(numbersAppControllerP, estimateByMTable, 'C7:K' + estimateByMTableRowsL3, 1, 'Up');
+
+              thousandsSeparator(numbersAppControllerP, estimateByMTable, 'C7:K' + estimateByMTableRowsL3, 'Number');
+
+              // NEW, HIDE DETAILS
+              var hideRowDetailsStartNum = 7;
+              var numOfRowsToHideCollection = 0;
+
+              // -----
+              var rowPrimaryColorsIndex = 0;
+
+              var rowStartNumToHide = 0;
+              var barsQuantities = [];
+              var stirrupsQuantities = [];
+              var barNameAndQuantityTrack = '';
+
+              var levelNames = [];
+
+              var levelAndElement = '';
+              var levelsAndElementsTrack = [];
+              var stirrupsNameStr = '';
+
+              var quantitiesBarsPartial = {};
+              var quantitiesBarsTotal = {};
+
+              var slabBars6QuantitiesPartial = 0;
+              var slabBars6QuantitiesTotal = 0;
+
+              var slabBars8QuantitiesPartial = 0;
+              var slabBars8QuantitiesTotal = 0;
+
+              var slabBars10QuantitiesPartial = 0;
+              var slabBars10QuantitiesTotal = 0;
+
+              var slabBars12QuantitiesPartial = 0;
+              var slabBars12QuantitiesTotal = 0;
+
+              // --------------- QUANTITIES: SHOES, COLUMNS AND BEAMS
+              var shoeQuantityPartial = 0;
+              var columnQuantityPartial = 0;
+              var beamQuantityPartial = 0;
+
+              var shoeQuantityTotal = 0;
+              var columnQuantityTotal = 0;
+              var beamQuantityTotal = 0;
+              // ---------------
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+                var columnB_Track = estimateByMTable.cells['B' + iSum].value();
+
+                var slabBars12Track = estimateByMTable.cells['K' + iSum].value();
+
+                // --------------- HIDE ROWS
+
+                if (columnA_Track != null) {
+                  var levelAndElement = columnA_Track;
+
+                  levelsAndElementsTrack.push(levelAndElement);
+                }
+
+                if (hideRows) {
+                  // 🔴🔴🔴 (columnB_Track == null && columnA_Track == null) — SITUAÇÃO FIM DA TABELA, ANTES DE RESUMOS GRAND TOTAL
+                  // Vide no Finder o Screen que mostra onde deve permitir HIDE
+                  // Vide aplicação no ELSE, ABAIXO
+
+                  if (columnB_Track != null || columnA_Track != null || (columnB_Track == null && columnA_Track == null)) {
+                    if (barNameAndQuantityTrack == '' && columnB_Track != null) {
+                      var barNameAndQuantityTrack = columnB_Track;
+                    } else if (barNameAndQuantityTrack != '') {
+                      if (barNameAndQuantityTrack != columnB_Track || (columnA_Track == null && columnB_Track == null)) {
+                        var barsQuantitiesL = barsQuantities.length;
+
+                        var barsQuantitiesTotal = sumAllByReduce(barsQuantities);
+
+                        var rowEndNameToHide = estimateByMTable.cells['B' + iSum].name();
+
+                        // - 1 para usar fila anterior a corrente que é novo barNameAndQuantityTrack
+                        var rowEndNumToHide = getCellNamePartColumnOrRow(rowEndNameToHide, 'rowName') - 1;
+
+                        // + 1 para compatibilizar o número de numOfRowsToHide
+                        var numOfRowsToHide = rowEndNumToHide - rowStartNumToHide + 1;
+
+                        if (columnA_Track == null) {
+                          // "hideInChangeBarName"
+                          var levelAndElementToUse = levelsAndElementsTrack[levelsAndElementsTrack.length - 1];
+                        } else if (columnB_Track == null) {
+                          // "hideInSummary"
+                          var levelAndElementToUse = levelsAndElementsTrack[levelsAndElementsTrack.length - 2];
+                        }
+
+                        var rowStartNumToHideMinus1 = rowStartNumToHide - 1;
+
+                        var barName = estimateByMTable.cells['B' + rowStartNumToHideMinus1].value();
+
+                        if (levelAndElementToUse.includes('Sapata')) {
+                          var elementName = barsQuantitiesL > 1 ? 'Sapatas' : 'Sapata';
+
+                          shoeQuantityPartial += barsQuantitiesL;
+                        } else if (levelAndElementToUse.includes('Pilar')) {
+                          var elementName = barsQuantitiesL > 1 ? 'Pilares' : 'Pilar';
+
+                          columnQuantityPartial += barsQuantitiesL;
+                        } else if (levelAndElementToUse.includes('Viga')) {
+                          var elementName = barsQuantitiesL > 1 ? 'Vigas' : 'Viga';
+
+                          beamQuantityPartial += barsQuantitiesL;
+                        }
+
+                        estimateByMTable.cells[
+                          'B' + rowStartNumToHideMinus1
+                        ].value = `${barName} (${barsQuantitiesL} ${elementName})`;
+
+                        if (levelAndElementToUse.includes('Sapata')) {
+                          estimateByMTable.cells['C' + rowStartNumToHideMinus1].value = barsQuantitiesTotal;
+                        } else if (levelAndElementToUse.includes('Pilar') || levelAndElementToUse.includes('Viga')) {
+                          var stirrupsQuantitiesTotal = sumAllByReduce(stirrupsQuantities);
+
+                          if (levelAndElementToUse.includes('Pilar')) {
+                            estimateByMTable.cells['D' + rowStartNumToHideMinus1].value = barsQuantitiesTotal;
+
+                            estimateByMTable.cells['E' + rowStartNumToHideMinus1].value = stirrupsQuantitiesTotal;
+                          } else if (levelAndElementToUse.includes('Viga')) {
+                            estimateByMTable.cells['F' + rowStartNumToHideMinus1].value = barsQuantitiesTotal;
+
+                            estimateByMTable.cells['G' + rowStartNumToHideMinus1].value = stirrupsQuantitiesTotal;
+                          }
+                        }
+
+                        if (numOfRowsToHide > 0) {
+                          hideRowsRange(estimateByMTable, numOfRowsToHide, 'A' + rowStartNumToHide + ':A' + rowEndNumToHide);
+
+                          numOfRowsToHideCollection += numOfRowsToHide;
+
+                          // var numOfRowsToHide = 0; // Reset NEW20240102
+                        }
+
+                        var rowStartNumToHide = 0;
+                        var barsQuantities = [];
+                        var stirrupsQuantities = [];
+
+                        if (columnB_Track == null) {
+                          var barNameAndQuantityTrack = '';
+                        } else {
+                          // 🔴🔴🔴 This to get in <if (barNameAndQuantityTrack != "") {> above to write " (1 pilar)" in Varão 6 “Varão 6 (1 pilare)” and include in quantity if is last column that is only one - see screenshot in Finder
+                          var barNameAndQuantityTrack = columnB_Track;
+                        }
+                      }
+                    }
+                  }
+                }
+
+                if (columnA_Track != null) {
+                  var columnA_TrackItems = columnA_Track.split(', ');
+                  var levelName = columnA_TrackItems.slice(0, 2).join(' '); // G301 B Piso 1
+
+                  // Remove G301
+                  estimateByMTable.cells['A' + iSum].value = columnA_TrackItems.slice(1, columnA_TrackItems.length).join(', ');
+
+                  // Não no primeiro columnA_Track
+                  if (i > 6 && levelNames[0] != levelName) {
+                    estimateByMTable.cells['A' + i].addRowBelow();
+
+                    i += 1;
+                    estimateByMTableRowsL3 += 1;
+
+                    const slabBarsQuantitiesObj = {
+                      slabBars6QuantitiesPartial,
+                      slabBars8QuantitiesPartial,
+                      slabBars10QuantitiesPartial,
+                      slabBars12QuantitiesPartial,
+                      slabBarsSubTotalAndTotalColor,
+                    };
+
+                    var shoesColumnsBeamsStrPartial = getShoesColumnsBeamsStrPartialAndTotal(
+                      shoeQuantityPartial,
+                      columnQuantityPartial,
+                      beamQuantityPartial
+                    );
+
+                    barsWritePartial(
+                      estimateByMTable,
+                      iSum,
+                      levelNames,
+                      quantitiesBarsPartial,
+                      rowPrimaryColorsAlternate[rowPrimaryColorsIndex],
+                      shoesColumnsBeamsStrPartial,
+                      slabBarsQuantitiesObj,
+                      hideRowDetailsStartNum,
+                      numOfRowsToHideCollection,
+                      hideBarsSurfacesVolumesDetails
+                    );
+
+                    // ----------------- SLABS
+                    /*
+										barsSlabWriteSubtotal(estimateByMTable, iSum,  slabBars6QuantitiesPartial, slabBars8QuantitiesPartial, slabBars10QuantitiesPartial,slabBars12QuantitiesPartial, slabBarsSubTotalAndTotalColor)
+										*/
+
+                    // var slabBarsPartialList = [slabBars6QuantitiesPartial, slabBars8QuantitiesPartial, slabBars10QuantitiesPartial, slabBars12QuantitiesPartial]
+
+                    // -----------------
+
+                    if (rowPrimaryColorsIndex == 0) {
+                      var rowPrimaryColorsIndex = 1;
+                    } else if (rowPrimaryColorsIndex == 1) {
+                      var rowPrimaryColorsIndex = 0;
+                    }
+
+                    var numOfRowsToHideCollection = 0;
+                    var hideRowDetailsStartNum = iSum + 1;
+
+                    applyBackgroundColor(
+                      estimateByMTable,
+                      'A' + (iSum + 1) + ':K' + (iSum + 1),
+                      rowPrimaryColorsAlternate[rowPrimaryColorsIndex]
+                    );
+
+                    var levelNames = [];
+                    var quantitiesBarsPartial = {};
+                    var stirrupsNameStr = '';
+
+                    slabBars6QuantitiesTotal += slabBars6QuantitiesPartial;
+                    var slabBars6QuantitiesPartial = 0;
+
+                    slabBars8QuantitiesTotal += slabBars8QuantitiesPartial;
+                    var slabBars8QuantitiesPartial = 0;
+
+                    slabBars10QuantitiesTotal += slabBars10QuantitiesPartial;
+                    var slabBars10QuantitiesPartial = 0;
+
+                    slabBars12QuantitiesTotal += slabBars12QuantitiesPartial;
+                    var slabBars12QuantitiesPartial = 0;
+
+                    // ---------------
+                    shoeQuantityTotal += shoeQuantityPartial;
+                    var shoeQuantityPartial = 0;
+
+                    columnQuantityTotal += columnQuantityPartial;
+                    var columnQuantityPartial = 0;
+
+                    beamQuantityTotal += beamQuantityPartial;
+                    var beamQuantityPartial = 0;
+                  } else {
+                    applyBackgroundColor(
+                      estimateByMTable,
+                      'A' + iSum + ':K' + iSum,
+                      rowPrimaryColorsAlternate[rowPrimaryColorsIndex]
+                    );
+                  }
+
+                  if (!levelNames.includes(levelName)) {
+                    levelNames.push(levelName);
+                  }
+                }
+
+                if (columnB_Track != null) {
+                  if (levelAndElement.includes('Sapata') && columnB_Track.includes('Var')) {
+                    var quantity = estimateByMTable.cells['C' + iSum].value();
+
+                    estimateByMTable.cells['C' + iSum].value = Math.ceil(quantity * marginOfError);
+
+                    applyBackgroundColor(estimateByMTable, 'B' + iSum + ':C' + iSum, rowSecondaryColor);
+                  } else if (
+                    (levelAndElement.includes('Pilar') || levelAndElement.includes('Viga')) &&
+                    columnB_Track.includes('Var')
+                  ) {
+                    applyBackgroundColor(estimateByMTable, 'B' + iSum + ':B' + iSum, rowSecondaryColor);
+
+                    var stirrupsNameStr = levelAndElement.split(' / ')[1];
+
+                    if (levelAndElement.includes('Pilar')) {
+                      stirrupsNameStr += ' (Pilar)';
+
+                      var quantity = estimateByMTable.cells['D' + iSum].value();
+                      estimateByMTable.cells['D' + iSum].value = Math.ceil(quantity * marginOfError);
+
+                      // 🔴🔴🔴 NOT USED YET
+                      var quantityStirrups = estimateByMTable.cells['E' + iSum].value();
+                      estimateByMTable.cells['E' + iSum].value = Math.ceil(quantityStirrups * marginOfError);
+
+                      applyBackgroundColor(estimateByMTable, 'D' + iSum + ':E' + iSum, rowSecondaryColor);
+                    } else if (levelAndElement.includes('Viga')) {
+                      stirrupsNameStr += ' (Viga)';
+
+                      var quantity = estimateByMTable.cells['F' + iSum].value();
+                      estimateByMTable.cells['F' + iSum].value = Math.ceil(quantity * marginOfError);
+
+                      // 🔴🔴🔴 NOT USED YET
+                      var quantityStirrups = estimateByMTable.cells['G' + iSum].value();
+                      estimateByMTable.cells['G' + iSum].value = Math.ceil(quantityStirrups * marginOfError);
+
+                      applyBackgroundColor(estimateByMTable, 'F' + iSum + ':G' + iSum, rowSecondaryColor);
+                    }
+
+                    var quantityStirrupsWithMarginOfError = Math.ceil(quantityStirrups * marginOfError);
+
+                    if (quantitiesBarsPartial[stirrupsNameStr] === undefined) {
+                      quantitiesBarsPartial[stirrupsNameStr] = quantityStirrupsWithMarginOfError;
+                    } else {
+                      quantitiesBarsPartial[stirrupsNameStr] += quantityStirrupsWithMarginOfError;
+                    }
+
+                    if (quantitiesBarsTotal[stirrupsNameStr] === undefined) {
+                      quantitiesBarsTotal[stirrupsNameStr] = quantityStirrupsWithMarginOfError;
+                    } else {
+                      quantitiesBarsTotal[stirrupsNameStr] += quantityStirrupsWithMarginOfError;
+                    }
+                  }
+
+                  var quantityWithMarginOfError = Math.ceil(quantity * marginOfError);
+
+                  if (quantitiesBarsPartial[columnB_Track] === undefined) {
+                    quantitiesBarsPartial[columnB_Track] = quantityWithMarginOfError;
+                  } else {
+                    quantitiesBarsPartial[columnB_Track] += quantityWithMarginOfError;
+                  }
+
+                  if (quantitiesBarsTotal[columnB_Track] === undefined) {
+                    quantitiesBarsTotal[columnB_Track] = quantityWithMarginOfError;
+                  } else {
+                    quantitiesBarsTotal[columnB_Track] += quantityWithMarginOfError;
+                  }
+
+                  if (rowStartNumToHide == 0) {
+                    // + 1 para considerar a fila a seguir pois a corrente é necessária para introduzir os resumos
+                    var rowStartNumToHide = iSum + 1;
+                  }
+
+                  barsQuantities.push(quantityWithMarginOfError);
+                  stirrupsQuantities.push(quantityStirrupsWithMarginOfError);
+                } else {
+                  // Is SLAB
+                  if (levelAndElement.includes('Laje') && slabBars12Track != null) {
+                    applyBackgroundColor(estimateByMTable, 'H' + iSum + ':K' + iSum, rowSecondaryColor);
+
+                    // 🔴🔴🔴 USE THIS FOR SLABS
+                    var slabBars6Quantity = estimateByMTable.cells['H' + iSum].value();
+                    var slabBars6QuantityWithMarginOfError = Math.ceil(slabBars6Quantity * marginOfError);
+                    estimateByMTable.cells['H' + iSum].value = slabBars6QuantityWithMarginOfError;
+
+                    var slabBars8Quantity = estimateByMTable.cells['I' + iSum].value();
+                    var slabBars8QuantityWithMarginOfError = Math.ceil(slabBars8Quantity * marginOfError);
+                    estimateByMTable.cells['I' + iSum].value = slabBars8QuantityWithMarginOfError;
+
+                    var slabBars10Quantity = estimateByMTable.cells['J' + iSum].value();
+                    var slabBars10QuantityWithMarginOfError = Math.ceil(slabBars10Quantity * marginOfError);
+                    estimateByMTable.cells['J' + iSum].value = slabBars10QuantityWithMarginOfError;
+
+                    var slabBars12Quantity = estimateByMTable.cells['K' + iSum].value();
+                    var slabBars12QuantityWithMarginOfError = Math.ceil(slabBars12Quantity * marginOfError);
+                    estimateByMTable.cells['K' + iSum].value = slabBars12QuantityWithMarginOfError;
+
+                    slabBars6QuantitiesPartial += slabBars6QuantityWithMarginOfError;
+                    slabBars8QuantitiesPartial += slabBars8QuantityWithMarginOfError;
+                    slabBars10QuantitiesPartial += slabBars10QuantityWithMarginOfError;
+                    slabBars12QuantitiesPartial += slabBars12QuantityWithMarginOfError;
+                  }
+                }
+
+                if (i == estimateByMTableRowsL3 - 1) {
+                  // var quantitiesBarsPartialL = Object.keys(quantitiesBarsPartial).length
+
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+
+                  iSum += 1;
+                  i += 2;
+                  estimateByMTableRowsL3 += 2;
+                  var rowEndNumToHide = i - 1;
+
+                  // 🔴🔴🔴 LOCAL CALCULATIONS — TEMPORARY SOLUTION!??
+
+                  numbersApp.activate();
+                  delay(d1);
+
+                  // 🔴🔴🔴🔴🔴🔴 ERROR TESTING — Sem pilares na cobertura não entra AQUI
+                  if (numOfRowsToHide > 0 && rowStartNumToHide > 0) {
+                    // numOfRowsToHide: Used only to get in then is overwritten
+
+                    var numOfRowsToHide = rowsSelectionNumInColumn(
+                      estimateByMTable,
+                      'A' + rowStartNumToHide + ':A' + rowEndNumToHide
+                    );
+
+                    var barsQuantitiesL = numOfRowsToHide + 1;
+
+                    // Manter a linha abaixo de …[4], projecto Magaia exigiu [3]
+                    // var elementName = getPreviousColumnA_WithElementName(estimateByMTable, rowStartNumToHide-1).split(" ")[4]
+                    var elementName = getPreviousColumnA_WithElementName(estimateByMTable, rowStartNumToHide - 1).split(' ')[3];
+
+                    var barName = estimateByMTable.cells['B' + (rowStartNumToHide - 1)].value();
+
+                    var elementName =
+                      barsQuantitiesL > 0 ? (elementName.includes('Pilar') ? elementName + 'e' : elementName) + 's' : elementName;
+
+                    estimateByMTable.cells[
+                      'B' + (rowStartNumToHide - 1)
+                    ].value = `${barName} (${barsQuantitiesL} ${elementName})`;
+
+                    var iSumStart = rowStartNumToHide - 1;
+                    var iSumEnd = iSum - 1;
+
+                    // 🔴🔴🔴🔴🔴🔴 AQUI CHEGA NOME ERRADO "200x300s" por isso gera erro por issso não apanha "columnLetter"
+
+                    if (elementName.includes('Sapata')) {
+                      var columnLetter = 'C';
+                    } else if (elementName.includes('Pilar')) {
+                      var columnLetter = 'D';
+                    } else if (elementName.includes('Viga')) {
+                      var columnLetter = 'F';
+                    }
+
+                    var barsQuantities = sumFromSelectionRange(
+                      estimateByMTable,
+                      columnLetter + iSumStart + ':' + columnLetter + iSumEnd
+                    );
+
+                    estimateByMTable.cells[columnLetter + (rowStartNumToHide - 1)].value = barsQuantities.toString();
+
+                    if (elementName.includes('Pilar')) {
+                      var columnsStirrupsQuantities = sumFromSelectionRange(estimateByMTable, 'E' + iSumStart + ':E' + iSumEnd);
+
+                      estimateByMTable.cells['E' + (rowStartNumToHide - 1)].value = columnsStirrupsQuantities.toString();
+                    } else if (elementName.includes('Viga')) {
+                      var beamsStirrupsQuantities = sumFromSelectionRange(estimateByMTable, 'G' + iSumStart + ':G' + iSumEnd);
+
+                      estimateByMTable.cells['G' + (rowStartNumToHide - 1)].value = beamsStirrupsQuantities.toString();
+                    }
+
+                    hideRowsRange(estimateByMTable, numOfRowsToHide, 'A' + rowStartNumToHide + ':A' + rowEndNumToHide);
+
+                    // var numOfRowsToHideCollection = numOfRowsToHide
+
+                    numOfRowsToHideCollection += numOfRowsToHide;
+                  }
+
+                  // ---------------------------------- SUBTOTAL
+
+                  const slabBarsQuantitiesObj = {
+                    slabBars6QuantitiesPartial,
+                    slabBars8QuantitiesPartial,
+                    slabBars10QuantitiesPartial,
+                    slabBars12QuantitiesPartial,
+                    slabBarsSubTotalAndTotalColor,
+                  };
+
+                  var shoesColumnsBeamsStrPartial = getShoesColumnsBeamsStrPartialAndTotal(
+                    shoeQuantityPartial,
+                    columnQuantityPartial,
+                    beamQuantityPartial
+                  );
+
+                  barsWritePartial(
+                    estimateByMTable,
+                    iSum,
+                    levelNames,
+                    quantitiesBarsPartial,
+                    rowPrimaryColorsAlternate[rowPrimaryColorsIndex],
+                    shoesColumnsBeamsStrPartial,
+                    slabBarsQuantitiesObj,
+                    hideRowDetailsStartNum,
+                    numOfRowsToHideCollection,
+                    hideBarsSurfacesVolumesDetails
+                  );
+
+                  // ----------------- SLABS
+                  /*
+									barsSlabWriteSubtotal(estimateByMTable, iSum,  slabBars6QuantitiesPartial, slabBars8QuantitiesPartial, slabBars10QuantitiesPartial,slabBars12QuantitiesPartial, slabBarsSubTotalAndTotalColor)
+									*/
+
+                  slabBars6QuantitiesTotal += slabBars6QuantitiesPartial;
+                  slabBars8QuantitiesTotal += slabBars8QuantitiesPartial;
+                  slabBars10QuantitiesTotal += slabBars10QuantitiesPartial;
+                  slabBars12QuantitiesTotal += slabBars12QuantitiesPartial;
+
+                  shoeQuantityTotal += shoeQuantityPartial;
+                  columnQuantityTotal += columnQuantityPartial;
+                  beamQuantityTotal += beamQuantityPartial;
+
+                  // ---------------------------------- TOTAL
+                  var slabBarsList = [
+                    slabBars6QuantitiesTotal,
+                    slabBars8QuantitiesTotal,
+                    slabBars10QuantitiesTotal,
+                    slabBars12QuantitiesTotal,
+                  ];
+
+                  var shoesColumnsBeamsStrTotal = getShoesColumnsBeamsStrPartialAndTotal(
+                    shoeQuantityTotal,
+                    columnQuantityTotal,
+                    beamQuantityTotal
+                  );
+
+                  var barsKilogramsInfo = getBarsKilogramsInfo(quantitiesBarsTotal, slabBarsList);
+
+                  //
+
+                  var barsKilogramsQuantity = barsKilogramsInfo.match(/(\d[0-9,.]*)\sKG/)[1].replace(/,/g, '');
+
+                  var estimateInfoToFill = { 'Aço A400': barsKilogramsQuantity };
+
+                  // ---------------
+
+                  const barsTotalStr = barsWriteTotal(
+                    estimateByMTable,
+                    iSum,
+                    quantitiesBarsTotal,
+                    barsKilogramsInfo,
+                    shoeColumnBeamBarsTotalColor,
+                    shoesColumnsBeamsStrTotal
+                  );
+
+                  // ----------------- SLABS
+                  /* // 🔴🔴🔴 DESACTIVADO NOT NECESSARY BECAUSE WAS INCLUDED IN TOTAL
+									barsSlabWriteTotal(estimateByMTable, iSum,  slabBarsList, slabBarsSubTotalAndTotalColor)
+									*/
+
+                  // ----------------- BARS COST
+                  // var slabBarsList = [slabBars6QuantitiesTotal, slabBars8QuantitiesTotal, slabBars10QuantitiesTotal, slabBars12QuantitiesTotal]
+
+                  if (includeCost) {
+                    var barsCostInfo = barsCost(
+                      estimateByMTable,
+                      buildingNameAndGroupID,
+                      iSum,
+                      quantitiesBarsTotal,
+                      stirrupCoecientCost,
+                      bar6Cost,
+                      bar8Cost,
+                      bar10Cost,
+                      bar12Cost,
+                      slabBarsList,
+                      costRowsColor
+                    );
+
+                    processedBuildingsInfo.push(barsCostInfo);
+                  }
+
+                  // -----------------
+
+                  // Apply white backgroundColor in row before GRAND TOTAL
+                  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 1) + ':K' + (iSum + 1), 'white');
+
+                  // ----------------- WRITE SUMMARY
+                  estimateByMSummaryTable.cells['B3'].value = barsTotalStr;
+                }
+              }
+            } else if (sheetName.includes('VOLUMES')) {
+              // 🔴🔴🔴 DELETE Coluna de Elemento, vem no Export e no Archicad vem apenas em Header
+              deleteColumns(estimateByMTable, 1, 1);
+
+              alignVertical(estimateByMTable, 'A7:H' + estimateByMTableRowsL2, 'center');
+
+              var estimateByMTableRowsL3 = estimateByMTable.rowCount();
+
+              setDecimals(numbersAppControllerP, estimateByMTable, 'C7:H' + estimateByMTableRowsL3, 1, 'Up');
+
+              thousandsSeparator(numbersAppControllerP, estimateByMTable, 'C7:H' + estimateByMTableRowsL3, 'Number');
+
+              var [
+                subtotalLineSumNamesCement,
+                subtotalLineSumNamesGrossSand,
+                subtotalLineSumNamesFineSand,
+                subtotalLineSumNamesStone,
+                subtotalLineSumNamesWater,
+              ] = [[], [], [], [], []];
+
+              var [
+                subtotalLevelSumNamesCement,
+                subtotalLevelSumNamesGrossSand,
+                subtotalLevelSumNamesFineSand,
+                subtotalLevelSumNamesStone,
+                subtotalLevelSumNamesWater,
+              ] = [[], [], [], [], []];
+
+              var levelNames = [];
+              var elementNames = [];
+
+              // NEW, HIDE DETAILS
+              var hideRowDetailsStartNum = 7;
+              // var numOfRowsToHideCollection = 0
+
+              var rowPrimaryColorsIndex = 0;
+              var quantitiesNoProcessPartial = {};
+              var volumeQuantitiesTotal = {};
+
+              for (var i = 6; i < estimateByMTableRowsL3; i++) {
+                var iSum = i + 1;
+                var columnA_Track = estimateByMTable.cells['A' + iSum].value();
+                var columnB_Track = estimateByMTable.cells['B' + iSum].value();
+                var columnC_Track = estimateByMTable.cells['C' + iSum].value();
+
+                if (columnC_Track != null) {
+                  estimateByMTable.cells['C' + iSum].value = '=' + columnC_Track + '*' + marginOfError;
+
+                  var columnC_Track = columnC_Track * marginOfError;
+                }
+
+                if (columnA_Track != null) {
+                  // A - Fundação, Pilar 200x200 / Estribo 160x160
+
+                  var columnA_TrackItems = columnA_Track.split(', ');
+                  // G301 B Piso 1
+                  var levelName = columnA_TrackItems.slice(0, 2).join(' ');
+
+                  var elementName = columnA_TrackItems[2];
+
+                  // Remove G301
+                  estimateByMTable.cells['A' + iSum].value = columnA_TrackItems.slice(1, columnA_TrackItems.length).join(', ');
+
+                  // Não no primeiro columnA_Track
+                  if (i > 6 && levelNames[0] != levelName) {
+                    estimateByMTable.cells['A' + i].addRowBelow();
+
+                    i += 1;
+                    estimateByMTableRowsL3 += 1;
+
+                    // ----------------- FUNCTION
+                    var subtotalLineSumNames = [
+                      subtotalLineSumNamesCement,
+                      subtotalLineSumNamesGrossSand,
+                      subtotalLineSumNamesFineSand,
+                      subtotalLineSumNamesStone,
+                      subtotalLineSumNamesWater,
+                    ];
+
+                    volumeWriteSubtotal(
+                      estimateByMTable,
+                      estimateByMTableRowsL3,
+                      i,
+                      levelNames,
+                      subtotalLineSumNames,
+                      rowPrimaryColorsAlternate,
+                      rowPrimaryColorsIndex,
+                      quantitiesNoProcessPartial,
+                      hideRowDetailsStartNum,
+                      hideBarsSurfacesVolumesDetails
+                    );
+                    // -----------------
+
+                    // Cimento
+                    var subtotalLevelSumNameCement = estimateByMTable.cells['D' + iSum].name();
+                    subtotalLevelSumNamesCement.push(subtotalLevelSumNameCement);
+
+                    // Areia Grossa
+                    var subtotalLevelSumNameGrossSand = estimateByMTable.cells['E' + iSum].name();
+                    subtotalLevelSumNamesGrossSand.push(subtotalLevelSumNameGrossSand);
+
+                    // Areia Fina
+                    var subtotalLevelSumNameFineSand = estimateByMTable.cells['F' + iSum].name();
+                    subtotalLevelSumNamesFineSand.push(subtotalLevelSumNameFineSand);
+
+                    // Pedra
+                    var subtotalLevelSumNameStone = estimateByMTable.cells['G' + iSum].name();
+                    subtotalLevelSumNamesStone.push(subtotalLevelSumNameStone);
+
+                    // Água
+                    var subtotalLevelSumNameWater = estimateByMTable.cells['H' + iSum].name();
+                    subtotalLevelSumNamesWater.push(subtotalLevelSumNameWater);
+
+                    var [
+                      subtotalLineSumNamesCement,
+                      subtotalLineSumNamesGrossSand,
+                      subtotalLineSumNamesFineSand,
+                      subtotalLineSumNamesStone,
+                      subtotalLineSumNamesWater,
+                    ] = [[], [], [], [], []];
+
+                    var levelNames = [];
+                    var elementNames = [];
+
+                    var quantitiesNoProcessPartial = {};
+
+                    if (rowPrimaryColorsIndex == 0) {
+                      var rowPrimaryColorsIndex = 1;
+                    } else if (rowPrimaryColorsIndex == 1) {
+                      var rowPrimaryColorsIndex = 0;
+                    }
+
+                    var hideRowDetailsStartNum = iSum + 1;
+
+                    // Bold row
+                    bold(estimateByMTable, 'A' + (iSum + 1) + ':H' + (iSum + 1));
+
+                    applyBackgroundColor(
+                      estimateByMTable,
+                      'A' + (iSum + 1) + ':H' + (iSum + 1),
+                      rowPrimaryColorsAlternate[rowPrimaryColorsIndex]
+                    );
+                  } else {
+                    // Bold row
+                    bold(estimateByMTable, 'A' + iSum + ':H' + iSum);
+                    applyBackgroundColor(
+                      estimateByMTable,
+                      'A' + iSum + ':H' + iSum,
+                      rowPrimaryColorsAlternate[rowPrimaryColorsIndex]
+                    );
+                  }
+
+                  if (!levelNames.includes(levelName)) {
+                    levelNames.push(levelName);
+                  }
+
+                  if (!elementNames.includes(elementName)) {
+                    elementNames.push(elementName);
+                  }
+                }
+
+                if (columnB_Track != null) {
+                  if (
+                    columnB_Track.includes('Areia') ||
+                    columnB_Track.includes('Enrocamento') ||
+                    columnB_Track.includes('Escavação') ||
+                    columnB_Track.includes('Solo')
+                  ) {
+                    applyBackgroundColor(estimateByMTable, 'B' + iSum + ':C' + iSum, rowSecondaryColor);
+                  }
+
+                  var quantity = Number(formatNumber(columnC_Track, 2, 2).replace(/,/g, ''));
+
+                  if (
+                    columnB_Track.includes('Betão armado') ||
+                    columnB_Track.includes('Betão simples') ||
+                    columnB_Track.includes('Enrocamento')
+                  ) {
+                    //var elementNameCurrent = elementNames[0]
+
+                    var elementNameCurrent = elementNames[elementNames.length - 1];
+
+                    if (elementNameCurrent.includes('Sapata')) {
+                      // var elementNameSimple = "Sapata"
+
+                      if (columnB_Track.includes('Enrocamento')) {
+                        var elementNameSimple = 'Leito Fundações';
+                      } else {
+                        var elementNameSimple = 'Sapata';
+                      }
+                    } else if (elementNameCurrent.includes('Pilar')) {
+                      var elementNameSimple = 'Pilar';
+                    } else if (elementNameCurrent.includes('Viga')) {
+                      var elementNameSimple = 'Viga';
+                    } else if (elementNameCurrent.includes('Laje')) {
+                      if (columnB_Track.includes('Enrocamento')) {
+                        var elementNameSimple = 'Leito Piso Térreo';
+                      } else if (elementNameCurrent.includes('Laje') && elementNameCurrent.includes('Piso Térreo')) {
+                        var elementNameSimple = 'Laje Piso Térreo';
+                      } else {
+                        var elementNameSimple = 'Laje';
+                      }
+                    }
+
+                    if (elementNameSimple) {
+                      columnB_Track += ` (${elementNameSimple})`;
+                    }
+                  }
+
+                  if (quantitiesNoProcessPartial[columnB_Track] === undefined) {
+                    quantitiesNoProcessPartial[columnB_Track] = quantity;
+                  } else {
+                    quantitiesNoProcessPartial[columnB_Track] += quantity;
+                  }
+
+                  if (volumeQuantitiesTotal[columnB_Track] === undefined) {
+                    volumeQuantitiesTotal[columnB_Track] = quantity;
+                  } else {
+                    volumeQuantitiesTotal[columnB_Track] += quantity;
+                  }
+
+                  if (
+                    columnB_Track.includes('Betonilha') ||
+                    columnB_Track.includes('Betão') ||
+                    columnB_Track.includes('Reboco')
+                  ) {
+                    // NOTE QUE ARCHICAD COLOCA "Betonilha" antes de "Betão"
+
+                    if (columnB_Track.includes('Betão armado')) {
+                      var volumeCalculationsQuotients = [
+                        reinforcedConcreteK_CementBy1m3,
+                        reinforcedConcreteK_SandBy1m3,
+                        reinforcedConcreteK_StoneBy1m3,
+                        reinforcedConcreteK_WaterBy1m3,
+                      ];
+
+                      volumeCalculationsSubtotal(estimateByMTable, iSum, volumeCalculationsQuotients, rowSecondaryColor);
+                    } else if (
+                      columnB_Track.includes('Betonilha de regularização') ||
+                      columnB_Track.includes('Betão de limpeza') ||
+                      columnB_Track.includes('Betão simples')
+                    ) {
+                      var volumeCalculationsQuotients = [
+                        concretK_CementBy1m3,
+                        concretK_GrossSandBy1m3,
+                        concretK_StoneBy1m3,
+                        concretK_WaterBy1m3,
+                      ];
+
+                      volumeCalculationsSubtotal(estimateByMTable, iSum, volumeCalculationsQuotients, rowSecondaryColor);
+                    } else if (columnB_Track.includes('Reboco')) {
+                      var volumeCalculationsQuotients = [plasterK_CementBy1m3, plasterK_FineSandBy1m3, plasterK_WaterBy1m3];
+
+                      volumeCalculationsSubtotal_Plaster(estimateByMTable, iSum, volumeCalculationsQuotients, rowSecondaryColor);
+                    }
+
+                    // Cimento
+                    var subTotalLineSumNameCement = estimateByMTable.cells['D' + iSum].name();
+                    subtotalLineSumNamesCement.push(subTotalLineSumNameCement);
+
+                    // Areia Grossa
+                    var subTotalLineSumNameGrossSand = estimateByMTable.cells['E' + iSum].name();
+                    subtotalLineSumNamesGrossSand.push(subTotalLineSumNameGrossSand);
+
+                    // Areia Fina
+                    var subTotalLineSumNameFineSand = estimateByMTable.cells['F' + iSum].name();
+                    subtotalLineSumNamesFineSand.push(subTotalLineSumNameFineSand);
+
+                    // Pedra
+                    var subTotalLineSumNameStone = estimateByMTable.cells['G' + iSum].name();
+                    subtotalLineSumNamesStone.push(subTotalLineSumNameStone);
+
+                    // Água
+                    var subTotalLineSumNameWater = estimateByMTable.cells['H' + iSum].name();
+                    subtotalLineSumNamesWater.push(subTotalLineSumNameWater);
+                  }
+                }
+
+                if (i == estimateByMTableRowsL3 - 1) {
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+                  estimateByMTable.cells['A' + (i + 1)].addRowBelow();
+
+                  i += 3;
+                  estimateByMTableRowsL3 += 3;
+
+                  // ----------------- FUNCTION / SUBTOTAL
+                  var subtotalLineSumNames = [
+                    subtotalLineSumNamesCement,
+                    subtotalLineSumNamesGrossSand,
+                    subtotalLineSumNamesFineSand,
+                    subtotalLineSumNamesStone,
+                    subtotalLineSumNamesWater,
+                  ];
+
+                  volumeWriteSubtotal(
+                    estimateByMTable,
+                    estimateByMTableRowsL3,
+                    i,
+                    levelNames,
+                    subtotalLineSumNames,
+                    rowPrimaryColorsAlternate,
+                    rowPrimaryColorsIndex,
+                    quantitiesNoProcessPartial,
+                    hideRowDetailsStartNum,
+                    hideBarsSurfacesVolumesDetails
+                  );
+
+                  // ----------------- FUNCTION / TOTAL
+                  var subtotalLevelSumNames = [
+                    subtotalLevelSumNamesCement,
+                    subtotalLevelSumNamesGrossSand,
+                    subtotalLevelSumNamesFineSand,
+                    subtotalLevelSumNamesStone,
+                    subtotalLevelSumNamesWater,
+                  ];
+
+                  const volumesMaterialStr = volumeWriteTotal(
+                    estimateByMTable,
+                    estimateByMTableRowsL3,
+                    volumeQuantitiesTotal,
+                    subtotalLevelSumNames,
+                    grandTotalRangeColor
+                  );
+
+                  if (includeCost) {
+                    var volumeCostInfo = volumeCost(
+                      estimateByMTable,
+                      buildingNameAndGroupID,
+                      iSum,
+                      volumeQuantitiesTotal,
+                      priceCementUnit,
+                      priceGrossSandM3,
+                      priceRockfill,
+                      priceStoneM3,
+                      priceFineSandM3,
+                      priceRedSandM3,
+                      priceWaterL,
+                      costRowsColor
+                    );
+
+                    processedBuildingsInfo.push(volumeCostInfo);
+                  }
+                  // ----------------- WRITE SUMMARY
+                  estimateByMSummaryTable.cells['B4'].value = volumesMaterialStr;
+                }
+              }
+
+              var estimateInfoToFill = volumeQuantitiesTotal;
+            }
+
+            var tableHeight = estimateByMTable.height();
+            positionY += tableHeight + 75; //100
+
+            // ----------------- APPLY FORMULA RESULTS
+
+            if (sheetName.includes('PAREDES')) {
+              var rangeNameToApplyFormulaResults = 'B7:J' + estimateByMTableRowsL3;
+            } else if (sheetName.includes('VOLUMES')) {
+              var rangeNameToApplyFormulaResults = 'C7:H' + estimateByMTableRowsL3;
+            } else if (sheetName.includes('SUPERF')) {
+              var rangeNameToApplyFormulaResults = 'C7:C' + estimateByMTableRowsL3;
+            } else if (sheetName.includes('VAR')) {
+              // 🔴🔴🔴 NO FORMULAS
+            }
+
+            if (sheetName.includes('PAREDES') || sheetName.includes('VOLUMES') || sheetName.includes('SUPERF')) {
+              applyFormulaResults(estimateByMTable, rangeNameToApplyFormulaResults);
+            }
+
+            delay(d0p3); // Era d1
+
+            if (
+              sheetName.includes('PAREDES') ||
+              sheetName.includes('VOLUMES') ||
+              sheetName.includes('VAR') ||
+              sheetName.includes('SUPERF')
+            ) {
+              updateGrandSummary(estimateByMSummaryTable);
+            }
+
+            // -------------- UPDATE TABLE NAME
+
+            estimateByMTable.name = buildingNameAndGroupID;
+
+            // ---------------------------- WRITE QUANTITIES IN ESTIMATE BY QUANTITY DOCNUM
+
+            if (writeQuantitiesInEstimateByQ) {
+              if (filteredBuildingsToWriteQuantitiesInEstimateByQ) {
+                if (!filteredBuildingsToWriteQuantitiesInEstimateByQ.includes(buildingNum)) {
+                  continue;
+                }
+              }
+
+              var invoiceCs = invoiceCs.slice(0, 12);
+
+              var docsNum = numbersApp.documents();
+
+              var estimateByQDocNum = docsNum.filter(
+                document => document.name().includes(invoiceCs) && document.name().includes('ESTIMATIVA DE CUSTO ')
+              )[0];
+
+              if (!estimateByQDocNum) {
+                var estimateByQDocNum = numbersApp.open(Path(estimateByQPathStr));
+                delay(d3);
+              }
+
+              var estimateByQDocNumName = estimateByQDocNum.name();
+
+              delay(d0p3);
+              doMenu('Numbers', 'Window', estimateByQDocNumName);
+              delay(d0p3);
+
+              var sheetsNamesEstimateByQ = estimateByQDocNum.sheets.name();
+              var sheetNameEstimateByQ = sheetsNamesEstimateByQ.filter(name => name.includes(buildingGroupId))[0];
+              var estimateByQSheet = estimateByQDocNum.sheets[sheetNameEstimateByQ];
+
+              var estimateByQTable = estimateByQSheet.tables[0];
+              estimateByQTable.columns[6].textColor = 'black';
+
+              var estimateByQTableRowsL = estimateByQTable.rowCount();
+
+              // VOLUMES PAISAGISMO
+              if (sheetName.includes('VOLUMES') && buildingGroupId[1] == '1') {
+                var estimateInfoToFillVolumesLandscape = Object.entries(estimateInfoToFill).map(item => [
+                  item[0] + ' | m3',
+                  item[1],
+                ]);
+
+                var generalItemsToWriteCollection = [
+                  ['GeralVolumes', 'GeralSuperfícies', 'GERALSUPERFÍCIES', estimateInfoToFillVolumesLandscape],
+                ];
+
+                writeEstimateByQArray(estimateByQTable, generalItemsToWriteCollection, estimateByQTableRowsL);
+              } else if (sheetName.includes('VAOS')) {
+                var generalItemsToWriteCollection = [
+                  ['Janelas', 'Portas', 'Fornecimento e colocação de portas', windowsInfo],
+                  ['Portas', 'Total Parcial', 'Total Parcial', doorsInfo],
+                ];
+
+                writeEstimateByQArray(estimateByQTable, generalItemsToWriteCollection, estimateByQTableRowsL);
+              } else if (
+                sheetName.includes('AREAS') ||
+                sheetName.includes('PAREDES') ||
+                sheetName.includes('SUPERF') ||
+                sheetName.includes('VAR') ||
+                sheetName.includes('VOLUMES')
+              ) {
+                writeEstimateByQDict(estimateByQTable, estimateInfoToFill, estimateByQTableRowsL);
+              }
+
+              if (sheetName.includes('COBERTURA') || sheetName.includes('ESPECIALIDADES') || sheetName.includes('SUPERF')) {
+                if (sheetName.includes('ESPECIALIDADES')) {
+                  if (buildingGroupId[1] == '1') {
+                    // PAISAGISMO G101
+
+                    var generalQuantities01PAI = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('01PAI'))
+                    );
+
+                    var estimateInfoToFillGeneral01PAI = Object.entries(generalQuantities01PAI);
+
+                    var generalItemsToWriteCollection = [
+                      ['GeralEspecialidade01PAI', 'Total Parcial', 'Total Parcial', estimateInfoToFillGeneral01PAI],
+                    ];
+                  } else {
+                    var generalQuantities00MOB = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('00MOB'))
+                    );
+
+                    var estimateInfoToFillGeneral00MOB = Object.entries(generalQuantities00MOB);
+
+                    var generalQuantities02ARQ = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('02ARQ'))
+                    );
+
+                    var estimateInfoToFillGeneral02ARQ = Object.entries(generalQuantities02ARQ);
+
+                    var generalQuantities03HID = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('03HID'))
+                    );
+
+                    var estimateInfoToFillGeneral03HID = Object.entries(generalQuantities03HID);
+
+                    var generalQuantities05ELE = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('05ELE'))
+                    );
+
+                    var estimateInfoToFillGeneral05ELE = Object.entries(generalQuantities05ELE);
+
+                    var generalQuantities06CLI = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('06CLI'))
+                    );
+
+                    var estimateInfoToFillGeneral06CLI = Object.entries(generalQuantities06CLI);
+
+                    var generalQuantities07GAS = Object.fromEntries(
+                      Object.entries(generalQuantities).filter(([key]) => key.includes('07GAS'))
+                    );
+
+                    var estimateInfoToFillGeneral07GAS = Object.entries(generalQuantities07GAS);
+
+                    var generalItemsToWriteCollection = [
+                      ['GeralEspecialidade00MOB', 'Total Parcial', 'Total Parcial', estimateInfoToFillGeneral00MOB],
+                      [
+                        'GeralEspecialidade02ARQ',
+                        'GeralEspecialidade00MOB',
+                        'GeralEspecialidade00MOB',
+                        estimateInfoToFillGeneral02ARQ,
+                      ],
+                      ['GeralEspecialidade03HID', 'Total Parcial', 'Total Parcial', estimateInfoToFillGeneral03HID],
+                      ['GeralEspecialidade05ELE', 'Total Parcial', 'Total Parcial', estimateInfoToFillGeneral05ELE],
+                      ['GeralEspecialidade06CLI', 'Total Parcial', 'Total Parcial', estimateInfoToFillGeneral06CLI],
+                      ['GeralEspecialidade07GAS', 'Total Parcial', 'Total Parcial', estimateInfoToFillGeneral07GAS],
+                    ];
+                  }
+                } else if (sheetName.includes('COBERTURA') || sheetName.includes('SUPERF')) {
+                  if (sheetName.includes('COBERTURA')) {
+                    var fillIdStart = 'GeralCobertura';
+                    var fillIdEnd = 'Total Parcial';
+
+                    var columnB_Track2ID = 'Total Parcial';
+
+                    var estimateInfoToFillGeneral = Object.entries(generalQuantities);
+                  } else if (sheetName.includes('SUPERF')) {
+                    var fillIdStart = 'GeralSuperfícies';
+
+                    if (buildingGroupId[1] == '1') {
+                      var fillIdEnd = 'GeralEspecialidade01PAI';
+                      var columnB_Track2ID = 'GERALESPECIALIDADE01PAI';
+                    } else if (buildingGroupId[1] == '2') {
+                      var fillIdEnd = 'Pavimentos';
+                      var columnB_Track2ID = 'PAVIMENTOS';
+                    } else if (buildingGroupId[1] == '3') {
+                      var fillIdEnd = 'Pavimentos';
+                      var columnB_Track2ID = 'PAVIMENTOS';
+                    }
+
+                    var estimateInfoToFillGeneral = Object.entries(estimateInfoToFillGeneral);
+                  }
+
+                  var generalItemsToWriteCollection = [[fillIdStart, fillIdEnd, columnB_Track2ID, estimateInfoToFillGeneral]];
+                }
+
+                writeEstimateByQArray(estimateByQTable, generalItemsToWriteCollection, estimateByQTableRowsL);
+              }
+            }
+          }
+        }
+
+        if (savePdfAndMoveAndRenameTXT) {
+          if (writeQuantitiesInEstimateByQ) {
+            delay(d0p3);
+            estimateByQDocNum.save();
+          }
+
+          delay(d0p3); // Era d1
+
+          try {
+            doMenu('Numbers', 'Window', estimateByMDocNumName);
+          } catch (error) {
+            // File with extension unhidden
+
+            doMenu('Numbers', 'Window', `${estimateByMDocNumName}.numbers`);
+          }
+          delay(d0p3); // Era d1
+
+          populateProcessedBuildingsInfo(headerTable, processedBuildingsInfo, includeCost);
+
+          deteleExtraTables(estimateByMSheet, buildingsNamesAndGroupID);
+
+          delay(d0p3); // Era d2
+          estimateByMDocNum.save();
+          delay(d0p3); // Era d2
+
+          // -------------- TIMESTAMP AND RENAME
+          const endDateTime = new Date();
+          const processTimeElapsed = timeElapsed(startDateTime, endDateTime);
+
+          const { dateY4M2D2__H2M2S2: end_dateY4M2D2__H2M2S2 } = formatDateV3(endDateTime).formats;
+
+          // ---------------------------- SAVE PDFS
+          if (saveEstimateByMPdf) {
+            var sheetNames = [`${sheetName} _ ${end_dateY4M2D2__H2M2S2}`];
+
+            for (var i = 0; i < sheetNames.length; i++) {
+              var formatedPdfNewName = sheetNames[i];
+              var sheetNameItems = sheetName.split(' _ ');
+              var sheetName = sheetNameItems[0];
+
+              numbersSaveAsPDF(
+                numbersAppControllerP,
+                estimateByMDocNum,
+                i,
+                sheetNames,
+                sheetName,
+                materialPathStr,
+                formatedPdfNewName
+              );
+            }
+          }
+
+          var txtFileNameNew = txtFileName.replace('.txt', ` _ ${end_dateY4M2D2__H2M2S2} (${processTimeElapsed})`);
+
+          var filePathStrNew = filePathStrItems.join('/') + `/TF 00 ${ND} WF_ESTIMATE A5E - InPROCESS/` + txtFileName;
+
+          // ----- Move to PROJECT ORIGINAIS
+          finderApp.move(Path(filePathStrNew), { to: Path(originalsPathStr + '/' + orifinalsDel5FolderStr) });
+          delay(d3);
+
+          // renameItem(originalsPathStr + "/" + orifinalsDel5FolderStr + "/" + txtFileName, txtFileNameNew, "noReveal")
+          renameItem(
+            originalsPathStr + '/' + orifinalsDel5FolderStr + '/' + txtFileName,
+            txtFileNameNew,
+            'reveal-activatePreviousTab'
+          );
+        }
+      } catch (error) {
+        alert(
+          `${error.name}`,
+          `❗️${error.message}❗️\n\n\n—\nTalvez não encontrou o Numbers de "00X00EM" para ${customerName} ${invoiceCs}!`
+        );
+      }
+    }
+  } else {
+    // 🔴🔴🔴 Desacriva alerta para não atrapalhar em cada verificação do número de ficheiros a processar
+    // alert(`Check in Numbers if "filePathStrsFromWfEstimateA5PathStrL == numberOfTxtFilesToProcess"`, ``)
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function getArrayOfSumOfUniqueBarsNames(barsShoesColumnsBeamsSlabArray) {
+  let sumByBarsNames = {};
+  barsShoesColumnsBeamsSlabArray.forEach(item => {
+    let parts = item.split(': ');
+    let barName = parts[0];
+    let barQuantity = parseInt(parts[1]);
+
+    if (!sumByBarsNames[barName]) {
+      sumByBarsNames[barName] = barQuantity;
+    } else {
+      sumByBarsNames[barName] += barQuantity;
+    }
+  });
+
+  // Convert the object to an barsShoesColumnsBeamsSlabArray of strings
+  let summedBarsShoesColumnsBeamsSlabArray = [];
+  for (let barName in sumByBarsNames) {
+    if (sumByBarsNames[barName] !== 0) {
+      // summedBarsShoesColumnsBeamsSlabArray.push(barName + ': ' + sumByBarsNames[barName]);
+      summedBarsShoesColumnsBeamsSlabArray.push(barName + ': ' + formatNumber(sumByBarsNames[barName], 0, 0));
+    }
+  }
+
+  // Now perform the mapping operation
+  return summedBarsShoesColumnsBeamsSlabArray.map(item => item.replace('Varão ', ''));
+}
+
+function getPreviousColumnA_WithElementName(estimateByMTable, currentCellNum) {
+  var columnA_WithElementName = '';
+
+  for (var i = currentCellNum; i < estimateByMTable.rowCount(); i--) {
+    var columnA_Track = estimateByMTable.cells['A' + i].value();
+
+    if (columnA_Track) {
+      columnA_WithElementName = columnA_Track;
+      break;
+    }
+  }
+
+  return columnA_WithElementName;
+}
+/* 
+function getEstimatesPathStrs(originalsPathStr, invoiceCs) {
+  var filePathStrs = getPathStrsFromPathStr(originalsPathStr, 'files');
+  // var estimateByMPathStr = filePathStrs.filter(url => url.includes("+ MATERIAL") && !url.includes("_") && url.includes(".numbers"))[0]
+  var estimateByMPathStr = filePathStrs.filter(
+    url => url.includes(' MATERIAL') && !url.includes('_') && url.includes('.numbers')
+  )[0];
+
+  var estimateByQPathStr = filePathStrs.filter(
+    url => url.includes('ESTIMATIVA DE CUSTO E DURAÇÃO') && !url.includes('_') && url.includes('.numbers')
+  )[0];
+
+  if (!estimateByMPathStr || (!estimateByQPathStr && invoiceCs[2] != 'W')) {
+    if (invoiceCs[2] == 'W') {
+      var errorMessage = `estimateByMPathStr: ${estimateByMPathStr ? 'Sim' : 'Não'}\nestimateByQPathStr: N/A`;
+    } else {
+      var errorMessage = `estimateByMPathStr: ${estimateByMPathStr ? 'Sim' : 'Não'}\nestimateByQPathStr: ${
+        estimateByQPathStr ? 'Sim' : 'Não'
+      }`;
+    }
+
+    alert(`Há erro na busca de "EstimatesPathStrs". Encontrado?`, errorMessage);
+  }
+
+  return {
+    estimateByMPathStr,
+    estimateByQPathStr,
+  };
+}
+ */
+function deteleExtraTables(estimateByMSheet, tablesNamesOfBuildingsProcessed) {
+  var tablesOfBuildings = getTablesOfBuildings(estimateByMSheet.tables());
+
+  var tablesNamesToDelete = [];
+  for (var i = 0; i < tablesOfBuildings.length; i++) {
+    var tableOfBuilding = tablesOfBuildings[i];
+    var tableOfBuildingName = tableOfBuilding.name();
+
+    if (!tablesNamesOfBuildingsProcessed.includes(tableOfBuildingName)) {
+      // tableOfBuilding.delete()
+
+      tablesNamesToDelete.push(tableOfBuildingName);
+    }
+  }
+
+  deleteTablesByName(estimateByMSheet, tablesNamesToDelete);
+}
+
+function getTablesOfBuildings(tables) {
+  return tables.filter(item => item.name().includes('(G'));
+}
+
+function getTablesNamesOfBuildings(tablesNames) {
+  return tablesNames
+    .filter(item => item.includes('(G'))
+    .sort(function (x, y) {
+      // var xp = x.substr(18, 2);
+      var xp = x.match(/G(\d{3})/)[1];
+      // var yp = y.substr(18, 2);
+
+      var yp = y.match(/G(\d{3})/)[1];
+      return xp == yp ? 0 : xp < yp ? -1 : 1;
+    });
+}
+
+function distributeTablesRightVertically(sheet, tablesNames, distanceBetweenTopLeftCorners_Input) {
+  var positionX = 1250;
+  var positionY = 75; // Start position
+
+  for (var i = 0; i < tablesNames.length; i++) {
+    var tableName = tablesNames[i];
+    var table = sheet.tables[tableName];
+
+    if (distanceBetweenTopLeftCorners_Input == 'auto') {
+      // var tablePosition = table.position()
+      var tableHeight = table.height();
+    } else {
+      var tableHeight = Number(distanceBetweenTopLeftCorners_Input);
+    }
+
+    table.position = { x: positionX, y: positionY };
+    positionY += tableHeight + 100;
+  }
+}
+
+function getBuildingTextType1(buildingsText, buildingGroupId) {
+  var re = new RegExp(`${buildingGroupId}.*(\n\t.*)*`, `gm`);
+  return buildingsText.match(re).join('\n');
+}
+
+function getBuildingTextType2(buildingsText, buildingGroupId) {
+  var re = new RegExp(`${buildingGroupId}.*`, `g`);
+  return buildingsText.match(re).join('\n');
+}
+
+function getBarsTotals(list, indexToReturn) {
+  var quantities = list.map(item => {
+    var itemItems = item.split('\t');
+    var itemItem = itemItems[indexToReturn];
+
+    if (itemItem.includes('-')) {
+      return 0.0;
+    } else {
+      return Number(itemItem);
+    }
+  });
+  return sumAllByReduce(quantities);
+}
+
+function getWallTotals(list, indexToReturn) {
+  var quantities = list.map(item => Number(item.split('\t')[indexToReturn].replace(' m²', '').replace(/,/, '')));
+
+  if (indexToReturn == 2) {
+    // Wall quantity does not need decimals
+    return sumAllByReduce(quantities);
+  } else {
+    return formatNumber(sumAllByReduce(quantities), 2, 2);
+  }
+}
+
+// -------------------------------- COST ESTIMATE
+
+function deleteBuildingCostEstimateInfo(table) {
+  while (table.rowCount() > 9) {
+    table.rows[7].delete();
+  }
+  clearRange(table, 'A8:B8');
+}
+
+// ---------------- COST
+
+function populateProcessedBuildingsInfo(headerTable, processedBuildingsInfo, includeCost) {
+  var rowIndexStart = 7;
+  // 1 is last empty row to ensure SUM() function include new row
+  var rowsLWithoutBuilding = rowIndexStart + 1;
+
+  if (includeCost) {
+    var processedBuildingsInfoL = processedBuildingsInfo.length;
+    var headerTableRowsL = headerTable.rowCount();
+
+    var finalRowsL = rowsLWithoutBuilding + processedBuildingsInfoL;
+
+    if (headerTableRowsL > finalRowsL) {
+      while (headerTable.rowCount() > finalRowsL) {
+        headerTable.rows[7].delete();
+      }
+    } else if (headerTableRowsL < finalRowsL) {
+      while (headerTable.rowCount() < finalRowsL) {
+        headerTable.rows[7].addRowBelow();
+      }
+    } // else if is headerTableRowsL == finalRowsL // Do nothing
+
+    for (var i = 0; i < processedBuildingsInfo.length; i++) {
+      var rowIndex = rowIndexStart + i;
+      var itemsToPopulate = processedBuildingsInfo[i];
+      rowPopulateItems(headerTable, itemsToPopulate, rowIndex);
+    }
+  }
+
+  // else { // Delete rows and clear row before last one
+  //    while (headerTable.rowCount() > 9) {
+  //       headerTable.rows[7].delete();
+  //    }
+
+  //    clearRange(headerTable, "A8:B8")
+  // }
+}
+
+// ---------------- VOLUME COST
+
+function volumeCost(
+  estimateByMTable,
+  buildingNameAndGroupID,
+  iSum,
+  volumeQuantitiesTotal,
+  priceCementUnit,
+  priceGrossSandM3,
+  priceRockfill,
+  priceStoneM3,
+  priceFineSandM3,
+  priceRedSandM3,
+  priceWaterL,
+  costRowsColor
+) {
+  estimateByMTable.cells['A' + (iSum + 3)].addRowBelow();
+  estimateByMTable.cells['A' + (iSum + 3)].addRowBelow();
+  estimateByMTable.cells['A' + (iSum + 3)].addRowBelow();
+
+  var volumeQuantitiesTotalArrayProcessed = volumeQuantitiesTotalArrayProcess(volumeQuantitiesTotal);
+
+  var priceVolumeItems = volumeQuantitiesTotalArrayProcessed
+    .filter(item => !item.includes('Escavação') && !item.includes('Solo'))
+    .map(function (item) {
+      var itemItems = item.split(': ');
+      var quantity = itemItems[1].replace(/,/g, '');
+
+      if (item.includes('Areia - Vermelha')) {
+        var priceSubtotal = quantity * priceRedSandM3;
+      } else if (item.includes('Enrocamento')) {
+        var priceSubtotal = quantity * priceRockfill;
+      } else {
+        var priceSubtotal = 0.0;
+      }
+
+      // return itemItems[0] + ': ' + formatNumber(priceSubtotal.toString(), 2, 2);
+      return itemItems[0] + ': ' + formatNumber(priceSubtotal, 2, 2);
+    });
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 4) + ':' + 'H' + (iSum + 6), costRowsColor);
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 4) + ':' + 'C' + (iSum + 4), 'white');
+
+  estimateByMTable.cells['A' + (iSum + 5)].value = 'ESTIMATIVA DE CUSTO';
+  estimateByMTable.cells['B' + (iSum + 5)].value = priceVolumeItems.filter(item => item.split(': ')[1] != '0.00').join('\n');
+
+  var priceVolumeQuantitiesNoProcesTotal = sumAllByReduce(
+    priceVolumeItems.map(item => Number(item.split(': ')[1].replace(/,/g, '')))
+  );
+
+  var letters = ['D', 'E', 'F', 'G', 'H'];
+  var pricesCimentGrossSandFineSandStoneWater = [priceCementUnit, priceGrossSandM3, priceFineSandM3, priceStoneM3, priceWaterL];
+
+  var priceCimentGrossSandFineSandStoneWaterCollection = [];
+
+  for (var i = 0; i < letters.length; i++) {
+    var quantity = estimateByMTable.cells[letters[i] + (iSum + 3)].value();
+    // var quantity = Number(formatNumber(estimateByMTable.cells[letters[i] + (iSum + 3)].value()), 2, 2)
+
+    var cost = quantity * pricesCimentGrossSandFineSandStoneWater[i];
+    estimateByMTable.cells[letters[i] + (iSum + 4)].value = cost;
+
+    priceCimentGrossSandFineSandStoneWaterCollection.push(cost);
+  }
+
+  var priceCimentGrossSandFineSandStoneWaterTotal = sumAllByReduce(priceCimentGrossSandFineSandStoneWaterCollection);
+
+  estimateByMTable.cells['D' + (iSum + 5)].value = formatNumber(priceCimentGrossSandFineSandStoneWaterTotal, 2, 2);
+
+  var rangeNameToFormat1 = 'D' + (iSum + 5) + ':' + 'H' + (iSum + 5);
+  alignHorizontal(estimateByMTable, rangeNameToFormat1, 'center');
+
+  mergeCells(estimateByMTable, rangeNameToFormat1);
+
+  var priceVolumeTotal = priceVolumeQuantitiesNoProcesTotal + priceCimentGrossSandFineSandStoneWaterTotal;
+
+  estimateByMTable.cells['A' + (iSum + 6)].value = formatNumber(priceVolumeTotal, 2, 2);
+
+  var rangeNameToFormat2 = 'A' + (iSum + 6) + ':' + 'H' + (iSum + 6);
+  alignHorizontal(estimateByMTable, rangeNameToFormat2, 'center');
+  applyFontSize(estimateByMTable, rangeNameToFormat2, 15);
+  mergeCells(estimateByMTable, rangeNameToFormat2);
+
+  return [buildingNameAndGroupID, priceVolumeTotal];
+}
+
+// ---------------- BARS COST
+
+function barsCost(
+  estimateByMTable,
+  buildingNameAndGroupID,
+  iSum,
+  quantitiesBarsTotal,
+  stirrupCoecientCost,
+  bar6Cost,
+  bar8Cost,
+  bar10Cost,
+  bar12Cost,
+  slabBarsList,
+  costRowsColor
+) {
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow();
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow();
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow();
+
+  var quantitiesBarsTotalArrayProcessed = barsShoesColumnsBeamsWriteTotalToArrayProcess(quantitiesBarsTotal);
+
+  var priceBarsItems = quantitiesBarsTotalArrayProcessed.map(function (item) {
+    var itemItems = item.split(': ');
+    var quantity = itemItems[1].replace(/,/g, '');
+
+    if (item.includes('Estribo')) {
+      var stirrupLengthWithListStrs = item.match(/(\d*)x(\d*)/).slice(-2);
+
+      // 1000 para metros
+      var stirrupLengthWithList = stirrupLengthWithListStrs.map(num => Number(num) / 1000);
+      var stirrupLengthLinear = sumAllByReduce(stirrupLengthWithList) * 2;
+      var priceSubtotal = quantity * stirrupLengthLinear * stirrupCoecientCost;
+    } else if (item.includes('Varão 6')) {
+      var priceSubtotal = quantity * bar6Cost;
+    } else if (item.includes('Varão 8')) {
+      var priceSubtotal = quantity * bar8Cost;
+    } else if (item.includes('Varão 10')) {
+      var priceSubtotal = quantity * bar10Cost;
+    } else if (item.includes('Varão 12')) {
+      var priceSubtotal = quantity * bar12Cost;
+    }
+
+    // return itemItems[0] + ': ' + formatNumber(priceSubtotal.toString(), 2, 2);
+    return itemItems[0] + ': ' + formatNumber(priceSubtotal, 2, 2);
+  });
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 3) + ':' + 'K' + (iSum + 5), costRowsColor);
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 3) + ':' + 'G' + (iSum + 3), 'white');
+
+  estimateByMTable.cells['A' + (iSum + 4)].value = 'ESTIMATIVA DE CUSTO';
+  estimateByMTable.cells['B' + (iSum + 4)].value = priceBarsItems.join('\n');
+
+  var priceBarsShoesColumnsBeamsTotal = sumAllByReduce(priceBarsItems.map(item => Number(item.split(': ')[1].replace(/,/g, ''))));
+
+  var letters = ['H', 'I', 'J', 'K'];
+  var bars_6_8_10_12_Costs = [bar6Cost, bar8Cost, bar10Cost, bar12Cost];
+
+  var priceBarsSlabTotalCollection = [];
+
+  for (var i = 0; i < letters.length; i++) {
+    var costByBarType = slabBarsList[i] * bars_6_8_10_12_Costs[i];
+    estimateByMTable.cells[letters[i] + (iSum + 3)].value = costByBarType;
+
+    priceBarsSlabTotalCollection.push(costByBarType);
+  }
+
+  var priceBarsSlabTotal = sumAllByReduce(priceBarsSlabTotalCollection);
+
+  estimateByMTable.cells['H' + (iSum + 4)].value = formatNumber(priceBarsSlabTotal, 2, 2);
+
+  mergeCells(estimateByMTable, 'H' + (iSum + 4) + ':' + 'K' + (iSum + 4));
+
+  var priceBarsTotal = priceBarsShoesColumnsBeamsTotal + priceBarsSlabTotal;
+
+  estimateByMTable.cells['A' + (iSum + 5)].value = formatNumber(priceBarsTotal, 2, 2);
+
+  var rangeNameToFormat2 = 'A' + (iSum + 5) + ':' + 'K' + (iSum + 5);
+  alignHorizontal(estimateByMTable, rangeNameToFormat2, 'center');
+  applyFontSize(estimateByMTable, rangeNameToFormat2, 15);
+  mergeCells(estimateByMTable, rangeNameToFormat2);
+
+  return [buildingNameAndGroupID, priceBarsTotal];
+}
+
+// ---------------- WALL COST
+
+function wallCost(
+  estimateByMTable,
+  buildingNameAndGroupID,
+  iSum,
+  bricksQuantityByThicknessArrayProcessed,
+  priceBrick100,
+  priceBrick150,
+  priceBrick200,
+  priceCementUnit,
+  priceGrossSandM3,
+  priceWaterL,
+  costRowsColor
+) {
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow(); // Subcost1
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow(); // Subcost1
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow(); // Total Cost
+
+  var letters = [
+    ['E', 'F'],
+    ['G', 'H'],
+    ['I', 'J'],
+  ]; // Cimento, Areia, Água
+  var pricesCimentSandWaterList = [priceCementUnit, priceGrossSandM3, priceWaterL];
+  var pricesCimentSandWaterSum = 0;
+
+  for (var i = 0; i < letters.length; i++) {
+    var totalQuantity = estimateByMTable.cells[letters[i][0] + (iSum + 2)].value();
+    var priceSubtotal = totalQuantity * pricesCimentSandWaterList[i];
+    estimateByMTable.cells[letters[i][0] + (iSum + 3)].value = priceSubtotal;
+
+    var rangeNameToFormat = letters[i][0] + (iSum + 3) + ':' + letters[i][1] + (iSum + 3);
+
+    mergeCells(estimateByMTable, rangeNameToFormat);
+
+    pricesCimentSandWaterSum += priceSubtotal;
+  }
+
+  estimateByMTable.cells['G' + (iSum + 4)].value = pricesCimentSandWaterSum;
+  mergeCells(estimateByMTable, 'E' + (iSum + 4) + ':' + 'J' + (iSum + 4));
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 3) + ':' + 'J' + (iSum + 5), costRowsColor);
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 2) + ':' + 'D' + (iSum + 3), 'white');
+
+  // --------------- BRICKS
+
+  // var bricksQuantityByThicknessArray = Object.entries(bricksQuantityByThickness)
+
+  var priceTotalBricksItems = bricksQuantityByThicknessArrayProcessed
+    //.map(item => "Bloco " + item.join(": "))
+    // .map(item => item.join(": "))
+    .map(function (item) {
+      var itemItems = item.split(': ');
+      var thickness = itemItems[0].split(' ')[1];
+      var quantity = itemItems[1];
+
+      if (thickness == '100') {
+        var priceSubtotal = Number(quantity) * priceBrick100;
+      } else if (thickness == '150') {
+        var priceSubtotal = Number(quantity) * priceBrick150;
+      } else if (thickness == '200') {
+        var priceSubtotal = Number(quantity) * priceBrick200;
+      }
+
+      // return itemItems[0] + ': ' + formatNumber(priceSubtotal.toString(), 2, 2);
+      return itemItems[0] + ': ' + formatNumber(priceSubtotal, 2, 2);
+    });
+
+  estimateByMTable.cells['A' + (iSum + 4)].value = 'ESTIMATIVA DE CUSTO';
+  estimateByMTable.cells['B' + (iSum + 4)].value = priceTotalBricksItems.join('\n');
+
+  // --------------- WRITE SUMMARY
+  var bricksCosts = priceTotalBricksItems.map(item => Number(item.split(': ')[1].replace(/,/g, '')));
+
+  var bricksCost = sumAllByReduce(bricksCosts);
+  var wallCost = pricesCimentSandWaterSum + bricksCost;
+
+  estimateByMTable.cells['A' + (iSum + 5)].value = formatNumber(wallCost, 2, 2);
+
+  var rangeNameToFormat2 = 'A' + (iSum + 5) + ':' + 'J' + (iSum + 5);
+  alignHorizontal(estimateByMTable, rangeNameToFormat2, 'center');
+  applyFontSize(estimateByMTable, rangeNameToFormat2, 15);
+  mergeCells(estimateByMTable, rangeNameToFormat2);
+
+  return [buildingNameAndGroupID, wallCost];
+}
+
+// ---------------- SURFACE COST
+
+function surfaceCost(
+  estimateByMTable,
+  buildingNameAndGroupID,
+  iSum,
+  quantitiesNoProcessTotalArrayProcessed,
+  priceStoneCoatingM2,
+  pricePaintExteriorM2,
+  pricePaintInteriorM2,
+  pricePaintCeilingM2,
+  priceFloorTilesM2,
+  priceWallTilesM2,
+  priceSkirtingML,
+  costRowsColor
+) {
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow(); // Subcost1
+  estimateByMTable.cells['A' + (iSum + 2)].addRowBelow(); // Subcost1
+  //estimateByMTable.cells["A" + (iSum + 2)].addRowBelow() // Total Cost
+
+  var priceSurfaceItems = quantitiesNoProcessTotalArrayProcessed.map(function (item) {
+    var itemItems = item.split(': ');
+    var quantity = itemItems[1].replace(/,/g, '');
+
+    if (item.includes('Pedra')) {
+      var priceSubtotal = quantity * priceStoneCoatingM2;
+    } else if (item.includes('Pintura') && item.includes('Exterior')) {
+      var priceSubtotal = quantity * pricePaintExteriorM2;
+    } else if (item.includes('Pintura') && item.includes('Interior')) {
+      var priceSubtotal = quantity * pricePaintInteriorM2;
+    } else if (item.includes('Pintura') && item.includes('Tecto')) {
+      var priceSubtotal = quantity * pricePaintCeilingM2;
+
+      // 🔴🔴🔴 MUST COME BEFORE "Tijoelira", not to use Tijoleira's price because Rodapé's item has Tijoleira in name "• Rodapé - Tijoleira (ml): 1,206.30"
+    } else if (item.includes('Rodapé')) {
+      var priceSubtotal = quantity * priceSkirtingML;
+    } else if (item.includes('Tijoleira') && item.includes('Piso Térreo')) {
+      var priceSubtotal = quantity * priceFloorTilesM2;
+    } else if (item.includes('Tijoleira')) {
+      var priceSubtotal = quantity * priceWallTilesM2;
+    } else {
+      var priceSubtotal = 0.0;
+    }
+
+    // return itemItems[0] + ': ' + formatNumber(priceSubtotal.toString(), 2, 2);
+    return itemItems[0] + ': ' + formatNumber(priceSubtotal, 2, 2);
+  });
+
+  applyBackgroundColor(estimateByMTable, 'A' + (iSum + 3) + ':' + 'C' + (iSum + 4), costRowsColor);
+
+  estimateByMTable.cells['A' + (iSum + 3)].value = 'ESTIMATIVA DE CUSTO';
+  estimateByMTable.cells['B' + (iSum + 3)].value = priceSurfaceItems.join('\n');
+
+  var priceSurfaceTotal = sumAllByReduce(priceSurfaceItems.map(item => Number(item.split(': ')[1].replace(/,/g, ''))));
+
+  estimateByMTable.cells['A' + (iSum + 4)].value = formatNumber(priceSurfaceTotal, 2, 2);
+
+  var rangeNameToFormat = 'A' + (iSum + 4) + ':' + 'C' + (iSum + 4);
+  alignHorizontal(estimateByMTable, rangeNameToFormat, 'center');
+  applyFontSize(estimateByMTable, rangeNameToFormat, 15);
+  mergeCells(estimateByMTable, rangeNameToFormat);
+
+  return [buildingNameAndGroupID, priceSurfaceTotal];
+}
+
+function getSubtotalNameUpperCFromLevelNames(levelNames) {
+  return ('Subtotal de ' + levelNames[0].split(' ').slice(3, 20).join(' ')).toUpperCase();
+}
+
+// ---------------- WALL
+
+function wallCalculationsSubtotal1(estimateByMTable, estimateByMTableRowsL3, i, iSum, rowSecondaryColor, hideRows) {
+  var letters = [
+    ['E', 'E', 'F'],
+    ['G', 'G', 'H'],
+    ['I', 'I', 'J'],
+  ]; // Cimento, Areia, Água
+
+  var iSumPlus1 = iSum + 1;
+
+  for (var j = 0; j < letters.length; j++) {
+    estimateByMTable.cells[letters[j][0] + iSumPlus1].value = '=SUM(' + letters[j][1] + iSum + ':' + letters[j][2] + iSum + ')';
+
+    var rangeNameToFormat = letters[j][1] + (iSum + 1) + ':' + letters[j][2] + (iSum + 1);
+
+    mergeCells(estimateByMTable, rangeNameToFormat);
+    alignHorizontal(estimateByMTable, rangeNameToFormat, 'center');
+
+    bold(estimateByMTable, letters[j][0] + iSumPlus1 + ':' + letters[j][0] + iSumPlus1);
+  }
+
+  if (!hideRows) {
+    // Bold row
+    bold(estimateByMTable, 'A' + iSum + ':J' + iSum);
+  }
+
+  if (i != estimateByMTableRowsL3 - 1) {
+    // Se não for última coluna
+    applyBackgroundColor(estimateByMTable, 'B' + iSum + ':J' + iSum, rowSecondaryColor);
+  }
+}
+
+function wallCalculationsSubtotal2(estimateByMTable, iSum, subtotalLineSumNames, wallThicknessesToHideSubtotal2) {
+  var letters = ['E', 'G', 'I']; // Cimento, Areia, Água
+
+  for (var j = 0; j < subtotalLineSumNames.length; j++) {
+    estimateByMTable.cells[letters[j] + iSum].value = '=' + subtotalLineSumNames[j].join('+');
+
+    if (letters[j] == 'E') {
+      var rangeNameToFormat = 'E' + iSum + ':F' + iSum;
+    } else if (letters[j] == 'G') {
+      var rangeNameToFormat = 'G' + iSum + ':H' + iSum;
+    } else if (letters[j] == 'I') {
+      var rangeNameToFormat = 'I' + iSum + ':J' + iSum;
+    }
+
+    mergeCells(estimateByMTable, rangeNameToFormat);
+    alignHorizontal(estimateByMTable, rangeNameToFormat, 'center');
+  }
+
+  bold(estimateByMTable, 'A' + iSum + ':J' + iSum);
+
+  hideSubtotal2IfOneWallType(estimateByMTable, iSum, wallThicknessesToHideSubtotal2);
+}
+
+function hideSubtotal2IfOneWallType(estimateByMTable, iSum, wallThicknessesToHideSubtotal2) {
+  // HIDE Subtotal2 IF IS ONLY ONE WALL THICKNESS
+  if (wallThicknessesToHideSubtotal2.length == 1) {
+    // + 2 para fila a fazer hide
+    hideRows(estimateByMTable, 1, iSum);
+  }
+}
+
+function wallWriteTotal(
+  estimateByMTable,
+  estimateByMTableRowsL3,
+  iSum,
+  subtotalLineSumNamesAndColors,
+  grandTotalRangeColor_General,
+  rowPrimaryColor,
+  hideRows,
+  bricksQuantityByThicknessArrayProcessed,
+  wallThicknessesToHideSubtotal2
+) {
+  // Dados comuns
+  applyBackgroundColor(
+    estimateByMTable,
+    'A' + (estimateByMTableRowsL3 - 1) + ':D' + (estimateByMTableRowsL3 - 1),
+    grandTotalRangeColor_General
+  );
+  applyBackgroundColor(estimateByMTable, 'A' + estimateByMTableRowsL3 + ':D' + estimateByMTableRowsL3, rowPrimaryColor);
+
+  // 🔴🔴🔴 DESACTVADO, ESTE TOTAL ESTÁ CONTEMPLADO NO RESUMO
+
+  //var letters = [["G", "E", "I"], ["K", "J", "M"], ["O", "N", "J"]] // Cimento, Areia, Água
+  var letters = [
+    ['E', 'E', 'F'],
+    ['G', 'G', 'H'],
+    ['I', 'I', 'J'],
+  ]; // Cimento, Areia, Água
+
+  for (var j = 0; j < subtotalLineSumNamesAndColors.length; j++) {
+    var subtotalLineSumNames = subtotalLineSumNamesAndColors[j][0];
+    var grandTotalRangeColor = subtotalLineSumNamesAndColors[j][1];
+
+    // Cimento – pop to remove GRAND TOTAL FROM ARCHICAD
+    var subTotalLineSumNameCementFromAC_GrandTotal = subtotalLineSumNames.pop();
+
+    // G61,G63
+    estimateByMTable.cells[letters[j][0] + iSum].value = '=' + subtotalLineSumNames.join('+');
+
+    var rangeNameToFormat = letters[j][1] + (estimateByMTableRowsL3 - 2) + ':' + letters[j][2] + (estimateByMTableRowsL3 - 2);
+
+    mergeCells(estimateByMTable, rangeNameToFormat);
+    alignHorizontal(estimateByMTable, rangeNameToFormat, 'center');
+
+    applyBackgroundColor(
+      estimateByMTable,
+      letters[j][1] + (estimateByMTableRowsL3 - 1) + ':' + letters[j][2] + estimateByMTableRowsL3,
+      grandTotalRangeColor
+    );
+  }
+
+  // ---- Round to zero decimals
+  // setDecimals(numbersAppControllerP, estimateByMTable, `D${estimateByMTableRowsL3 - 1}:J${estimateByMTableRowsL3}`, 2, "Down")
+
+  const cement_brickPlacement = estimateByMTable.cells['E' + (estimateByMTableRowsL3 - 1)].value();
+
+  const cement_brickFill = estimateByMTable.cells['F' + (estimateByMTableRowsL3 - 1)].value();
+  const cementTotal = formatNumber(cement_brickPlacement + cement_brickFill, 0, 0);
+
+  const sand_brickPlacement = estimateByMTable.cells['G' + (estimateByMTableRowsL3 - 1)].value();
+  const sand_brickFill = estimateByMTable.cells['H' + (estimateByMTableRowsL3 - 1)].value();
+  const sandTotal = formatNumber(sand_brickPlacement + sand_brickFill, 0, 0);
+
+  const water_brickPlacement = estimateByMTable.cells['I' + (estimateByMTableRowsL3 - 1)].value();
+  const water_brickFill = estimateByMTable.cells['J' + (estimateByMTableRowsL3 - 1)].value();
+  const waterTotal = formatNumber(water_brickPlacement + water_brickFill, 0, 0);
+
+  const cementSandWaterStr = `• Sacos de Cimento: ${cementTotal}\n• Areia Grossa: ${sandTotal}\n• Água: ${waterTotal}`;
+
+  let wallMatetialStr = '';
+
+  if (hideRows) {
+    // estimateByMTable.cells["B" + (estimateByMTableRowsL3 - 1)].value = appGeneralLib
+
+    // Empty number of bick line like "110"
+    estimateByMTable.cells['B' + (estimateByMTableRowsL3 - 1)].value = '';
+    estimateByMTable.cells['A' + estimateByMTableRowsL3].value = 'TOTAL (TODOS NÍVEIS)';
+
+    wallMatetialStr =
+      sortArray(
+        bricksQuantityByThicknessArrayProcessed.map(function (item) {
+          var itemItems = item.split(': ');
+          // return itemItems[0] + ": " + formatNumber(itemItems[1], 2, 2)
+          return '• ' + itemItems[0] + ': ' + formatNumber(Math.ceil(Number(itemItems[1]), 0, 0));
+        })
+      ).join('\n') + `\n-----\n${cementSandWaterStr}`;
+
+    estimateByMTable.cells['B' + estimateByMTableRowsL3].value = wallMatetialStr;
+  }
+
+  hideSubtotal2IfOneWallType(estimateByMTable, iSum, wallThicknessesToHideSubtotal2);
+
+  // BOLD GRAND TOTAL ROW
+  bold(estimateByMTable, 'A' + (iSum + 2) + ':J' + (iSum + 2));
+
+  // ------------- Delete Totals in Summary Row and change background to white
+  const rangeToclear = 'E' + (iSum + 2) + ':J' + (iSum + 2);
+  clearRange(estimateByMTable, rangeToclear);
+  applyBackgroundColor(estimateByMTable, rangeToclear, 'white');
+
+  return wallMatetialStr;
+}
+
+// ---------------- VOLUMES
+
+function volumeQuantitiesTotalArrayProcess(volumeQuantitiesTotal) {
+  var quantitiesNoProcessTotalArray = Object.entries(volumeQuantitiesTotal);
+
+  // Sem formatNumber cria deciamis estranhas (313.15000000000003) mesmo com form antes de somar para dictionary
+  return quantitiesNoProcessTotalArray.map(item => '• ' + item[0] + ': ' + formatNumber(Math.ceil(item[1]), 0, 0)).sort();
+}
+
+function volumeCalculationsSubtotal(estimateByMTable, iSum, volumeCalculationsQuotients, rowSecondaryColor) {
+  applyBackgroundColor(estimateByMTable, 'B' + iSum + ':E' + iSum, rowSecondaryColor);
+
+  applyBackgroundColor(estimateByMTable, 'G' + iSum + ':H' + iSum, rowSecondaryColor);
+
+  var letters = ['D', 'E', 'G', 'H']; // Cimento, Areia, Pedra, Água
+
+  for (var j = 0; j < volumeCalculationsQuotients.length; j++) {
+    estimateByMTable.cells[letters[j] + iSum].value = '=C' + iSum + '*' + volumeCalculationsQuotients[j];
+  }
+}
+
+function volumeCalculationsSubtotal_Plaster(estimateByMTable, iSum, volumeCalculationsQuotients, rowSecondaryColor) {
+  applyBackgroundColor(estimateByMTable, 'B' + iSum + ':D' + iSum, rowSecondaryColor);
+
+  applyBackgroundColor(estimateByMTable, 'F' + iSum, rowSecondaryColor);
+  applyBackgroundColor(estimateByMTable, 'H' + iSum, rowSecondaryColor);
+
+  var letters = ['D', 'F', 'H']; // Cimento, Areia, Pedra, Água
+
+  for (var j = 0; j < volumeCalculationsQuotients.length; j++) {
+    estimateByMTable.cells[letters[j] + iSum].value = '=C' + iSum + '*' + volumeCalculationsQuotients[j];
+  }
+}
+
+function volumeWriteSubtotal(
+  estimateByMTable,
+  estimateByMTableRowsL3,
+  i,
+  levelNames,
+  subtotalLineSumNames,
+  rowPrimaryColorsAlternate,
+  rowPrimaryColorsIndex,
+  quantitiesNoProcessPartial,
+  hideRowDetailsStartNum,
+  hideBarsSurfacesVolumesDetails
+) {
+  if (i == estimateByMTableRowsL3 - 1) {
+    var cellNum = i - 1;
+  } else {
+    var cellNum = i;
+  }
+  // G301 B Piso 1, Sapata
+  // G301 B - Piso 1, Sapata
+  // Escrita "Resumo + Nível"
+  // 20 para que seja qual for o nome esteja dentro de número de items
+  estimateByMTable.cells['A' + cellNum].value = getSubtotalNameUpperCFromLevelNames(levelNames);
+
+  /* // DESACTIVATO
+	applyTextColor(estimateByMTable, "A" + cellNum + ":A" + cellNum, rowPrimaryColorsAlternate[rowPrimaryColorsIndex])
+	*/
+
+  // var letters = ["D", "E", "G", "H"] // Cimento, Areia, Pedra, Água
+  var letters = ['D', 'E', 'F', 'G', 'H']; // Cimento, Areia, Pedra, Água
+
+  for (var j = 0; j < subtotalLineSumNames.length; j++) {
+    if (subtotalLineSumNames[j].length > 0) {
+      estimateByMTable.cells[letters[j] + cellNum].value = '=' + subtotalLineSumNames[j].join('+');
+    }
+  }
+
+  if (!hideBarsSurfacesVolumesDetails) {
+    bold(estimateByMTable, 'A' + cellNum + ':H' + cellNum);
+  }
+
+  applyBackgroundColor(estimateByMTable, 'B' + cellNum + ':H' + cellNum, rowPrimaryColorsAlternate[rowPrimaryColorsIndex]);
+
+  var quantitiesNoProcessPartialArray = Object.entries(quantitiesNoProcessPartial);
+
+  // Sem formatNumber cria deciamis estranhas (313.15000000000003) mesmo com form antes de somar para dictionary
+
+  /*
+	var quantitiesNoProcessPartialArrayTxt = quantitiesNoProcessPartialArray.map(item => "• " + item[0] + ": " + formatNumber(Math.ceil(item[1]), 0, 0)).sort().join("\n")
+	*/
+  var quantitiesNoProcessPartialArraySorted = quantitiesNoProcessPartialArray
+    .map(item => '• ' + item[0] + ': ' + formatNumber(Math.ceil(item[1]), 0, 0))
+    .sort(); //.join("\n")
+
+  const quantitiesNoProcessPartialArrayTxt = getSeparatedVolumesByUsingOrNotCement(quantitiesNoProcessPartialArraySorted);
+
+  estimateByMTable.cells['B' + cellNum].value = quantitiesNoProcessPartialArrayTxt;
+
+  // ----- NEW
+
+  if (hideBarsSurfacesVolumesDetails) {
+    var numOfRowsToHide = cellNum - hideRowDetailsStartNum;
+
+    if (numOfRowsToHide > 0) {
+      hideRowsRange(estimateByMTable, numOfRowsToHide, 'A' + hideRowDetailsStartNum + ':A' + (cellNum - 1));
+    }
+  }
+}
+
+function volumeWriteTotal(
+  estimateByMTable,
+  estimateByMTableRowsL3,
+  volumeQuantitiesTotal,
+  subtotalLevelSumNames,
+  grandTotalRangeColor
+) {
+  estimateByMTable.cells['A' + estimateByMTableRowsL3].value = 'TOTAL (TODOS NÍVEIS)';
+
+  // var quantitiesNoProcessTotalArray = Object.entries(volumeQuantitiesTotal)
+
+  // // Sem formatNumber cria deciamis estranhas (313.15000000000003) mesmo com form antes de somar para dictionary
+  // var quantitiesNoProcessTotalArrayTxt = quantitiesNoProcessTotalArray.map(item => "• " + item[0] + ": " + formatNumber(item[1], 2, 2)).sort().join("\n")
+
+  var volumeQuantitiesTotalArrayProcessed = volumeQuantitiesTotalArrayProcess(volumeQuantitiesTotal);
+
+  /*
+
+	// ------------ Filter by Composites With and Without Cement
+	const cementComposites = ["Betonilha", "Betão", "Reboco"];
+
+	const arrayWithCementComposites = volumeQuantitiesTotalArrayProcessed.filter(item =>
+		cementComposites.some(keyword => item.includes(keyword))
+	);
+
+	const arrayWithoutCementComposites = volumeQuantitiesTotalArrayProcessed.filter(item =>
+		!cementComposites.some(keyword => item.includes(keyword))
+	);
+	*/
+
+  // const arrayWithCementComposites = separatedVolumesByUsingOrNotCement.
+  // const arrayWithoutCementComposites =
+
+  // var quantitiesNoProcessTotalArrayTxt = volumeQuantitiesTotalArrayProcessed.join("\n")
+
+  /*
+	var quantitiesNoProcessTotalArrayTxt = arrayWithoutCementComposites.join("\n") + "\n---------\n" + arrayWithCementComposites.join("\n")
+		*/
+
+  /*
+	const quantitiesNoProcessTotalArrayTxt = getSeparatedVolumesByUsingOrNotCement(volumeQuantitiesTotalArrayProcessed)
+
+	estimateByMTable.cells["B" + estimateByMTableRowsL3].value = quantitiesNoProcessTotalArrayTxt
+	*/
+
+  var letters = ['D', 'E', 'F', 'G', 'H']; // Cimento, Areia Grossa, Areia Fina, Pedra, Água
+
+  for (var j = 0; j < subtotalLevelSumNames.length; j++) {
+    var subtotalLevelSumName = estimateByMTable.cells[letters[j] + (estimateByMTableRowsL3 - 2)].name();
+
+    estimateByMTable.cells[letters[j] + estimateByMTableRowsL3].value =
+      '=' + subtotalLevelSumNames[j].join('+') + '+' + subtotalLevelSumName;
+  }
+
+  bold(estimateByMTable, 'A' + estimateByMTableRowsL3 + ':H' + estimateByMTableRowsL3);
+
+  // White backgroundColor for Previous em ROW
+  applyBackgroundColor(estimateByMTable, 'A' + (estimateByMTableRowsL3 - 1) + ':H' + (estimateByMTableRowsL3 - 1), 'white');
+
+  pressDelete(1);
+
+  // Color Grand TOTAL
+  applyBackgroundColor(estimateByMTable, 'A' + estimateByMTableRowsL3 + ':H' + estimateByMTableRowsL3, grandTotalRangeColor);
+
+  const cementTotal = formatNumber(estimateByMTable.cells['D' + estimateByMTableRowsL3].value(), 0, 0);
+  const sandGrossTotal = formatNumber(estimateByMTable.cells['E' + estimateByMTableRowsL3].value(), 0, 0);
+  const sandFineTotal = formatNumber(estimateByMTable.cells['F' + estimateByMTableRowsL3].value(), 0, 0);
+  const stoneTotal = formatNumber(estimateByMTable.cells['G' + estimateByMTableRowsL3].value(), 0, 0);
+  const waterTotal = formatNumber(estimateByMTable.cells['H' + estimateByMTableRowsL3].value(), 0, 0);
+
+  const cementSandGrossSandFineStoneWaterStr = `• Sacos de Cimento: ${cementTotal}\n• Areia Grossa: ${sandGrossTotal}\n• Areia Fina: ${sandFineTotal}\n• Brita: ${stoneTotal}\n• Água: ${waterTotal}`;
+
+  const quantitiesNoProcessTotalArrayTxt = getSeparatedVolumesByUsingOrNotCement(volumeQuantitiesTotalArrayProcessed);
+
+  const volumesMaterialStr = cementSandGrossSandFineStoneWaterStr + '\n-----\n' + quantitiesNoProcessTotalArrayTxt;
+
+  estimateByMTable.cells['B' + estimateByMTableRowsL3].value = volumesMaterialStr;
+
+  // ------------- Delete Totals in Summary Row and change background to white
+  const rangeToclear = 'D' + estimateByMTableRowsL3 + ':H' + estimateByMTableRowsL3;
+  clearRange(estimateByMTable, rangeToclear);
+  applyBackgroundColor(estimateByMTable, rangeToclear, 'white');
+
+  // .split("\n---------")[0] Excude volues of elements
+
+  return volumesMaterialStr
+    .split('\n---------')[0]
+    .split('\n')
+    .filter(item => !item.includes('Escavação') && !item.includes('Solo - Natural'))
+    .join('\n');
+}
+
+function getSeparatedVolumesByUsingOrNotCement(volumeQuantities) {
+  // ------------ Filter by Composites With and Without Cement
+  const cementComposites = ['Betonilha', 'Betão', 'Reboco'];
+
+  const arrayWithoutCementComposites = volumeQuantities.filter(item => !cementComposites.some(keyword => item.includes(keyword)));
+
+  const arrayWithCementComposites = volumeQuantities.filter(item => cementComposites.some(keyword => item.includes(keyword)));
+
+  const arrayWithoutAndWithCementCompositesTxt =
+    arrayWithoutCementComposites.join('\n') + '\n---------\n' + arrayWithCementComposites.join('\n');
+
+  return arrayWithoutAndWithCementCompositesTxt;
+
+  // return {
+  //    arrayWithoutCementComposites,
+  //    arrayWithCementComposites
+  // }
+}
+
+// ---------------- VARÃO
+
+function getBarsKilogramsInfo(quantitiesBarsTotal, slabBarsList) {
+  // --------------- GET BARS KG
+  var quantitiesBarsTotalArray = Object.entries(quantitiesBarsTotal);
+
+  // ------ GET TOTAL OF VARÃO
+  var barsQuantitiesArrayOnly = quantitiesBarsTotalArray.filter(item => item[0].includes('Varão'));
+
+  // --------------- GET ALL KILOGRAMS OF barsShoesColumnsBeamsSlab
+
+  // var theVariable = cflLib.cfl2Str(barsQuantitiesArrayOnly[0], "Referência", barsQuantitiesArrayOnly[0][0])
+
+  // ----- ORGANIZE slabBarsList By Name section
+  var slabBarsListByName = [
+    'Varão 6: ' + slabBarsList[0],
+    'Varão 8: ' + slabBarsList[1],
+    'Varão 10: ' + slabBarsList[2],
+    'Varão 12: ' + slabBarsList[3],
+  ];
+
+  var barsShoesColumnsBeamsSlabArray = barsQuantitiesArrayOnly.map(item => item[0] + ': ' + item[1]).concat(slabBarsListByName);
+
+  var barsKilograms = 0;
+  // var barsNamesSetcions = []
+
+  for (var i = 0; i < barsShoesColumnsBeamsSlabArray.length; i++) {
+    var barItems = barsShoesColumnsBeamsSlabArray[i].split(': ');
+    var barNameSection = barItems[0].split(' ')[1];
+    var barQuantity = Number(barItems[1]);
+
+    if (barQuantity > 0) {
+      // if (!barsNamesSetcions.includes(barNameSection)) {
+      // 	barsNamesSetcions.push(barNameSection)
+      // }
+
+      // Comprimento de varão 5.8 m calculado em "#P51A • DESENHO & ESPECIFICAÇÕES > 04-FERRO"
+      if (barNameSection == '6') {
+        barsKilograms += barQuantity * 1.29; // Varão 6 (de 5.8m) são 1.29 KG
+      }
+      if (barNameSection == '8') {
+        barsKilograms += barQuantity * 2.29;
+      }
+      if (barNameSection == '10') {
+        barsKilograms += barQuantity * 3.09;
+      }
+      if (barNameSection == '12') {
+        barsKilograms += barQuantity * 5.15;
+      }
+    }
+  }
+
+  // var barsNamesSetcionsSorted = sortArray(barsNamesSetcions)
+  var barsNamesSetcionsSorted = sortArray(getArrayOfSumOfUniqueBarsNames(barsShoesColumnsBeamsSlabArray));
+
+  return `Varão ${barsNamesSetcionsSorted.join(', ') + ' — ' + formatNumber(barsKilograms, 2, 2)} KG`;
+}
+
+function getShoesColumnsBeamsStrPartialAndTotal(shoeQuantity, columnQuantity, beamQuantity) {
+  return `Sapatas: ${formatNumber(shoeQuantity, 0, 0)}\nPilares (Segmentos): ${formatNumber(
+    columnQuantity,
+    0,
+    0
+  )}\nVigas (Segmentos): ${formatNumber(beamQuantity, 0, 0)}`;
+}
+
+function barsWritePartial(
+  estimateByMTable,
+  iSum,
+  levelNames,
+  quantitiesBarsPartial,
+  shoeColumnBeamBarsTotalColor,
+  shoesColumnsBeamsStrPartial,
+  slabBarsQuantitiesObj,
+  hideRowDetailsStartNum,
+  numOfRowsToHideCollection,
+  hideBarsSurfacesVolumesDetails
+) {
+  // -------------- SLAB
+  const {
+    slabBars6QuantitiesPartial,
+    slabBars8QuantitiesPartial,
+    slabBars10QuantitiesPartial,
+    slabBars12QuantitiesPartial,
+    slabBarsSubTotalAndTotalColor,
+  } = slabBarsQuantitiesObj;
+
+  const hasBarsSlab =
+    slabBars6QuantitiesPartial > 0 ||
+    slabBars8QuantitiesPartial > 0 ||
+    slabBars10QuantitiesPartial > 0 ||
+    slabBars12QuantitiesPartial > 0;
+
+  if (hasBarsSlab) {
+    estimateByMTable.cells['H' + iSum].value = slabBars6QuantitiesPartial;
+    estimateByMTable.cells['I' + iSum].value = slabBars8QuantitiesPartial;
+    estimateByMTable.cells['J' + iSum].value = slabBars10QuantitiesPartial;
+    estimateByMTable.cells['K' + iSum].value = slabBars12QuantitiesPartial;
+
+    applyBackgroundColor(estimateByMTable, 'H' + iSum + ':K' + iSum, slabBarsSubTotalAndTotalColor);
+  }
+
+  // --------------
+
+  var subtotalNameUpperC = getSubtotalNameUpperCFromLevelNames(levelNames);
+
+  var quantitiesBarsPartialPartialArray = Object.entries(quantitiesBarsPartial);
+
+  var quantitiesBarsPartialPartialArrayTxt = quantitiesBarsPartialPartialArray
+    .map(item => '• ' + item[0] + ': ' + formatNumber(item[1], 0, 0))
+    .sort()
+    .join('\n');
+
+  // Se quantitiesBarsPartialPartialArrayTxt disponível então pode correr
+  // Lajes de Pisos e Cobertura quantitiesBarsPartialPartialArrayTxt é undefined não tendo info
+  /// 🔴🔴🔴 E não inclui a Laje de Piso Térreo, pois esta faz parte de Level Fundação
+  // Resultado é string "undefined" devido ao join mas aceita if (quantitiesBarsPartialPartialArrayTxt) { e negou if (quantitiesBarsPartialPartialArrayTxt != undefined) { e ainda não percebi porque negou visto que devia aceitar
+
+  if (quantitiesBarsPartialPartialArrayTxt || hasBarsSlab) {
+    estimateByMTable.cells['A' + iSum].value = subtotalNameUpperC;
+  }
+
+  if (quantitiesBarsPartialPartialArrayTxt) {
+    // estimateByMTable.cells["A" + iSum].value = subtotalNameUpperC
+    estimateByMTable.cells['B' + iSum].value = `${quantitiesBarsPartialPartialArrayTxt}\n\n—\n${shoesColumnsBeamsStrPartial}`;
+
+    if (!hideBarsSurfacesVolumesDetails) {
+      bold(estimateByMTable, 'A' + iSum + ':G' + iSum);
+    }
+
+    applyBackgroundColor(estimateByMTable, 'B' + iSum + ':G' + iSum, shoeColumnBeamBarsTotalColor);
+  }
+
+  // ----- NEW
+
+  if (hideBarsSurfacesVolumesDetails) {
+    var numOfRowsToHide = iSum - hideRowDetailsStartNum - numOfRowsToHideCollection;
+
+    if (numOfRowsToHide > 0) {
+      hideRowsRange(estimateByMTable, numOfRowsToHide, 'A' + hideRowDetailsStartNum + ':A' + (iSum - 1));
+    }
+  }
+}
+
+function barsShoesColumnsBeamsWriteTotalToArrayProcess(quantitiesBarsTotal) {
+  var quantitiesBarsTotalArray = Object.entries(quantitiesBarsTotal);
+
+  return quantitiesBarsTotalArray.map(item => '• ' + item[0] + ': ' + formatNumber(item[1], 0, 0)).sort();
+}
+
+function barsWriteTotal(
+  estimateByMTable,
+  iSum,
+  quantitiesBarsTotal,
+  barsKilogramsInfo,
+  shoeColumnBeamBarsTotalColor,
+  shoesColumnsBeamsStrTotal
+) {
+  // ---------------
+  var quantitiesBarsTotalArray = Object.entries(quantitiesBarsTotal);
+
+  /* // COMPLEX SUMMARY
+
+	var quantitiesBarsTotalArrayProcessed = barsShoesColumnsBeamsWriteTotalToArrayProcess(quantitiesBarsTotal)
+
+
+	var quantitiesBarsTotalArrayTxt = quantitiesBarsTotalArrayProcessed.join("\n")
+	
+	// --------------- GET TOTAL OF ESTRIBOS
+	var stirrupsQuantitiesArray = quantitiesBarsTotalArray
+	.filter(item => item[0].includes("Estribo"))
+	.map(item => Number(item[1]))
+	
+	var stirrupsQuantitiesTotal = formatNumber(sumAllByReduce(stirrupsQuantitiesArray), 0, 0)
+	
+	// ------ GET TOTAL OF VARÃO
+	var barsQuantitiesArrayOnly = quantitiesBarsTotalArray
+	.filter(item => item[0].includes("Varão"))
+	
+	// ---------------
+	var barsQuantitiesArray = barsQuantitiesArrayOnly
+	.map(item => Number(item[1]))
+	
+	var barsQuantitiesTotal = formatNumber(sumAllByReduce(barsQuantitiesArray), 0, 0)
+	
+	
+	
+	estimateByMTable.cells["B" + (iSum + 2)].value = quantitiesBarsTotalArrayTxt + `\n\n—\n` + barsKilogramsInfo + `\n\n—\n• Estribos (Pilares e Vigas): ${stirrupsQuantitiesTotal}\n• Varão (Sapatas, Pilares e Vigas): ${barsQuantitiesTotal}\n\n—\n${shoesColumnsBeamsStrTotal}`
+	*/
+
+  // --------------- SIMPLIFIED SUMMARY
+
+  estimateByMTable.cells['A' + (iSum + 2)].value = 'TOTAL (TODOS NÍVEIS)';
+
+  var stirrupsArrayTxt = quantitiesBarsTotalArray
+    .filter(item => item[0].includes('Estribo'))
+    .map(item => '• ' + item[0] + ': ' + formatNumber(item[1], 0, 0))
+    .sort()
+    .join('\n');
+
+  const barsTotalStr = stirrupsArrayTxt + `\n\n—\n` + barsKilogramsInfo;
+
+  estimateByMTable.cells['B' + (iSum + 2)].value = barsTotalStr;
+
+  // Withe background
+  applyBackgroundColor(estimateByMTable, 'B' + (iSum + 2) + ':K' + (iSum + 2), 'white');
+
+  applyBackgroundColor(estimateByMTable, 'B' + (iSum + 2) + ':G' + (iSum + 2), shoeColumnBeamBarsTotalColor);
+
+  bold(estimateByMTable, 'A' + (iSum + 2) + ':G' + (iSum + 2));
+
+  return barsTotalStr;
+}
+
+/*
+function barsSlabWriteSubtotal(estimateByMTable, iSum,  slabBars6QuantitiesPartial, slabBars8QuantitiesPartial, slabBars10QuantitiesPartial,slabBars12QuantitiesPartial, slabBarsSubTotalAndTotalColor) {
+	estimateByMTable.cells["H" + iSum].value = slabBars6QuantitiesPartial
+	estimateByMTable.cells["I" + iSum].value = slabBars8QuantitiesPartial
+	estimateByMTable.cells["J" + iSum].value = slabBars10QuantitiesPartial
+	estimateByMTable.cells["K" + iSum].value = slabBars12QuantitiesPartial
+
+	applyBackgroundColor(estimateByMTable, "H" + iSum + ":K" + iSum, slabBarsSubTotalAndTotalColor)
+}
+*/
+
+/*
+function barsSlabWriteTotal(estimateByMTable, iSum, slabBarsList, slabBarsSubTotalAndTotalColor) {
+	estimateByMTable.cells["H" + (iSum + 2)].value = slabBarsList[0]
+	estimateByMTable.cells["I" + (iSum + 2)].value = slabBarsList[1]
+	estimateByMTable.cells["J" + (iSum + 2)].value = slabBarsList[2]
+	estimateByMTable.cells["K" + (iSum + 2)].value = slabBarsList[3]
+
+	applyBackgroundColor(estimateByMTable, "H" + (iSum + 2) + ":K" + (iSum + 2), slabBarsSubTotalAndTotalColor)
+}
+*/
+
+function writeEstimateByQDict(estimateByQTable, estimateInfoToFillDict, estimateByQTableRowsL) {
+  for (var i = 1; i < estimateByQTableRowsL; i++) {
+    var iSum = i + 1;
+    var fillId = estimateByQTable.cells['D' + iSum].value();
+
+    if (fillId) {
+      var quantity = estimateInfoToFillDict[fillId];
+
+      if (quantity) {
+        // CONVERSÕES
+
+        if (fillId.includes('Bloco')) {
+          quantity /= 12.5; // 12.5 blocos por m2
+        }
+
+        if (fillId.includes('Betonilha de regularização')) {
+          quantity /= 0.03; // 30 mm de espessura de betonilha de regularização
+        }
+
+        if (fillId.includes('Reboco')) {
+          quantity /= 0.025; // 25 mm de espessura de reboco
+        }
+
+        estimateByQTable.cells['G' + iSum].value = quantity;
+        estimateByQTable.cells['G' + iSum].textColor = 'blue';
+        estimateByQTable.cells['D' + iSum].textColor = 'blue';
+      }
+    }
+  }
+}
+
+function writeEstimateByQArray(estimateByQTable, generalItemsToWriteCollectionArrayNested, estimateByQTableRowsL) {
+  for (var h = 0; h < generalItemsToWriteCollectionArrayNested.length; h++) {
+    var fillIdStart = generalItemsToWriteCollectionArrayNested[h][0];
+    var fillIdEnd = generalItemsToWriteCollectionArrayNested[h][1];
+    var columnB_Track2ID = generalItemsToWriteCollectionArrayNested[h][2];
+    var generalItemsToWrite = generalItemsToWriteCollectionArrayNested[h][3];
+
+    var isToWrite = false;
+    var j = 0;
+
+    for (var i = 1; i < estimateByQTableRowsL; i++) {
+      var iSum1 = i + 1;
+      // var columnB_Track1 = estimateByQTable.cells["B" + iSum1].value()
+      var fillId1_Track = estimateByQTable.cells['D' + iSum1].value();
+
+      try {
+        // Para fim da tabela visto que
+        var columnB_Track2 = estimateByQTable.cells['B' + (iSum1 + 1)].value();
+        var fillId2_Track = estimateByQTable.cells['D' + (iSum1 + 1)].value();
+      } catch (error) {
+        //
+      }
+
+      try {
+        //if (generalItemToWrite) { // Para se generalItemToWrite[0] não tiver info
+
+        var generalItemToWrite = generalItemsToWrite[j];
+
+        if (generalItemsToWrite.length > j) {
+          var openingIdentifier = 'Preencher';
+        } else {
+          var openingIdentifier = 'Fim';
+        }
+
+        if (fillId1_Track == fillIdStart) {
+          var isToWrite = true;
+          var started = true;
+        } else if (fillId1_Track == fillIdEnd) {
+          var isToWrite = false;
+        }
+
+        if (openingIdentifier == 'Preencher' && isToWrite) {
+          var generalItemToWrite1Items = generalItemToWrite[0].split(' | ');
+
+          if (generalItemToWrite1Items.length == 2) {
+            var elementName = generalItemToWrite1Items[0];
+
+            if (fillIdStart == 'Janelas' || fillIdStart == 'Portas') {
+              var openingUnitPrice = generalItemToWrite1Items[1];
+            } else {
+              var elementUnit = generalItemToWrite1Items[1];
+            }
+          } else if (generalItemToWrite1Items.length == 3) {
+            var elementName = generalItemToWrite1Items[1];
+            var elementUnit = generalItemToWrite1Items[2];
+          }
+
+          var elementQuantity = generalItemToWrite[1];
+
+          if (columnB_Track2 == columnB_Track2ID) {
+            estimateByQTable.cells['B' + iSum1].addRowBelow();
+
+            selectionRange(estimateByQTable, 'A' + iSum1 + ':K' + iSum1);
+
+            delay(d0p3); // Acrescido depois que falhou Copy Paste do item anterior
+
+            copy();
+            delay(d0p3); // Acrescido depois que falhou Copy Paste do item anterior
+
+            selectionRange(estimateByQTable, 'A' + (iSum1 + 1) + ':K' + (iSum1 + 1));
+
+            delay(d0p3); // Acrescido depois que falhou Copy Paste do item anterior
+
+            paste();
+
+            estimateByQTable.cells['B' + (iSum1 + 1)].value = elementName;
+            estimateByQTable.cells['B' + (iSum1 + 1)].textColor = 'blue';
+
+            if (elementUnit) {
+              estimateByQTable.cells['E' + (iSum1 + 1)].value = elementUnit;
+              estimateByQTable.cells['E' + (iSum1 + 1)].textColor = 'blue';
+            }
+
+            estimateByQTable.cells['G' + (iSum1 + 1)].value = elementQuantity;
+            estimateByQTable.cells['G' + (iSum1 + 1)].textColor = 'blue';
+
+            if (openingUnitPrice) {
+              estimateByQTable.cells['I' + (iSum1 + 1)].value = openingUnitPrice;
+              estimateByQTable.cells['I' + (iSum1 + 1)].textColor = 'blue';
+            }
+          } else {
+            estimateByQTable.cells['B' + (iSum1 + 1)].value = elementName;
+            estimateByQTable.cells['B' + (iSum1 + 1)].textColor = 'blue';
+
+            // estimateByQTable.cells["E" + (iSum1 + 1)].value = elementUnit
+            // estimateByQTable.cells["E" + (iSum1 + 1)].textColor = "blue"
+            if (elementUnit) {
+              estimateByQTable.cells['E' + (iSum1 + 1)].value = elementUnit;
+              estimateByQTable.cells['E' + (iSum1 + 1)].textColor = 'blue';
+            }
+
+            estimateByQTable.cells['G' + (iSum1 + 1)].value = elementQuantity;
+            estimateByQTable.cells['G' + (iSum1 + 1)].textColor = 'blue';
+
+            if (openingUnitPrice) {
+              estimateByQTable.cells['I' + (iSum1 + 1)].value = openingUnitPrice;
+              estimateByQTable.cells['I' + (iSum1 + 1)].textColor = 'blue';
+            }
+          }
+
+          j++;
+        } else if (openingIdentifier == 'Fim' && isToWrite && fillId2_Track != fillIdEnd) {
+          estimateByQTable.rows[i + 1].delete();
+
+          i -= 1;
+          estimateByQTableRowsL -= 1; // Não percebi por que 2 e nega
+        }
+      } catch (error) {
+        // alert(`${error.name}`, `${error.message}\n\n—\nTalvez …`)
+      }
+    }
+  }
+}
+
+// --------------
+
+function updateGrandSummary(estimateByMSummaryTable) {
+  const wallMatetialStr = estimateByMSummaryTable.cells['B2'].value();
+
+  let barsTotalStr = estimateByMSummaryTable.cells['B3'].value();
+
+  const volumesMaterialStr = estimateByMSummaryTable.cells['B4'].value();
+  let surfaceQuantitiesTotalArrayTxt = estimateByMSummaryTable.cells['B5'].value();
+
+  if (barsTotalStr === null) {
+    barsTotalStr = '';
+  }
+
+  if (surfaceQuantitiesTotalArrayTxt === null) {
+    surfaceQuantitiesTotalArrayTxt = '';
+  }
+
+  let wallMatetialStrItems = [];
+
+  if (wallMatetialStr) {
+    wallMatetialStrItems = wallMatetialStr.split('\n').filter(item => item[0] != '-');
+  }
+
+  let volumesMaterialStrItems = [];
+  let volumeWithoutCementComposites = '';
+
+  if (volumesMaterialStr) {
+    volumesMaterialStrItems = volumesMaterialStr.split(`\n-----\n`);
+    volumeWithoutCementComposites = volumesMaterialStrItems[1];
+  }
+
+  let itemsToProcessGoup1 = wallMatetialStrItems;
+
+  // const itemsToProcessGoup1 = wallMatetialStrItems.concat(volumesMaterialStrItems[0].split("\n"))
+
+  if (volumesMaterialStrItems[0]) {
+    itemsToProcessGoup1 = itemsToProcessGoup1.concat(volumesMaterialStrItems[0].split('\n'));
+  }
+
+  // console.log("volumesMaterialStrItems[0]: " + volumesMaterialStrItems[0])
+
+  const itemsToProcessGoup2 = volumeWithoutCementComposites.split('\n');
+
+  const uniqueGrandSummaryGroup1 = makeUniqueGrandSummaryItems(itemsToProcessGoup1);
+  const uniqueGrandSummaryGroup2 = makeUniqueGrandSummaryItems(itemsToProcessGoup2);
+
+  const grandSummaryGroup1AndGroup2 = `${uniqueGrandSummaryGroup1.join('\n')}\n-----\n${uniqueGrandSummaryGroup2.join('\n')}`;
+
+  const grandSummary = `${grandSummaryGroup1AndGroup2}\n-----\n${barsTotalStr}\n-----\n${surfaceQuantitiesTotalArrayTxt}`;
+
+  const grandSummaryWithUnits = grandSummary
+    .split('\n')
+    .map(function (item) {
+      if (item.includes(' (ml):')) {
+        return item;
+      } else if (item.includes('Água')) {
+        return `${item} (l)`;
+      } else if (item.includes('Pedra') || item.includes('Pintura') || item.includes('Tijoleira')) {
+        return `${item} m2`;
+      } else if (item.includes('Areia') || item.includes('Brita') || item.includes('Enrocamento')) {
+        return `${item} m3`;
+      } else {
+        return item;
+      }
+    })
+    .join('\n');
+
+  estimateByMSummaryTable.cells['B11'].value = grandSummaryWithUnits;
+}
+
+function makeUniqueGrandSummaryItems(itemsToProcess) {
+  var itemsProcessedObj = {};
+
+  for (var i = 0; i < itemsToProcess.length; i++) {
+    const itemItems = itemsToProcess[i].split(': ');
+
+    let itemName = itemItems[0];
+    let itemQuantityMultipleDelimeter = itemItems[1];
+
+    if (itemName && itemQuantityMultipleDelimeter) {
+      const itemQuantity = Number(itemQuantityMultipleDelimeter.replace(/,/g, ''));
+
+      if (itemName.includes('Bloco')) {
+        itemName = itemName.split(' ').slice(0, 3).join(' ');
+      }
+
+      if (itemName.includes('Enrocamento')) {
+        itemName = itemName.split(' ').slice(0, 2).join(' ');
+      }
+
+      if (itemsProcessedObj[itemName] === undefined) {
+        itemsProcessedObj[itemName] = itemQuantity;
+      } else {
+        itemsProcessedObj[itemName] += itemQuantity;
+      }
+    }
+  }
+  // itemName
+
+  var itemsProcessed = Object.entries(itemsProcessedObj);
+
+  const itemsProcessedMapped = itemsProcessed.map(item => item[0] + ': ' + formatNumber(item[1], 0, 0));
+
+  return sortArray(itemsProcessedMapped);
+}
+
+// --------------

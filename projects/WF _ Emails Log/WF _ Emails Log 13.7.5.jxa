@@ -1,0 +1,523 @@
+
+
+// v13.7.5
+
+
+
+var pathLib = Library("pathLib")
+
+
+
+
+var currentApp = Application.currentApplication();
+var saApp = (currentApp.includeStandardAdditions = true, currentApp);
+var systemEventsApp = Application("System Events");
+
+var finderApp = Application("Finder");
+var contactsApp = Application("Contacts");
+var numbersApp = Application('Numbers');
+var mailApp = Application ("Mail")
+
+delay(3) // added to solve error Download TVCabo Attachments
+
+var plataformsPathStr = pathLib.getPlataformsPathStr()
+
+var centralAttachmentsFolderStr = plataformsPathStr + "/INBOX/ATTACHMENTS"
+var emailsProcessTriggerStr = plataformsPathStr + "/APPS WF/EMAILS LOG TRIGGER"
+var emailsProcessLogEmailsFileStr = plataformsPathStr + "/INBOX/_ LOG EMAILS.numbers"
+
+var dateMain = new Date();
+
+var yyyy = (dateMain.getFullYear().toString());
+var mm = dateMain.toLocaleString("en", {month: "2-digit"});
+var dd = dateMain.toLocaleString("en", {day: "2-digit"});
+var time = (dateMain.toLocaleString("en", {hourCycle: "h24", hour: "2-digit", minute: "2-digit", second: "2-digit"})).replace(/:/g, "");
+
+var timeStamp = yyyy + mm + dd + "-" + time
+
+// ---------------
+
+var emailsPeriod = 4 // In days
+var dateSet2Past = new Date();
+
+dateSet2Past.setDate(dateSet2Past.getDate() - emailsPeriod)
+dateSet2Past.setHours(0)
+dateSet2Past.setMinutes(0)
+dateSet2Past.setSeconds(0)
+
+var messages = mailApp.inbox.messages.whose({ dateReceived: { '>': dateSet2Past } })()
+
+messages.sort(function(a,b){
+  return a.dateReceived() - b.dateReceived();
+});
+
+
+// --------------- COLORING ROWS
+// During Email Log & any process for titleColor1
+var titleColor1 = "black"
+var attachmentColor = [25000, 25000, 25000]
+
+// During any process. Includes titleColor1 above
+var titleColor2 = [25000, 25000, 25000]
+var titleColorDuplicates = "red"
+
+// ---------------
+var sheets2process = []
+var docNumbersEdits = []
+var emailsCountInMail = []
+uniqueDates = []
+
+
+for (var message of messages) {
+//for(var h=0; h < messages.length; h++) {
+
+	emailsCountInMail.push(1) // Can be any item
+
+	var subject = message.subject().toUpperCase()
+	//var subject = messages[h].subject().toUpperCase()
+
+	var senderName = message.sender.extractNameFrom()
+	//var senderName = messages[h].sender.extractNameFrom()
+
+	var senderFirstName = senderName.split(" ")[0].replace(/"/g, '').replace(/,/g, '')
+
+	// Se não tiver nome (Como TVCabo, o Mail usa email como nome)
+	if (senderName.includes("@")) {
+		var senderFirstName = senderName.split("@")[1].split(".")[0] // Name from Email
+	}
+
+	var senderFirstName = senderFirstName.toUpperCase()
+
+	var senderEmail = message.sender.extractAddressFrom()
+	//var senderEmail = messages[h].sender.extractAddressFrom()
+	var senderEmail = senderEmail.toLowerCase() // Todos Emails em "Contacts" devem ser em LowerCase
+
+	var deliveredToEmail = message.allHeaders().split(" ")[1].split("\n")[0]
+	//var deliveredToEmail = messages[h].allHeaders().split(" ")[1].split("\n")[0]
+
+	var dateReceivedMsg = message.dateReceived();
+	//var dateReceivedMsg = messages[h].dateReceived();
+
+	var YYMsg = dateReceivedMsg.toLocaleString("en", {year: "numeric"});
+	var MMMsg = dateReceivedMsg.toLocaleString("en", {month: "2-digit"});
+	var DDMsg = dateReceivedMsg.toLocaleString("en", {day: "2-digit"});
+	var timeMsg = (dateReceivedMsg.toLocaleString("en", {hourCycle: "h24", hour: "2-digit", minute: "2-digit", second: "2-digit"})).replace(/:/g, "");
+
+	timeStampMsg = YYMsg + MMMsg + DDMsg + "-" + timeMsg
+
+	var docNumbersLogEmails = numbersApp.open(Path(emailsProcessLogEmailsFileStr));
+	delay(0.3)
+
+	var currentSheet = YYMsg + "-" + MMMsg
+
+	var sheets2processStr = sheets2process.toString()
+
+	if (!sheets2processStr.includes(currentSheet)) {
+		sheets2process.push(currentSheet)
+	}
+
+	var sheetsNames4SheetStr = docNumbersLogEmails.sheets.name().toString()
+
+	if (sheetsNames4SheetStr.includes(currentSheet)) {
+		var numbersSheet = docNumbersLogEmails.sheets[currentSheet];
+
+	} else {
+
+		numbersApp.activate()
+
+		var numbersSheet = numbersApp.Sheet({name: currentSheet});
+
+		doMenu("Numbers", "Window", "Show First Sheet") // Go to First Sheet
+
+		docNumbersLogEmails.sheets.push(numbersSheet);
+
+		var tableOne = numbersSheet.tables[0]
+
+		doSubMenu("Numbers", "Table", "Header Rows", "0")
+		delay(0.3)
+		doSubMenu("Numbers", "Table", "Header Columns", "0")
+
+		for(var i=0; i < 3; i++) {
+			tableOne.columns[1].delete();
+		}
+
+		for(var i=0; i < 12; i++) {
+			tableOne.rows[3].delete();
+		}
+		tableOne.columns[0].width = 50;
+		tableOne.columns[1].width = 350;
+	}
+
+	var table = numbersSheet.tables[0]
+
+
+	emailsInNumbers = []
+	emailsInNumbersWithoutTimeStampRepeated = []
+
+	for (var g = 0; g < table.rowCount() ; g++) {
+
+		var emailChecker = table.rows[g].cells[0].value();
+
+		if (emailChecker != "" && emailChecker != null) {
+
+			var emailTitleSplit = table.rows[g].cells[1].value().split(" __ ")[0]
+
+			var timeStampMatch = emailTitleSplit.match(/\d{8}-\d{6}\s/)[0]
+			var dateOnly = timeStampMatch.split("-")[0]
+
+			var emailTitleWithoutTimeStamp = emailTitleSplit.split(timeStampMatch)[1]
+
+			var emailsInNumbersStr = emailsInNumbers.toString()
+
+			if (emailsInNumbersStr.includes(emailTitleWithoutTimeStamp)) {
+				emailsInNumbersWithoutTimeStampRepeated.push(emailTitleWithoutTimeStamp)
+			}
+
+			emailsInNumbers.push(emailTitleSplit)
+
+			// Collect unique Dates
+			var uniqueDatesStr = uniqueDates.toString()
+
+			if (!uniqueDatesStr.includes(dateOnly)) {
+				uniqueDates.push(dateOnly)
+			}
+		}
+	}
+
+	var emailsInNumbersStr = emailsInNumbers.toString()
+
+	var timeStampMsgAndSenderFirstNameAndSubject = timeStampMsg + " " + senderFirstName + " _ " + subject
+
+	if (!emailsInNumbersStr.includes(timeStampMsgAndSenderFirstNameAndSubject)) {
+
+		docNumbersEdits.push(1)
+
+		titleNameInLog = timeStampMsg + " " + senderFirstName + " _ " + subject + " __ " + deliveredToEmail + " __ " + timeStamp
+
+		attachmentsInfo = [titleNameInLog]
+
+		var attachmentsList = message.mailAttachments()
+		//var attachmentsList = messages[h].mailAttachments()
+
+		// for of … substibuido por for (var …) loop para conseguir a condição " || i > 0" por que para um email com muitos anexos gravava somente o primeiro e não entrava mais na condição "if (!attachmentsList[i].downloaded())" por assumir que tudo já foi baixado e sobrepunha os nomes dos anexos no primeiro ficheiro gravado
+
+		delay(3) // Tente 20 // Para garantir que todos anexos foram baixados
+
+		try {
+
+			for(var i = 0; i < attachmentsList.length ; i++) {
+
+				delay(1)
+
+				originalName = attachmentsList[i].name()
+
+				/*
+
+				// DESACTIVAMOS e fica a condição <if (!attachmentsList[i].downloaded() || i > 0) {> pois usamos of filtro acima <if (!emailsInNumbersStr.includes(timeStampMsgAndSenderFirstNameAndSubject)) {> que assume que entra aqui o email que não tenha sido processado e registado em Numbers sendo que o email que chega aqui deve ser processado incluindo os Anexos mesmo que tenham sido abertos por exemplo em iOS ou baixados mas email não processado
+				// Vantagens desta nova ideia:
+					- Pode ler emails em iOS ou outro computador quando abrir o Meu, vai processar o email e os anexos
+					- Activando, o setting do Mail "Donwload Attachments" o Mail vai baixar os Anexos logo que entrar o Email mesmo se estiver fechado, resolvendo o erro que tinha na ideia anterior de não gravar anexos pesados pois estariam em "processo de downloading" no momento de processamento
+						- Enquanto o App processa a lista de Emails processados em Numbers <emailsInNumbers>, o Mail estará a baixar os Anexos
+							- Se por ventura, falhar baixar os anexos pesados, introduz um DELAY para regular
+
+
+				// Desvantagens da ideia anterior abaixo
+					- Não podia activar o setting do Mail "Donwload Attachments" para poder rastrear Downloads não baixados
+					- Anexos pessados não eram gravados pois estariam em "processo de downloading" no momento de processamento
+
+				--------
+				// Exclude downloaded Attachments.
+				// Para não gravar de Novo anexos já gravados
+
+				if (!attachmentsList[i].downloaded() || i > 0) {
+				*/
+
+
+					originalNameAndTimestamp = timeStampMsg + " | " + originalName
+
+					attachmentsInfo.push(originalName)
+
+					var dupEmails = "apoio@tvcabo.co.mz, facturas.vodacom@vm.co.mz"
+					var bcxEmails = emailsGet("BCX").toString()
+					var cjcldsEmails = emailsGet("CJCLDS").toString()
+
+					// AttachmentsDIRECTSAVE
+					//if (senderEmail == "apoio@tvcabo.co.mz" || senderEmail == "facturas.vodacom@vm.co.mz") {
+
+					var p5APathStr = plataformsPathStr + "/P5/P5A ARQUITECTURA"
+
+					if (dupEmails.includes(senderEmail)) {
+						var attachmentsFolderStr = plataformsPathStr + "/DATACENTER/DUP X-DIM"
+						var savePath = Path(attachmentsFolderStr + "/" + timeStampMsg + " | " + originalName);
+
+					} else if (bcxEmails.includes(senderEmail)) {
+						var attachmentsFolderStr = p5APathStr + "/P5AE EMPREITADA/XCLFE201001 • BCX • ESCRITÓRIOS 2P • MAPUTO CIDADE • XCLCE201001"
+
+						folderName = titleNameInLog.split(" __ ")[0]
+						var savePath = Path(createPath(attachmentsFolderStr, folderName))
+
+					} else if (cjcldsEmails.includes(senderEmail)) {
+
+						if (subject.includes("T3")) {
+							var attachmentsFolderStr = p5APathStr + "/P5AF FISCALIZAÇÃO/XDXFF201001 • CJCLDS • MEETING HOUSE • MAPUTO T3 • XDXCF201001"
+
+						} else if (subject.includes("MANGOANINE")) {
+
+							var attachmentsFolderStr = p5APathStr + "/P5AA ARQUITECTURA/A2019/10 MAPUTO/XDXFA191002 • CJCLDS • MEETING ROOM • MAHOTAS • XDXCA191004/X5 GESTÃO"
+
+						} else {
+							var attachmentsFolderStr = centralAttachmentsFolderStr
+						}
+
+						folderName = titleNameInLog.split(" __ ")[0]
+						var savePath = Path(createPath(attachmentsFolderStr, folderName))
+
+					} else {
+
+						// Exclude Senders Emails
+						if (!(senderEmail == "messaging-service@post.xero.com")) {
+
+							folderName = titleNameInLog.split(" __ ")[0]
+							var savePath = Path(createPath(centralAttachmentsFolderStr, folderName))
+						}
+					}
+				//}
+
+				delay(1)
+
+				attachmentsList[i].save({in: savePath});
+
+				finderApp.reveal(savePath).extensionHidden = true
+			}
+
+		} catch {
+
+		}
+
+		// EXTRAIR O NOME DA PASTA NA QUAL SE GRAVOU ANEXOS & ADICIONAR
+
+		if (savePath) {
+			var attachmentsPathItems = savePath.toString().split("/")
+			var lastAttachmentName = attachmentsPathItems.pop()
+			var savedInFolder = attachmentsPathItems.pop()
+
+			if (dupEmails.includes(senderEmail)) {
+				var containerFolder = savedInFolder
+			} else {
+				var containerFolder = attachmentsPathItems.pop()
+			}
+
+			// Replace first item (titleNameInLog) with it plus containerFolder
+			attachmentsInfo[0] = titleNameInLog.split(" __ ")[0] + " _ " + containerFolder + " __ " + titleNameInLog.split(" __ ")[1] + " __ " + titleNameInLog.split(" __ ")[2]
+		}
+
+		var savePath = undefined // To reset path
+		var attachmentsFolderStr =
+
+		// ------------------------------------------ WRITE
+
+		delay(0.3) // Era 0.3
+
+		var table = numbersSheet.tables[0]
+		var tableRowsL = table.rowCount()
+
+		// Add Necessary Rows
+		for (var h = 0; h < attachmentsInfo.length ; h++) {
+			var newRow = table.cells["B" + (tableRowsL + h)].addRowBelow();
+		}
+
+		// Reset variable tableRowsL
+		var tableRowsL = table.rowCount()
+
+		var emailsCountInNumbers = [1] // Começa com 1 item para situacões que seja nova tabela e assim não se acrescenta nada (emailsCountInNumbers.length + 1) no nextNumber
+
+		for (var i = 0; i < tableRowsL ;i++) {
+
+			var value = table.rows[i].cells[1].value();
+
+			var emailChecker = table.rows[i].cells[0].value();
+
+			if (emailChecker != "" && emailChecker != null) {
+				emailsCountInNumbers.push(1) // Just to add items
+			}
+
+			if (value == "" || value == null) {
+
+				var attachmentsInfoL = attachmentsInfo.length
+
+				for(var j = 0; j < attachmentsInfoL ; j++) {
+					table.rows[i+j].cells[1].value = attachmentsInfo[j];
+
+					var titleIndex = (i+j+1)
+
+					if (j == 0) {
+
+						// Email Title Text
+						table.cells["A" + titleIndex].value = emailsCountInNumbers.length
+						table.rows[titleIndex-1].textColor = titleColor1
+
+					} else {
+						delay(0.3) // New
+						// Attachment Text
+						table.rows[titleIndex-1].textColor = attachmentColor
+					}
+				}
+				break
+			}
+		}
+	}
+}
+
+//var theReference = (currentApp.chooseFromList(uniqueDates, { withPrompt: "Referência", defaultItems: uniqueDates[0]})).toString();
+
+//var theReference = (currentApp.chooseFromList(sheets2process, { withPrompt: "Referência", defaultItems: sheets2process[0]})).toString();
+
+// --------------- COLOR TO DUPLICATES & ALTERNATE ROW COLOR BY DATE (COLOR2 FOR UNIQUEDATES PAIR INDEXES)
+
+// ----- COLLECT UNIQUEDATES
+// Collect Alternate Dates from uniqueDates based on pair indexes (i%2 == 0) FOR rows4Color1 and Odd indexes for rows4Color2
+// uniqueDates[i] will be uniqueDates[0], uniqueDates[2], uniqueDates[4]
+
+rows4Color1 = []
+rows4Color2 = []
+
+for(var i=0; i < uniqueDates.length; i++) {
+  if (i%2 == 0) {
+		rows4Color1.push(uniqueDates[i])
+	} else {
+		rows4Color2.push(uniqueDates[i])
+	}
+
+}
+
+var rows4Color1Str = rows4Color1.toString()
+var rows4Color2Str = rows4Color2.toString()
+
+// ----- COLOR TO DUPLICATES & ALTERNATE ROW COLOR (COLOR2)
+
+var emailsInNumbersWithoutTimeStampRepeatedStr = emailsInNumbersWithoutTimeStampRepeated.toString()
+
+for (var c = 0; c < sheets2process.length ; c++) {
+
+	var currentSheet = sheets2process[c]
+	var numbersSheet = docNumbersLogEmails.sheets[currentSheet];
+
+	var table = numbersSheet.tables[0]
+
+	for (var d = 0; d < table.rowCount() ; d++) {
+		var emailChecker = table.rows[d].cells[0].value();
+
+		if (emailChecker != "" && emailChecker != null) {
+
+			var emailTitleSplit = table.rows[d].cells[1].value().split(" __ ")[0]
+
+			var timeStampMatch = emailTitleSplit.match(/\d{8}-\d{6}\s/)[0]
+			var dateOnly = timeStampMatch.split("-")[0]
+
+			if (rows4Color1Str.includes(dateOnly)) {
+				table.rows[d].textColor = titleColor1
+
+			} else if (rows4Color2Str.includes(dateOnly)) {
+				table.rows[d].textColor = titleColor2
+
+			}
+
+			var emailTitleWithoutTimeStamp = emailTitleSplit.split(timeStampMatch)[1]
+
+			if (emailsInNumbersWithoutTimeStampRepeatedStr.includes(emailTitleWithoutTimeStamp)) {
+				table.rows[d].textColor = titleColorDuplicates
+			}
+		}
+	}
+}
+
+if (docNumbersEdits.length == 0) { // Se todos emails do período foram processdos
+	currentApp.displayAlert(`Todos emails de período de ${emailsPeriod} dias já foram processados!`)
+}
+
+docNumbersLogEmails.save()
+
+var numbersWindowsNum = numbersApp.windows().length
+
+if (numbersWindowsNum > 1) {
+	numbersApp.windows[0].close()
+} else {
+	numbersApp.quit()
+}
+delay(1)
+
+// --------------- Detele TRIGGER(s) Folder(s)
+
+var emailsProcessTriggerFolders = systemEventsApp.folders.byName(emailsProcessTriggerStr).folders
+
+var thisFolderL = emailsProcessTriggerFolders.length
+
+for(var i=0; i < thisFolderL; i++) {
+	var emailsProcessTriggerFolders = systemEventsApp.folders.byName(emailsProcessTriggerStr).folders
+
+	emailsProcessTriggerFolders[0].delete();
+	delay(0.3)
+}
+
+
+
+
+// ------------------------------------------ FUNCTIONS
+
+function doMenu(appName, menuName, menuItem) {
+
+	var frontApp = Application(appName);
+
+	frontApp.activate();
+
+	var frontAppSE = systemEventsApp.processes.byName(appName);
+
+	var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+	delay(0.3)
+
+	menuName.menus[0].menuItems.byName(menuItem).click();
+}
+
+
+function doSubMenu(appName, menuName, menuItem, subMenuItem) {
+
+	var frontApp = Application(appName);
+
+	frontApp.activate();
+
+	var frontAppSE = systemEventsApp.processes.byName(appName);
+
+	var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+	delay(0.3)
+
+	menuName.menus[0].menuItems.byName(menuItem).menus[0].menuItems.byName(subMenuItem).click();
+}
+
+function emailsGet(emailFilter) {
+
+	var group = contactsApp.groups.whose({name: { _contains: emailFilter}})()[0]
+
+	var peopleArrayLength = group.people().length
+	var emailsGot = [];
+
+  for (var i = 0; i <= peopleArrayLength-1; ++i) {
+		var emails = group.people()[i].emails()
+
+		for (var j =0; j <  emails.length; j++) {
+			emailsGot.push(emails[j].value())
+		}
+	}
+  return emailsGot;
+}
+
+function createPath(folderStr, folderName) {
+
+	var newFolderStr = folderStr + "/" + folderName
+	var newFolder = Path(newFolderStr)
+
+	if (!finderApp.exists(newFolder)) {
+		var attachmentsFolder = finderApp.make({new: "folder", at: Path(folderStr), withProperties: {name: folderName }});
+	}
+
+	return newFolderStr + "/" + originalNameAndTimestamp;
+}

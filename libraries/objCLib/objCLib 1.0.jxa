@@ -1,0 +1,116 @@
+
+
+// v1.0
+// const objCLib = Library("objCLib")
+
+const displayLib = Library("displayLib")
+const finderLib = Library("finderLib")
+
+
+
+const finderApp = Application("Finder")
+
+// --------------------------------------- DELAYS
+
+// const d0p3 = 0.3
+// const d0p5 = 0.5
+const d1 = 1
+// ---------------------------------------
+
+// --------------- 🔴🔴🔴 TRAZER AS FUNCOES DE PDF AQUI
+
+
+
+
+
+
+
+// Em finderLib tem a função saveTxtFiles
+
+
+
+
+
+
+
+
+
+
+// --------------------------------------- readFile
+function readFile(fileStr) {	
+	var error = $(); // Create an NSError instance
+	// "$()" is used to pass an uninitialized "NSError" object. If an error occurs when reading the file, the "stringWithContentsOfFileEncodingError" method can set an "NSError" that provides more details about the problem.
+
+	var fileString = $.NSString.alloc.initWithContentsOfFileUsedEncodingError(fileStr, $.NSUTF8StringEncoding, error)
+
+	const fileStringJs = fileString.js; 
+
+	if (fileStringJs === undefined) {
+		return displayLib.alert(`Erro`, `O texto é "${fileStringJs}", lendo "${fileStr}".`)
+	}
+
+	return fileStringJs;
+}
+
+/*
+function writeToFile(pathStr, text) {
+	var outputStr = $.NSString.alloc.initWithUTF8String(text);
+
+	var error = $(); // Create an NSError instance
+
+	var result = outputStr.writeToFileAtomicallyEncodingError(pathStr, true, $.NSUTF8StringEncoding, error);
+
+	
+	if (result === false) {
+		return displayLib.alert(`Erro`, `O ficheiro que estava a gravar é "${pathStr}".`)
+	}
+
+	finderApp.reveal(Path(pathStr)).extensionHidden = true;
+}
+*/
+
+function writeToFile(pathStr, text, revealFile = true) {
+
+	// OBJ C Não aceita escrever num ficheiro criado por JS
+	
+	var outputStr = $.NSString.alloc.initWithUTF8String(text);
+	var error = $();
+
+	var result = outputStr.writeToFileAtomicallyEncodingError(pathStr, true, $.NSUTF8StringEncoding, error);
+
+	if (result === false) {
+	
+		var errorDescription = ObjC.unwrap(error.localizedDescription);
+		// Added by AChtGPT
+
+		return displayLib.alert("Error", `Failed to write file at "${pathStr}": ${errorDescription}`);
+	}
+
+	if (revealFile) {
+		finderApp.reveal(Path(pathStr)).extensionHidden = true;
+	}
+
+	return result
+}
+
+
+function appendToFile(pathStr, text, revealFile = true) {
+	var previousContent = readFile(pathStr)
+
+	var error = $(); // Create an NSError instance
+
+	var outputStr = $(previousContent).stringByAppendingFormat("\n" + text);
+	outputStr.writeToFileAtomicallyEncodingError(pathStr, true, $.NSUTF8StringEncoding, error);
+
+	if (revealFile) {
+		finderApp.reveal(Path(pathStr)).extensionHidden = true
+	}
+}
+
+function writeToFileWithAppend(pathStr, text, revealFile) {
+	if (finderApp.exists(Path(pathStr))) {
+		appendToFile(pathStr, text, revealFile)
+	} else {
+		writeToFile(pathStr, text, revealFile)
+	}
+}

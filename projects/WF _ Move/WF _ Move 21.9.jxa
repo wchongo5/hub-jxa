@@ -1,0 +1,1083 @@
+// v21.9
+
+ObjC.import('Quartz');
+
+const { alert, dialog } = Library('displayLib');
+const documentLib = Library('documentLib');
+
+const { getContratFolderInfo, getExtensionFromStr, getFinderFolderPathSr, getItemPropertiesByPathStr, getND } =
+  Library('finderLib');
+var pathLib = Library('pathLib');
+var renameLib = Library('renameLib');
+var projectLib = Library('projectLib');
+
+const objCLib = Library('objCLib');
+
+const { formatDateV3, getDelays, mmNum2mmStr } = Library('datetimeLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const { revealItem } = Library('xxNodejsJXALib');
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+const numbersApp = Application('Numbers');
+
+const safariApp = Application('Safari');
+const previewApp = Application('Preview');
+
+// ---------------------------------------
+const ND = getND();
+// --------------------------------------- DELAYS
+
+const { d0p3, d0p5, d1, d2, d5 } = getDelays();
+
+const numXG5PathObj = Path(pathLib.getNumXG5PathStr());
+
+// ---------------------------------------
+
+// ----- DUPS & DERIVATIVES
+const xDupPathStr = pathLib.getXDupPathStr();
+const wDupPathStr = pathLib.getXWDupPathStr();
+const telephoneRechargePathStr = pathLib.getXDupTelephoneRechargePathStr();
+const enzRentPathStr = pathLib.getXDupEnzRentPathStr();
+const xDupL100InssPathStr = pathLib.getXDupL100InssPathStr();
+const xDupL100InssPaymentPathStr = pathLib.getXDupL100InssPaymentPathStr();
+const tvcaboPathStr = pathLib.getXDupTvcaboPathStr();
+const taxationPathStr = pathLib.getXDupTaxationPathStr();
+const xDupXGeneralPathStr = pathLib.getXDupXGeneralPathStr();
+const xDupEdmCredelecPathStr = pathLib.getXDupEdmCredelecPathStr();
+
+// ----- Bancos
+const xActivityBank5PathObj = Path(pathLib.getBanksPathStr() + '/ACTIVIDADES BANK5');
+
+// ----- Developing Apps
+var p4SP5ApplePathStr = pathLib.getP4SP5AApplePathStr();
+
+var knowledgeJavacriptPathObj = Path(p4SP5ApplePathStr + '/D-JAVASCRIPT/• KNOWLEDGE JS');
+var knowledgePythonPathObj = Path(p4SP5ApplePathStr + '/D-PYTHON/• KNOWLEDGE PY');
+var knowledgeSwiftPathObj = Path(p4SP5ApplePathStr + '/D-SWIFT/+ KNOWLEDGE SW');
+
+// ----- More Folders
+var inboxPathStr = pathLib.getInboxPathStr();
+
+var tax20XXPathStr = pathLib.getTaxPathStr();
+var offlineFolderPathStr = pathLib.getOfflineFolderPathStr();
+var scan2BankPathStr = inboxPathStr + '/SCAN2BANK';
+var xeroFuelPathStr = inboxPathStr + '/XEROAUTOPAY';
+var scan5AndTemporaryPathStr = inboxPathStr + '/SCAN5 & TEMPORARY';
+
+var p2PathStr = pathLib.getP2PathStr();
+
+var dischargePathStr = p2PathStr + '/PROFISSIONAIS/P2DG GESTÃO (G5)/QUITAÇÕES';
+var generalKnowledgePathStr = p2PathStr + '/CONHECIMENTO GERAL';
+var matrixPathStr = p2PathStr + '/MATRIX';
+var designedInboxToMoveToPhotosAppPathStr =
+  p2PathStr + '/• DESIGN/P1NDD DESIGNED/COMPOSIÇÕES, INTEGRAÇÃO, LOGOS, BC, TIMELINE/+ INOBX TO MOVE TO PHOTOS APP';
+var pricesInboxPathStr = pathLib.getSuppliersPathStr() + '/P1FS — PREÇOS5/# INBOX';
+
+// ----- MOVE DOWNLOADS
+
+const iDownloadsPathStr = pathLib.getIDownloadsPathStr();
+
+const appFolderPathStr = iDownloadsPathStr + '/APPS (DMG - EXE)';
+const docFolderPathStr = iDownloadsPathStr + '/DOCUMENTOS (PDF - TXT - DOCX - XLS)';
+const imageFolderPathStr = iDownloadsPathStr + '/IMAGENS (JPG - PNG - TIF)';
+const otherFolderPathStr = iDownloadsPathStr + '/OUTROS';
+
+const appExtensions = ['dmg', 'exe'];
+const docExtensions = ['pdf', 'txt', 'rtf', 'xls', 'docx', 'doc'];
+const imageExtensions = ['JPG', 'jpg', 'png', 'tif'];
+
+// -data.txt ( vem de 20220430063715-30225-data.txt), de ficheiro de coordenadas convertido e baixado de GPS Visualizatio site
+
+var filters = [
+  // `GuiaPagamentoReport`,
+  `INSS ${ND} L`,
+  'IVA_Apuramento',
+  ` ${ND} RELATÓRIO `,
+  // `Pagamento_`,
+  `Extrato_`,
+  // `Transferência_BIM`,
+  ` ${ND} GARANTIA`,
+  ` ${ND} SEGURO PRO`,
+  `_Balancete`,
+  `-data.txt`,
+];
+
+function run(input, parameters) {
+  saApp.beep();
+  let pdfPage1Text = '';
+
+  try {
+    // GLOBAL TRY CATCH BLOCK
+
+    let moveToPathStr = '';
+
+    var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    input.sort(collator.compare);
+
+    delay(d1); // Para outros processos: Fechar a Window Downloads
+
+    // Para o Download de Extracto de BCI
+    var urlSafariCurrentTab = getURL(); // null
+    delay(d0p3);
+
+    var fileNames = [];
+    //var fileInputPaths = []
+    var fileNamesFiltered = [];
+    var inputLength = input.length;
+
+    // X-DIM_LDA_-
+
+    for (var i = 0; i < inputLength; i++) {
+      const nowFormatted = formatDateV3(new Date());
+
+      var {
+        year: { Y4: yearY4 },
+        month: { M2: monthM2, long: monthLong },
+        day: { D2: dayD2 },
+      } = nowFormatted.components;
+
+      // Como é loop, alguns ficheiro do mesmo loop podem ter meses diferentes:
+      // Ficeiro 1 pode ser de 20240331-245959 e o ficheiro 2 20240401-010042
+      var logMovesCSVPathStr = `${inboxPathStr}/_ LOG MOVES ${yearY4}${monthM2}.csv`;
+
+      var filePathStr = input[i].toString();
+      var filePathStrItems = filePathStr.split('/');
+      var fileName = filePathStrItems.pop();
+      var folderActionPathStr = filePathStrItems.join('/');
+      var folderActionName = filePathStrItems.pop();
+
+      if (filePathStr.endsWith('.pdf')) {
+        pdfPage1Text = documentLib.readPdfText(filePathStr);
+        var { isDischargeInssPdf, dischargeInssIssueDate } = documentLib.getDischargeInssPdfInfo(pdfPage1Text);
+      }
+
+      writeToLogMovesCSVFile(logMovesCSVPathStr, filePathStr, 'folderActionName', fileName);
+
+      // --------------------------------------------- Test if is SCAN2BANK FOLDER
+
+      //var carRegistrationIndentifiers	= ["v293", "v443", "v653", "v555"]
+
+      var scan2BankIndentifiers = ['xbim1', 'xbim2', 'xc101', 'xc102', 'wbim1', 'wbim2', 'wc', 'ww', 'wm', 'we'];
+
+      // Facturas e recibos levam números — Factura rtf130, Recibo rtr90f131
+      var taxationIndentifiers = 'rtf, rtr, rtie, rtif, rtip';
+      //var taxationIndentifiers	= ["rtf", "rtr", "rtie", "rtif", "rtip"]
+
+      // quitatprot é para dois IDENTIFIERS:
+      // 1 quitat é quitação
+      // 2 quitatprot é requerimento protocolado da quitação
+      // INSS não inclui …prot por ser emissão online sem requerimento protocolado
+      var dischargeIndentifierStrs = [
+        'quitatprot',
+        'quitineprot',
+        // 'quitinss',
+        'quittjprot',
+      ];
+
+      var [fileIndentifier1] = fileName.split('-');
+
+      // var fileIndentifier1 = fileNameItems[0];
+      // var fileIndentifier1 = fileNameItems[1];
+
+      // // Para ficheiros com um item "Recarga_de_telemóvel"
+      // if (fileIndentifier1 == undefined) {
+      //   var fileIndentifier1 = fileNameItems[0];
+      // }
+
+      // // INSS fileName from Web
+      // if (fileIndentifier1 == 'EmitirCertidaoReport.pdf') {
+      //   var fileIndentifier1 = 'quitinss';
+      // }
+
+      // try {
+      //   // vcp555 or evcp555 "e" de empréstimo
+      //   var paymentAndVehicleIdentifier = fileName.match(/v(c|l|p)\w\d{3}/)[0];
+
+      //   // If you get paymentAndVehicleIdentifier, check if is Loan or No
+
+      //   // É combustível pago com valor de empréstimo, move to Scan2Bank
+      //   if (fileName.match(/ev(c|l|p)\w\d{3}/)) {
+      //     var move2XeroAutoPay = false;
+      //   } else {
+      //     var move2XeroAutoPay = true;
+      //   }
+      // } catch {}
+
+      // Para aceitar identifiers com número de Factua e Recibo
+      if (fileIndentifier1.slice(0, 2) === 'rt') {
+        var fileIndentifier1 = fileIndentifier1.slice(0, 2);
+      }
+
+      // 🔴🔴🔴 "isBimPayment" at this position will be override if "isBimPayment" but specified below like "isTvCabo"
+      // Para NIB pdf name is "Transferência_Nacional.pdf"
+      var isBimPayment = fileName.startsWith('Transfere') && (fileName.includes('ncia_BIM') || fileName.includes('Nacional'));
+
+      var isScan2Bank = scan2BankIndentifiers.includes(fileIndentifier1);
+      var isTelephoneRecharge = fileName.includes('Recarga_de_telem');
+      var isFPD = pdfPage1Text && pdfPage1Text.includes('56677004 - FUNDO PROMOCAO DESPORTIVA RECEITAS');
+      var isInssBimPayment =
+        pdfPage1Text && pdfPage1Text.includes('Data de pagamento') && pdfPage1Text.includes('Data limite de pagamento');
+      var isTvCabo =
+        pdfPage1Text && (pdfPage1Text.includes('TVCABO20') || pdfPage1Text.includes('TV CABO - Comunicações Multimédia, Lda.'));
+      var isInssGuide = pdfPage1Text && pdfPage1Text.includes('Guia de Pagamento de Contribui') && pdfPage1Text.includes('GPC');
+
+      var isEdmCredelec = fileName.includes('Recarga_Credelec');
+
+      var isGlobalCheck =
+        // move2XeroAutoPay ||
+        isScan2Bank ||
+        taxationIndentifiers.includes(fileIndentifier1) ||
+        isDischargeInssPdf ||
+        dischargeIndentifierStrs.includes(fileIndentifier1) ||
+        isTelephoneRecharge ||
+        isFPD ||
+        isInssBimPayment ||
+        isTvCabo ||
+        isBimPayment ||
+        isInssGuide ||
+        isEdmCredelec;
+
+      // ---------------------------------------------
+
+      for (var j = 0; j < filters.length; j++) {
+        // if ((fileName.includes(filters[j]) && !doNotReveal) || urlSafariCurrentTab == null) {
+        if (fileName.includes(filters[j]) || urlSafariCurrentTab == null) {
+          fileNamesFiltered.push(fileName);
+          delay(d0p3);
+          //finderApp.reveal(input[i]).extensionHidden = true
+          revealItem(filePathStr, 'reveal');
+          delay(d0p5);
+
+          break; // Basta encontrar o filtro, interrope o Loop
+        }
+      }
+
+      fileNames.push('•      ' + fileName);
+    }
+
+    // Se o último ficheiro for um excluído, o App vai cancelar o processo abaixo: Display de nomes e opções de processamento.
+
+    var fileNamesFilteredStr = fileNamesFiltered.toString();
+
+    if (!fileNamesFilteredStr.includes(fileName) && !(urlSafariCurrentTab == null)) {
+      // -------- WHAT TO DISPLAY AUTOMATICALLY
+
+      if (
+        !folderActionName.includes('iMove2Selection') &&
+        folderActionName != 'Downloads' &&
+        folderActionName != 'DownloadsDB' &&
+        !isGlobalCheck &&
+        !isDischargeInssPdf
+      ) {
+        var fileNamesList = fileNames.join('\n');
+
+        var giveUpDisplay = currentApp.displayDialog(inputLength + '\n—\n' + fileNamesList.toString(), {
+          buttons: ['Cancel', 'Process DBDownloads', 'Move & Extras'],
+          defaultButton: 3,
+          cancelButton: 1,
+          givingUpAfter: 15,
+          withIcon: 1,
+        });
+
+        if (giveUpDisplay.gaveUp || giveUpDisplay.buttonReturned == 'Process DBDownloads') {
+          // --------  NEW IF GAVEUP
+
+          // Folder Action Only
+          var filePathStr = input[0].toString();
+          var filePathStrItems = filePathStr.split('/');
+          var inputRemoveNameOfItem1 = filePathStrItems.pop(); // Remove item name to access Folder
+
+          var inputFolderString = filePathStrItems.join('/'); // Using Not Folder Action, this FolderString you COPY or …
+
+          // Comum - Using Finder & Folder Action
+          // Melhor .diskItems sem limitações, .files tem limitações
+          // diskItems inclui <.DS_Store> precisará de filtrar, se necessário
+          var diskItemsURL = seApp.folders.byName(inputFolderString).diskItems.url();
+
+          for (var thisItem of diskItemsURL) {
+            var filePathStr = decodeURI(thisItem).slice(7).replace(/%23/g, '#');
+            var filePath = Path(filePathStr);
+
+            var filePathAlias = seApp.aliases.byName(filePathStr);
+            var fileName = filePathAlias.name();
+            var fileExtension = filePathAlias.nameExtension();
+
+            if (!fileNamesFilteredStr.includes(fileName)) {
+              if (fileExtension != '') {
+                // Excluimos folders pois não tem Extensão
+
+                if (appExtensions.includes(fileExtension)) {
+                  moveToPathStr = appFolderPathStr;
+                } else if (docExtensions.includes(fileExtension)) {
+                  moveToPathStr = docFolderPathStr;
+                } else if (imageExtensions.includes(fileExtension)) {
+                  moveToPathStr = imageFolderPathStr;
+                } else {
+                  moveToPathStr = otherFolderPathStr;
+                }
+
+                finderApp.move(filePath, { to: Path(moveToPathStr) });
+
+                writeToLogMovesCSVFile(logMovesCSVPathStr, moveToPathStr, 'movedToFolderName', fileName);
+              }
+            }
+          }
+        }
+      }
+
+      if (folderActionName == 'iMove2Selection') {
+        var option = 'Move to Selection';
+      } else if (folderActionName == 'iMove2Selection&Open') {
+        var option = 'Move to Selection & Open';
+      } else if (folderActionName == 'Downloads' || folderActionName == 'DownloadsDB') {
+        var option = 'Move to iDownloads';
+      } else if (isGlobalCheck) {
+        var option = 'Move to Global'; //
+      } else if (!giveUpDisplay.gaveUp && !(giveUpDisplay.buttonReturned == 'Process DBDownloads')) {
+        var option = cfl2Str(
+          [
+            'Delete',
+            'Copy & Delete - NãoAceitaCopiarImagem',
+            'Move to Selection',
+            'Move to Selection & Open',
+            'Open',
+            'Reveal',
+            '-----------',
+            'W - Dup',
+            'X - Dup',
+            '-----------',
+            'X - Bancos',
+            '-----------',
+            'Designed - Inbox2Photos',
+            'IMPOSTO20XX',
+            'Offline Folder',
+            'Preços5 - Inbox',
+            'Scan5 & Temporary',
+            '-----------',
+            'A. Conhecimento Geral',
+            'B. Matrix',
+            '1. Knowledge - Swift',
+            '2. Knowledge - Javascript',
+            '3. Knowledge - Python',
+          ],
+          'Pastas',
+          'Move to Selection'
+        );
+      }
+
+      if (option.includes('Delete')) {
+        if (option == 'Copy & Delete - NãoAceitaCopiarImagem') {
+          //finderApp.reveal(input[0])
+
+          revealItem(filePathStr, 'reveal');
+          delay(d0p3);
+
+          /* NEM ACEITA COPIAR USANDO TECLADO ENQUANTO JS ESTÁ A CORRER - COPIA O NOME NÃO A IMAGEM
+					currentApp.displayAlert("Usando o teclado, copiar a imagem - tem 5s")
+					finderApp.activate()
+
+					delay(d5)
+					*/
+
+          // Copia o nome APESAR de aceitar copiar a Imagem usando o TECLADO
+          //seApp.keystroke("c", { using: "command down" })
+
+          /*
+
+					//
+
+					//doMenu("Finder", "Edit", `Copy ${fileName.replace(".JPG", "")}`)
+
+					var fileNameWithOutExtension = fileName.replace(".JPG", "")
+					//var finderMenuEditName = `Copy "` + fileNameWithOutExtension + `"`
+
+					var finderMenuEditName = `Copy ` + fileNameWithOutExtension
+
+					// Copy "Screen Shot 2022-02-16 at 10.32.10"
+					//currentApp.displayAlert(finderMenuEditName)
+
+					// Copy from Finder Menu Edit
+					// Copy "Screen Shot 2022-02-16 at 10.32.10"
+
+					doMenu("Finder", "Edit", finderMenuEditName)
+					*/
+
+          //delay(d2)
+        }
+
+        finderApp.delete(input[0]);
+      } else if (option == 'Open') {
+        revealItem(filePathStr, 'reveal');
+        finderApp.open(Path(filePathStr));
+      } else if (option == 'Reveal') {
+        finderApp.activate();
+        revealItem(filePathStr, 'reveal');
+      } else if (option == 'Move to iDownloads' || isGlobalCheck) {
+        if (option == 'Move to iDownloads') {
+          var destinyFolderPathStr = iDownloadsPathStr;
+          // } else if (move2XeroAutoPay) {
+          //   var destinyFolderPathStr = xeroFuelPathStr;
+        } else if (isScan2Bank) {
+          var destinyFolderPathStr = scan2BankPathStr;
+        } else if (isTelephoneRecharge) {
+          var destinyFolderPathStr = telephoneRechargePathStr;
+        } else if (isFPD) {
+          var destinyFolderPathStr = enzRentPathStr;
+        } else if (isInssBimPayment) {
+          var destinyFolderPathStr = xDupL100InssPaymentPathStr;
+        } else if (isInssGuide) {
+          var destinyFolderPathStr = xDupL100InssPathStr;
+        } else if (isEdmCredelec) {
+          var destinyFolderPathStr = xDupEdmCredelecPathStr;
+        } else if (isTvCabo) {
+          var destinyFolderPathStr = tvcaboPathStr;
+        } else if (taxationIndentifiers.includes(fileIndentifier1)) {
+          var destinyFolderPathStr = taxationPathStr;
+        } else if (isBimPayment) {
+          var destinyFolderPathStr = xDupXGeneralPathStr;
+        } else if (isDischargeInssPdf || dischargeIndentifierStrs.includes(fileIndentifier1)) {
+          var destinyFolderPathStr = dischargePathStr;
+
+          // XG5 20210708A1 _ REQ - QUITAÇÃO _ TJCM (PROTOCOLADO)
+          // 20210713-20211011 QUITAÇÃO _ TJCM
+
+          if (fileIndentifier1.includes('quitat')) {
+            var dischargeInstitutionShortName = 'ATM';
+          } else if (fileIndentifier1.includes('quitine')) {
+            var dischargeInstitutionShortName = 'INE';
+          } else if (isDischargeInssPdf) {
+            var dischargeInstitutionShortName = 'INSS';
+          } else if (fileIndentifier1.includes('quittj')) {
+            var dischargeInstitutionShortName = 'TJCM';
+          }
+
+          var dischargeDocName = `QUITAÇÃO ${ND} ${dischargeInstitutionShortName}`;
+
+          if (fileIndentifier1.includes('prot')) {
+            var dateTitle = 'Data do Protocolo do Requeriemnto';
+          } else {
+            var dateTitle = 'Data da Emissão da Quitação';
+          }
+
+          if (isDischargeInssPdf) {
+            // var startDateStrInput = dischargeInssIssueDate.replace(/\//g, " ")
+
+            var startDateItems = dischargeInssIssueDate.split('/');
+            var startDateStrInput = `${startDateItems[0]} ${mmNum2mmStr([1])} ${startDateItems[2]}`;
+
+            // mmNum2mmStr(mmNum)
+          } else {
+            // START DATE
+            // 15e "e" of edit
+            var ddInput = dialog(
+              `Dia\n\n—\n• Se for data deste mês, introduz dia "(${dayD2})" ou acrescenta "e (${dayD2}e)" para editar a data na janela seguinte.`,
+              `${dayD2}`
+            );
+
+            var dateEditTrack = ddInput.slice(-1);
+
+            if (dateEditTrack == 'e') {
+              var startDateStrInput = dialog(`${dateTitle}`, `${ddInput.split(dateEditTrack)[0]} ${monthLong} ${yearY4}`);
+            } else {
+              var startDateStrInput = `${ddInput} ${monthLong} ${yearY4}`;
+            }
+          }
+
+          var startDateStrInputItems = startDateStrInput.split(' ');
+
+          var dayD2 = addZero(Number(startDateStrInputItems[0]));
+
+          // 28 para evitar saltar para outro mês se for um dia que não existe num determinado mês
+          // Por exemplo 29, 30, 31 em Fevereiro (último dia é 28 ou 29)
+          var startDateStr = '28 ' + startDateStrInputItems.slice(1).join(' ');
+
+          var startDate = new Date(startDateStr);
+
+          var startMm = startDate.toLocaleString('en', { month: '2-digit' });
+          //var startDd = addZero(startDate.getDate())
+          var startDd = dayD2;
+          var startYyyy = startDate.getFullYear();
+
+          if (fileIndentifier1.includes('prot')) {
+            var dischargeDocName = `XG5 ${startYyyy}${startMm}${startDd} REQ - ${dischargeDocName}.pdf`;
+          } else {
+            // END DATE
+            // Os 90 dias (3 meses) devem ser contados conforme o usual* e não matematicamente
+            // * Somar 3 meses e usar o dia da emissão e não calculado
+
+            var endDateNum = startDate.setMonth(startDate.getMonth() + 3);
+            var endDate = new Date(endDateNum);
+
+            var endMm = endDate.toLocaleString('en', { month: '2-digit' });
+            var endDd = addZero(endDate.getDate());
+            var endYyyy = endDate.getFullYear();
+
+            var endDdLastDay = daysInMonth(new Date(endDateNum)); // 31
+
+            if (Number(startDd) > Number(endDdLastDay)) {
+              var endDd = addZero(Number(endDdLastDay));
+            } else {
+              var endDd = addZero(Number(dayD2));
+            }
+
+            var dischargeValidity = `${startYyyy}${startMm}${startDd}-${endYyyy}${endMm}${endDd}`;
+
+            var dischargeDocName = `${dischargeValidity} ${dischargeDocName}.pdf`;
+
+            if (fileIndentifier1.includes('quittj')) {
+              numbersApp.activate();
+
+              var docNumXG5 = numbersApp.open(numXG5PathObj);
+
+              var customerAndSupplierSheet = docNumXG5.sheets['CUSTOMERS&SUPPLIERS'];
+              var tableTjcm = customerAndSupplierSheet.tables['Tribunal Judicial Períodos Quitação'];
+              delay(d1);
+
+              for (var i = 1; i < tableTjcm.rowCount(); i++) {
+                var iNum = i + 1;
+
+                var verifcationPeriod = tableTjcm.cells['A' + iNum].value();
+                var validity = tableTjcm.cells['B' + iNum].value();
+
+                if (verifcationPeriod != null && validity == null) {
+                  tableTjcm.cells['B' + iNum].value = `${dischargeValidity}`;
+
+                  break;
+                }
+              }
+              delay(d1);
+            }
+
+            finderApp.activate();
+          }
+        }
+
+        for (var i = 0; i < inputLength; i++) {
+          finderApp.move(input[i], { to: Path(destinyFolderPathStr) });
+
+          writeToLogMovesCSVFile(logMovesCSVPathStr, destinyFolderPathStr, 'movedToFolderName', fileName);
+
+          delay(d1);
+
+          // Rename
+          if (option == 'Move2Discharge And Rename') {
+            try {
+              var pathStrTo = dischargePathStr + '/+ ARQUIVO QUITAÇÕES';
+
+              moveFile(logMovesCSVPathStr, dischargePathStr, pathStrTo, dischargeInstitutionShortName);
+            } catch (error) {
+              alert(`${error.name}`, `${error.message}\n\n—\nTalvez não tem a Quitação anterior.`);
+            }
+
+            seApp.aliases.byName(dischargePathStr + '/' + fileName).name = dischargeDocName;
+
+            if (!fileIndentifier1.includes('prot')) {
+              // Quitação
+              delay(d2);
+
+              alert(`No Calendar actualizar:\nValidade & Screenshot\n---------------\n${dischargeDocName}`, ``);
+            }
+          }
+        }
+      } else if (
+        option.includes('Move to Selection') ||
+        option == 'W - Dup' ||
+        option == 'X - Dup' ||
+        option == 'X - Bancos' ||
+        option == '1. Knowledge - Swift' ||
+        option == '2. Knowledge - Javascript' ||
+        option == '3. Knowledge - Python' ||
+        option == 'Designed - Inbox2Photos' ||
+        option == 'IMPOSTO20XX' ||
+        option == 'Offline Folder' ||
+        option == 'Preços5 - Inbox' ||
+        option == 'Scan5 & Temporary' ||
+        option == 'A. Conhecimento Geral' ||
+        option == 'B. Matrix'
+      ) {
+        if (option.includes('Move to Selection')) {
+          var folderPathStrTo = getFinderFolderPathSr();
+
+          // Dups
+        } else if (option == 'W - Dup') {
+          var folderPathStrTo = wDupPathStr;
+        } else if (option == 'X - Dup') {
+          var folderPathStrTo = xDupPathStr;
+
+          // Bancos
+        } else if (option == 'X - Bancos') {
+          var folderPathStrTo = xActivityBank5PathObj;
+
+          // More Folders
+        } else if (option == 'Designed - Inbox2Photos') {
+          var folderPathStrTo = designedInboxToMoveToPhotosAppPathStr;
+        } else if (option == 'IMPOSTO20XX') {
+          var folderPathStrTo = tax20XXPathStr;
+        } else if (option == 'Offline Folder') {
+          var folderPathStrTo = offlineFolderPathStr;
+        } else if (option == 'Preços5 - Inbox') {
+          var folderPathStrTo = pricesInboxPathStr;
+        } else if (option == 'Scan5 & Temporary') {
+          var folderPathStrTo = scan5AndTemporaryPathStr;
+        } else if (option == 'A. Conhecimento Geral') {
+          var folderPathStrTo = generalKnowledgePathStr;
+        } else if (option == 'B. Matrix') {
+          var folderPathStrTo = matrixPathStr;
+        } else if (option == '1. Knowledge - Swift') {
+          var folderPathStrTo = knowledgeSwiftPathObj;
+        } else if (option == '2. Knowledge - Javascript') {
+          var folderPathStrTo = knowledgeJavacriptPathObj;
+        } else if (option == '3. Knowledge - Python') {
+          var folderPathStrTo = knowledgePythonPathObj;
+        }
+
+        // Add suffix if the Name exists in Destination Folder
+
+        if (
+          option.includes('Move to Selection') ||
+          option == 'W - Dup' ||
+          option == 'X - Dup' ||
+          option == 'B. Matrix' ||
+          option == 'A. Conhecimento Geral' ||
+          option == '1. Knowledge - Swift' ||
+          option == '2. Knowledge - Javascript' ||
+          option == '3. Knowledge - Python'
+        ) {
+          if (
+            option == 'A. Conhecimento Geral' ||
+            option == 'B. Matrix' ||
+            option == '1. Knowledge - Swift' ||
+            option == '2. Knowledge - Javascript' ||
+            option == '3. Knowledge - Python'
+          ) {
+            if (option == 'A. Conhecimento Geral') {
+              var fileNameWithOutExtension = cfl2Str(
+                [
+                  'ÁFRICA',
+                  'CIÊNCIA',
+                  'ESCOLA',
+                  'FAMILIAR',
+                  'GERAL',
+                  'LIFESTYLE',
+                  'MOÇAMBIQUE',
+                  'MUNDO',
+                  'PROFISSIONALISMO',
+                  'THINK',
+                ],
+                'Opções ' + option,
+                'CIÊNCIA'
+              );
+
+              var fileNameWithOutExtensionFilter = fileNameWithOutExtension;
+            } else if (option == 'B. Matrix') {
+              var fileNameWithOutExtension = cfl2Str(
+                [
+                  'BIBLIOGRAFIA',
+                  'CHINA',
+                  'CIÊNCIA CONTRADIÇÕES & NASA',
+                  'CIÊNCIA MANIPULADA',
+                  'CIÊNCIA OCULTISMO',
+                  'CORRUPÇÃO CANIBALISMO',
+                  'CORRUPÇÃO FAMÍLIA',
+                  'CORRUPÇÃO HUMANA',
+                  'CORRUPÇÃO LIFESTYLE',
+                  'DEUSES',
+                  'EGIPTO',
+                  'EGIPTO DEUSES',
+                  'EGIPTO PIRÂMIDES',
+                  'ELITE',
+                  'GRÉCIA',
+                  'GRÉCIA DEUSES',
+                  'GUERRA MUNDIAL',
+                  'HISTÓRIA',
+                  'IDA A LUA',
+                  'MANIPULAÇÃO',
+                  'MISTÉRIOS',
+                  'ORDEM MUNDIAL',
+                  'RELIGIÃO APOCALIPSE',
+                  'RELIGIÃO DEUS',
+                  'TERRA PLANA',
+                  'VACINA',
+                ],
+                'Opções ' + option,
+                'TERRA PLANA'
+              );
+
+              var fileNameWithOutExtensionFilter = fileNameWithOutExtension;
+            } else if (
+              option == '1. Knowledge - Swift' ||
+              option == '2. Knowledge - Javascript' ||
+              option == '3. Knowledge - Python'
+            ) {
+              var fileNameWithOutExtension = cfl2Str(
+                [
+                  'APPLICATION',
+                  'ESCREVER - APPLICATION',
+                  'ESCREVER - COMANDO',
+                  '0 ---------------',
+                  'CLASSES',
+                  'DATE',
+                  'DICTIONARY',
+                  'FUNCTION',
+                  'LIBRARY',
+                  'OBJECT',
+                  'REGEX',
+                  'SORT',
+                  'STRING',
+                  'TRY',
+                  'VARIABLE',
+                  '1 --------------- SW',
+                  'SW vs OBJC',
+                  '---',
+                  'CGPDF',
+                  'PDFKIT',
+                  'LIST',
+                  'VIEW',
+                  'BRINGMORE',
+                  '2 --------------- JS',
+                  'ARRAY',
+                  'DEBUGGING',
+                  'DISPLAY',
+                  'GUI',
+                  'IDENTIFIER',
+                  'IF',
+                  'LOOP',
+                  'NUMBER',
+                  'OBJECT',
+                  'PROPERTY',
+                  'PROTOTYPE',
+                  'SWITCH',
+                  'WHOSE',
+                  '3 --------------- PY',
+                  'DICT',
+                  'HELP',
+                  'LIST',
+                  'MODULE',
+                  'SORTED',
+                  'TUPLE',
+                  'RANGE',
+                  '---',
+                  'SET',
+                  'FROZENSET',
+                  '---',
+                  'BYTES',
+                  'BYTEARRAY',
+                  'MEMORYVIEW',
+                ],
+                'Opções ' + option,
+                'CLASSES'
+              );
+
+              var fileNameWithOutExtensionFilter = fileNameWithOutExtension;
+
+              if (fileNameWithOutExtension.includes('APPLICATION')) {
+                var dotsNumber = '• ';
+              } else {
+                var dotsNumber = '•• ';
+              }
+
+              if (fileNameWithOutExtension == 'APPLICATION') {
+                var fileNameWithOutExtension = cfl2Str(
+                  [
+                    'CALENDAR',
+                    'CHROME',
+                    'CONTACTS',
+                    'FINDER',
+                    'IMAGE EVENTS',
+                    'KEYNOTES',
+                    'MAIL',
+                    'MESSAGES',
+                    'MUSIC',
+                    'NOTES',
+                    'NUMBERS',
+                    'PAGES',
+                    'PHOTOS',
+                    'REMINDER',
+                    'SAFARI',
+                    'SYSTEM',
+                    'TEXTEDIT',
+                  ],
+                  'Aplicativo',
+                  'CALENDAR'
+                );
+              } else if (fileNameWithOutExtension.includes('ESCREVER')) {
+                var fileNameWithOutExtension = dialog('Escrever', '');
+              }
+
+              var fileNameWithOutExtension = dotsNumber + fileNameWithOutExtension;
+            }
+
+            var descripStatus = cfl2Str(['Não', 'Sim'], 'Tem descritivo?', 'Sim');
+
+            if (descripStatus == 'Sim') {
+              var folderAlias = seApp.folders.byName(folderPathStrTo);
+
+              var fileList = folderAlias.files;
+              var fileListNames = [];
+
+              for (var i = 0; i < fileList.length; i++) {
+                var fileName = fileList[i].name();
+
+                var fileNameItems = fileName.split(' ');
+
+                if (fileNameItems[0] == '•') {
+                  var fileNameSection = fileName.slice(2); // Remove "• "
+                } else if (fileNameItems[0] == '••') {
+                  var fileNameSection = fileName.slice(3); // Remove "•• "
+                } else {
+                  var fileNameSection = fileName; //.split(" ")[0]
+                }
+
+                var fileNameWithOutExtensionFilterItems = fileNameWithOutExtensionFilter.split(' ');
+
+                var fileNameWithOutExtensionFilterWord1 = fileNameWithOutExtensionFilterItems[0];
+                var fileNameWithOutExtensionFilterWord2 = fileNameWithOutExtensionFilterItems[1];
+
+                var fileNameSectionWord1 = fileNameSection.split(' ')[0];
+                var fileNameSectionWord2 = fileNameSection.split(' ')[1];
+
+                if (fileNameWithOutExtensionFilterItems.length == 1) {
+                  if (fileNameSectionWord1 == fileNameWithOutExtensionFilterWord1) {
+                    fileListNames.push(fileName);
+                  }
+                } else {
+                  if (
+                    fileNameSectionWord1 == fileNameWithOutExtensionFilterWord1 &&
+                    fileNameSectionWord2 == fileNameWithOutExtensionFilterWord2
+                  ) {
+                    fileListNames.push(fileName);
+                  }
+                }
+              }
+
+              var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+              fileListNames.sort(collator.compare);
+
+              var fileListNamesNumbered = [''];
+              for (var i = 0; i < fileListNames.length; i++) {
+                var number = i + 1;
+
+                fileListNamesNumbered.push(number + '	' + fileListNames[i]);
+              }
+
+              if (fileListNamesNumbered.length > 0) {
+                var fileName = cfl2Str(
+                  fileListNamesNumbered,
+                  fileNameWithOutExtensionFilter +
+                    ' | Todos ficheros\n\n—\nSe for continuação da numeração, selecione o ficheiro anterior nesta lista.',
+                  fileListNamesNumbered[0]
+                );
+              } else {
+                currentApp.displayAlert('👏👏👏\n\n\nEste é o ficheiro 1 neste grupo!');
+              }
+
+              if (fileName != '') {
+                // •• REGEX - #1.1 THANKS GOD => #1.1
+                var fileNameItems = fileName.split(' - ');
+
+                if (fileName.includes('#')) {
+                  var fileNameNumItems = fileName.match(/(#[1-9]+)(\.)([1-9]+)/);
+                  var fileNameWithoutPrefix = fileName.split(fileNameNumItems[0] + ' ')[1];
+
+                  // fileNameNumItems[1] inclui #
+                  var nextNumber = fileNameNumItems[1] + '.' + (Number(fileNameNumItems[3]) + 1);
+
+                  var description = nextNumber + ' ' + dialog('Descritivo | ' + nextNumber, fileNameWithoutPrefix.split('.')[0]);
+                } else {
+                  var fileNameWithoutPrefix = fileNameItems[1];
+                  var description = dialog('Descritivo', fileNameWithoutPrefix.split('.')[0]);
+                }
+              } else {
+                var description = dialog('Descritivo | Usa "#1.1", se for o primeiro para numerar', '');
+              }
+
+              var fileNameWithOutExtension = fileNameWithOutExtension + ' - ' + description;
+            }
+          }
+
+          for (var i = 0; i < inputLength; i++) {
+            // if (option.includes("Move to Selection") || option == "W - Dup" || option == "X - Dup") {
+            // 	var saveStart = 0
+
+            // } else {
+            // 	var saveStart = 1
+            // }
+
+            // var saveStart = 2
+            var saveStart = 1;
+
+            for (var s = saveStart; s < 1000000000; s++) {
+              var filePathStr = input[i].toString();
+              var filePathAlias = seApp.aliases.byName(filePathStr);
+
+              var fileExtension = filePathAlias.nameExtension();
+              var fileElements = filePathStr.split('/');
+
+              var fileNameWithExtension = fileElements.pop().split(' _ ')[0];
+
+              if (option.includes('Move to Selection') || option == 'W - Dup' || option == 'X - Dup') {
+                var fileNameWithOutExtension = fileNameWithExtension.split('.' + fileExtension)[0];
+              } else {
+                var fileNameWithOutExtension = fileNameWithOutExtension;
+              }
+
+              if (descripStatus == 'Sim') {
+                var fileNameOriginNew = fileNameWithOutExtension + '.' + fileExtension;
+              } else {
+                // if (s == 0 && (option.includes("Move to Selection") || option == "W - Dup" || option == "X - Dup")) {
+                if (s == 1 && (option.includes('Move to Selection') || option == 'W - Dup' || option == 'X - Dup')) {
+                  var fileNameOriginNew = fileNameWithOutExtension + '.' + fileExtension;
+                } else {
+                  var fileNameOriginNew = fileNameWithOutExtension + ' _ ' + s.toString() + '.' + fileExtension;
+                }
+              }
+
+              var filePathStrNew = folderPathStrTo + '/' + fileNameOriginNew;
+
+              var filePathDestinationNew = Path(filePathStrNew);
+
+              if (!finderApp.exists(filePathDestinationNew)) {
+                break;
+              }
+            }
+
+            filePathAlias.name = fileNameOriginNew;
+
+            var filePathStrOriginNew = fileElements.join('/') + '/' + fileNameOriginNew;
+
+            finderApp.move(Path(filePathStrOriginNew), { to: Path(folderPathStrTo) });
+
+            writeToLogMovesCSVFile(logMovesCSVPathStr, folderPathStrTo, 'movedToFolderName', fileNameOriginNew);
+
+            // Hide extension if (option.includes("Move to Selection")
+            // O resto usa o App5 "WF • Reveal & 1plus"
+
+            // -------------- RENAME IF IS XERO PDF INVOICE OR QUOTE
+
+            if (option.includes('Move to Selection')) {
+              var { name: fileName } = getItemPropertiesByPathStr(filePathStrNew);
+
+              var isInvoiceOrQuoteXeroPdfName = projectLib.getIsInvoiceOrQuoteXeroPdfName(fileName);
+
+              if (isInvoiceOrQuoteXeroPdfName) {
+                var contratFolderInfo = getContratFolderInfo(filePathStrNew);
+
+                var customer4Folders = contratFolderInfo.entity4Folders;
+
+                var newName = renameLib.invoiceOrQuoteXeroPdf(customer4Folders, filePathStrNew);
+
+                var filePathStrNew = folderPathStrTo + '/' + newName + '.pdf';
+              }
+
+              var filePath = Path(filePathStrNew);
+
+              finderApp.reveal(filePath).extensionHidden = true;
+
+              if (option == 'Move to Selection & Open') {
+                previewApp.open(filePath);
+                previewApp.activate();
+              }
+            }
+          }
+          // Don't move if the Name exists in Destination Folder
+        } else {
+          for (var i = 0; i < inputLength; i++) {
+            finderApp.move(input[i], { to: Path(folderPathStrTo) });
+
+            writeToLogMovesCSVFile(logMovesCSVPathStr, folderPathStrTo, 'movedToFolderName', fileName);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    alert(`${error.name}`, `${error.message}`);
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function writeToLogMovesCSVFile(logMovesCSVPathStr, folderPathStrTo, folderDescription, fileName) {
+  const { dateY4M2D2__H2M2S2 } = formatDateV3(new Date()).formats;
+
+  const folderPathStrToItems = folderPathStrTo.split('/');
+  let folderName = '';
+
+  var extension = getExtensionFromStr(folderPathStrTo);
+
+  if (extension) {
+    folderName = folderPathStrToItems[folderPathStrToItems.length - 2];
+  } else {
+    folderName = folderPathStrToItems[folderPathStrToItems.length - 1];
+  }
+
+  const textToWrite = `${dateY4M2D2__H2M2S2},${fileName} _ ${folderDescription}: ${folderName},${folderPathStrTo}/${fileName}`;
+
+  objCLib.writeToFileWithAppend(logMovesCSVPathStr, textToWrite, false);
+}
+
+function doMenu(appName, menuName, menuItem) {
+  var frontApp = Application(appName);
+
+  frontApp.activate();
+
+  var frontAppSE = seApp.processes.byName(appName);
+
+  var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+  delay(d0p3);
+
+  menuName.menus[0].menuItems.byName(menuItem).click();
+}
+
+function moveFile(logMovesCSVPathStr, dischargePathStr, pathStrTo, dischargeInstitutionShortName) {
+  var fileNames = seApp.folders.byName(dischargePathStr).files.name();
+
+  var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  fileNames.sort(collator.compare);
+
+  var fileNameToMove = fileNames.filter(fileName => fileName.includes(dischargeInstitutionShortName))[0];
+
+  var pathStrToMove = dischargePathStr + '/' + fileNameToMove;
+
+  finderApp.move(Path(pathStrToMove), { to: Path(pathStrTo) });
+
+  writeToLogMovesCSVFile(logMovesCSVPathStr, pathStrTo, 'movedToFolderName', fileNameToMove);
+}
+
+function daysInMonth(anyDateInMonth) {
+  // 0 is the last day of Month
+  return new Date(anyDateInMonth.getFullYear(), anyDateInMonth.getMonth() + 1, 0).getDate();
+}
+
+function addZero(i) {
+  if (i < 10) {
+    i = '0' + i;
+  }
+  return i.toString();
+}
+
+// function pdfText(pathStr) {
+//   var pdfURL = $.NSURL.fileURLWithPath(pathStr);
+//   var pdfDoc = $.PDFDocument.alloc.initWithURL(pdfURL);
+//   var pdfPage1 = pdfDoc.pageAtIndex(0);
+//   return $(pdfPage1.string).js; // Returns " " is scanned PDF
+// }
+
+// ------- GET URL
+function getURL() {
+  var CurrentURL = safariApp.windows[0].currentTab.url();
+  return CurrentURL;
+}
+
+function cfl2Str(theList, thePrompt, theDefaultItems, multipleStatus) {
+  if (multipleStatus == undefined) {
+    return currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems }).toString();
+  } else if (multipleStatus == 'm') {
+    return currentApp
+      .chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems, multipleSelectionsAllowed: true })
+      .toString();
+  }
+}

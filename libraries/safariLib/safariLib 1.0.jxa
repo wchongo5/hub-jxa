@@ -1,0 +1,158 @@
+// v1.0
+// const safariLib = Library("safariLib")
+
+const displayLib = Library('displayLib');
+const cflLib = Library('cflLib');
+
+// --------------------------------------- APPS
+
+const seApp = Application('System Events');
+
+const safariApp = Application('Safari');
+
+// --------------------------------------- DELAYS
+
+const d0p3 = 0.3;
+//const d0p5 = 0.5
+const d1 = 1;
+const d1p5 = 1.5;
+const d5 = 5;
+//const d10 = 10
+
+// ---------------------------------------
+
+function getTableCsv(tableIndex, replaceDashWithZero = true) {
+  var currentDocument = safariApp.documents[0];
+
+  // Line below explained in situation 01
+  // Inject and execute the function in the Safari document with the table index and replacement flag
+  var tableData = safariApp.doJavaScript(
+    '(' + extractTableData.toString() + ')(' + tableIndex + ', ' + replaceDashWithZero + ')',
+    { in: currentDocument }
+  );
+
+  var csvData = arrayToCsv(tableData); // Convert to CSV
+  return csvData;
+
+  // ---------- Functions
+
+  // Function to extract data from a specific table by index
+  function extractTableData(tableIndex, replaceDashWithZero) {
+    var tables = document.querySelectorAll('table');
+    if (tableIndex < 0 || tableIndex >= tables.length) return null; // Invalid index check
+
+    var table = tables[tableIndex];
+    var rows = Array.from(table.querySelectorAll('tr'));
+
+    var tableData = rows.map(row => {
+      var cells = Array.from(row.querySelectorAll('th, td'));
+      return cells.map(cell => {
+        var cellContent = cell.innerText.trim().replace(/,/g, ''); // Replace commas with nothing
+        return replaceDashWithZero && cellContent === '-' ? '0.00' : cellContent; // Replace "-" with "0.00" if flag is true
+      });
+    });
+
+    return tableData;
+  }
+
+  // Convert the table data to CSV format
+  function arrayToCsv(data) {
+    return data.map(row => row.join(',')).join('\n');
+  }
+}
+
+function getPageText() {
+  return safariApp.windows[0].currentTab.text();
+}
+
+function getURL() {
+  return safariApp.windows[0].currentTab.url();
+}
+
+function closeCurrentSafariTab(times) {
+  for (var i = 0; i < times; i++) {
+    delay(d0p3);
+    safariApp.windows[0].currentTab.close();
+    delay(d1);
+  }
+}
+
+function openURL(urlInput) {
+  //delay(d0p3) // NEW, MANTER???!!
+  const firstWindow = safariApp.windows[0];
+  //delay(d0p3) // NEW, MANTER???!!
+  const tab = safariApp.Tab({ url: urlInput });
+  //delay(d0p3) // NEW, MANTER???!!
+  firstWindow.tabs.push(tab);
+  //delay(d0p3) // NEW, MANTER???!!
+  firstWindow.currentTab = tab;
+  delay(d1);
+
+  var urlSubscriptionCurrentTab = getURL();
+
+  // "favorites://" is link of blank page
+  if (urlSubscriptionCurrentTab == 'favorites://') {
+    delay(d0p3);
+
+    // Open Location - garantir que que barra de endereço esteja activa (Spend activa imediatamente mas Create Invoice não)
+    seApp.keystroke('l', { using: 'command down' });
+    delay(d0p3);
+
+    saApp.setTheClipboardTo(urlInput);
+    delay(d1);
+
+    seApp.keystroke('v', { using: 'command down' });
+    delay(d1);
+
+    seApp.keyCode(76); // Press Enter
+    delay(d1);
+  }
+}
+
+// Returns the first tab that contains a page whose URL starts with the provided URL
+function getTab(url, window) {
+  var result;
+  window = window || safariApp.windows[0];
+  for (var index in window.tabs) {
+    var tab = window.tabs[index];
+    var tabURL = tab.url();
+    if (tabURL.startsWith(url)) {
+      result = tab;
+      break;
+    }
+  }
+  return result;
+}
+
+function superSafari(theAction, type, identifier, num, input) {
+  // 🔴 superSafari CONVERTED BY X-DIM FROM AS (super) TO JS (superSafari)
+  // Acrescentei "Super" pois em JS a palavra "super" é key word
+
+  //safariApp = Application('Safari')
+
+  if (theAction == 'click') {
+    var action = 'click();';
+  } else if (theAction == 'get') {
+    var action = 'innerHTML;';
+  } else if (theAction == 'submit') {
+    var action = 'submit();';
+  } else if (theAction == 'input') {
+    var action = 'value = "' + input + '";';
+  } else if (theAction == 'force') {
+    var action = 'onchange();';
+  }
+
+  if (type == 'id') {
+    var getElementBy = "getElementById('" + identifier + "').";
+  } else if (type == 'class') {
+    var getElementBy = "getElementsByClassName('" + identifier + "')[" + num + '].';
+  } else if (type == 'tag') {
+    var getElementBy = "getElementsByTagName('" + identifier + "')[" + num + '].';
+  } else if (type == 'name') {
+    var getElementBy = "getElementsByName('" + identifier + "')[" + num + '].';
+  }
+
+  var theJS = 'document.' + getElementBy + action;
+
+  return safariApp.doJavaScript(theJS, { in: safariApp.windows[0].currentTab });
+}

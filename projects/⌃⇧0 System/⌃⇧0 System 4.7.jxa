@@ -1,0 +1,102 @@
+
+
+// v4.7
+
+var currentApp = Application.currentApplication();
+var saApp = (currentApp.includeStandardAdditions = true, currentApp);
+
+var finderApp = Application("Finder");
+var textEditApp = Application ("TextEdit")
+
+// Pasta destino
+var itemListSelection = finderApp.selection(); // Selected folder for SAVE and Selected files for Attachments
+
+try {
+	if (itemListSelection[0].kind() == "Folder") {
+		var folderSelected  = itemListSelection[0]
+
+	} else {
+		var folderSelected  = itemListSelection[0].container();
+	}
+} catch {
+
+}
+
+if (!(itemListSelection[0] == undefined)) {  // Para evitar erro quando não tiver selecionado ou pasta ou ficheiro
+	//var folderSelected = itemList[0];
+	var destinyPathString = decodeURI(folderSelected.url()).slice(7).replace(/%23/g, "#");
+}
+
+var dateMain = new Date();
+
+var theYear = (dateMain.getFullYear().toString());
+var theMonth = dateMain.toLocaleString("en", {month: "2-digit"});
+var theDay = dateMain.toLocaleString("en", {day: "2-digit"});
+var theTime = (dateMain.toLocaleString("en", {hourCycle: "h24", hour: "2-digit", minute: "2-digit", second: "2-digit"})).replace(/:/g, "");
+
+var appleScriptVerion = saApp.systemInfo().applescriptVersion
+var appleScriptStudioverion = saApp.systemInfo().applescriptVersion
+var systemVersion = saApp.systemInfo().systemVersion
+var shortUserName = saApp.systemInfo().shortUserName
+var longUserName = saApp.systemInfo().longUserName
+var userID = saApp.systemInfo().userID
+var userLocale = saApp.systemInfo().userLocale
+var homeDirectory = saApp.systemInfo().homeDirectory
+var bootVolume = saApp.systemInfo().bootVolume
+var computerName = saApp.systemInfo().computerName
+var hostName = saApp.systemInfo().hostName
+var ipv4Address = saApp.systemInfo().ipv4Address
+var primaryEthernetAddress = saApp.systemInfo().primaryEthernetAddress
+var cpuType = saApp.systemInfo().cpuType
+var cpuSpeed = saApp.systemInfo().cpuSpeed
+var physicalMemory = saApp.systemInfo().physicalMemory
+
+var macModel = saApp.doShellScript("system_profiler SPHardwareDataType | awk '/Model Identifier/ {print $3}'")
+var macSerial = saApp.doShellScript("system_profiler SPHardwareDataType | awk '/Serial/ {print $4}'")
+
+var SytemInfo1 = "User Name: " + longUserName + " (" + shortUserName + ")" + "\n" +
+"Computer Name: " + computerName + "\n" +
+"Mac Model: " + macModel + "\n" +
+"Serial: " + macSerial
+
+var SytemInfo2 = "Apple Script Verion: " + appleScriptVerion + "\n" +
+"Apple Script Studioverion: " + appleScriptStudioverion + "\n" +
+"System Version: " + systemVersion + "\n" +
+"User ID: " + userID + "\n" +
+"User Locale: " + userLocale + "\n" +
+"Home Directory: " + homeDirectory + "\n" +
+"Boot Volume: " + bootVolume + "\n" +
+"Host Name: " + hostName + "\n" +
+"Ip Address: " + ipv4Address + "\n" +
+"Ethernet: " + primaryEthernetAddress + "\n" +
+"CPU Type: " + cpuType + "\n" +
+"CPU Speed: " + cpuSpeed + "\n" +
+"Physical Memory: " + physicalMemory
+
+var SystemInfo = "\n\n\n" + SytemInfo1 + "\n\n" + SytemInfo2
+
+// currentApp.activate(); // Em Script Editor activa automaticamente mas nega aqui em Atom
+var response = (currentApp.chooseFromList(["Back To Serial", "Display info", "Save (In Selected Folder)"], { withPrompt: "Acção", defaultItems: "Display info"})).toString();
+
+
+if (response == "Back To Serial") {
+	saApp.setTheClipboardTo(macSerial);
+
+} else if (response == "Display info") {
+	currentApp.displayDialog(SystemInfo)
+
+} else if (response == "Save (In Selected Folder)") {
+
+	var doc = textEditApp.make({new: "document", withProperties: {text: SystemInfo}})
+
+	var thisFileName = "SYSTEM INFO " + longUserName + " " + theYear + theMonth + theDay + theTime + ".txt"
+
+	var thePathAndFileName = Path(destinyPathString + thisFileName)
+
+	doc.save({in: thePathAndFileName})
+	delay(0.3)
+
+	// ------------- HIDE EXTENSION
+
+	finderApp.reveal(Path(destinyPathString + thisFileName)).extensionHidden = true
+}

@@ -1,0 +1,107 @@
+
+
+// v1.0
+// var authenticationLib = Library("authenticationLib")
+
+
+var appLib = Library("appLib")
+
+var menuLib = Library("menuLib")
+var displayLib = Library("displayLib")
+var cflLib = Library("cflLib")
+
+
+var currentApp = Application.currentApplication()
+var saApp = (currentApp.includeStandardAdditions = true, currentApp)
+var seApp = Application("System Events")
+
+var finderApp = Application("Finder")
+var previewApp = Application("Preview")
+
+
+// --------------------------------------- DELAYS
+var d0p3 = 0.3
+var d1 = 1
+var d3 = 3
+var d6 = 6
+
+// ---------------------------------------
+
+function getAfterExportOption() {
+	return cflLib.cfl2Str(["Fechar Original", "Fechar Original e abrir processado", "Apagar Original e abrir processado"], "Despois de Assinatura & Carimbo\n\n\n—\n•No PDF de assinatura e carimbo, apenas selecione um item❗️\n• No PDF com paste, tem 6s para reorganizar assinatura e carimbo❗️\n", "Apagar Original e abrir processado")
+}
+
+function signAndStamp(pdf2SignAndStampPathStr, afterExportOption) {
+
+	var pdfWithSignatureAndStampPathStr = "/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P2/IDENTIDADE (SYNC5 COM PAPER)/AUTENTICIDADE/PDF ASSINATURA & CARIMBO/PDF ASSINATURA & CARIMBO.pdf"
+
+	var frontmostAppName = seApp.applicationProcesses.where({ frontmost: true }).name()[0]
+
+	if (frontmostAppName == "Preview") {
+
+		//var afterExportOption = cflLib.cfl2Str(["Fechar Original", "Fechar Original e abrir processado", "Apagar Original e abrir processado"], "Despois de Assinatura & Carimbo\n\n\n—\n•No PDF de assinatura e carimbo, apenas selecione um item❗️\n• No PDF com paste, tem 6s para reorganizar assinatura e carimbo❗️\n", "Apagar Original e abrir processado")
+
+		previewApp.activate()
+
+		var pdf2SignAndStamp = previewApp.documents[0]
+		//var pdf2SignAndStampPathStr = pdf2SignAndStamp.path()
+
+		finderApp.reveal(Path(pdf2SignAndStampPathStr)).extensionHidden = true
+
+		var windowBounds = previewApp.windows[0].bounds() // Save current Bounds
+		delay(d0p3)
+
+		previewApp.windows[0].bounds = {"x":569, "y":25, "width":820, "height":1219}
+		delay(d0p3)
+
+		var pdfWithSignatureAndStampDoc = previewApp.open(Path(pdfWithSignatureAndStampPathStr))
+		delay(d3) // Era d6
+
+		menuLib.selectAll()
+		delay(d0p3)
+		menuLib.copy()
+		delay(d0p3)
+
+		pdfWithSignatureAndStampDoc.close({saving: "no"})
+
+		delay(d0p3)
+		//seApp.keystroke("v", { using: "command down" })
+		menuLib.paste()
+		delay(d6)
+
+		previewApp.windows[0].bounds = windowBounds // Back Previous Bounds
+		delay(d0p3)
+
+		var pdf2SignAndStampPathStrItems = pdf2SignAndStampPathStr.split("/")
+		var fileNameNew = pdf2SignAndStampPathStrItems.pop().replace(".pdf", " _")
+		var pdfToSaveToFolderStr = pdf2SignAndStampPathStrItems.join("/")
+
+		var pdf2SignAndStampPathStrNew = pdfToSaveToFolderStr + "/" + fileNameNew + ".pdf"
+
+		appLib.saveAsPDF(pdfToSaveToFolderStr, fileNameNew)
+		delay(d0p3) // ---------------- TEMPORARY
+
+		// Sem undo Paste, faz save de assinatura e carimbo
+		// Um undo é suficiente mesmo mudando de posição "de assinatura e carimbo" várias vezes
+		//seApp.keystroke("z", { using: "command down" })
+		menuLib.undo()
+		//delay(d0p3) // Era d1
+		delay(d1)
+
+		if (afterExportOption.includes("Fechar Original") || afterExportOption.includes("Apagar Original")) {
+			pdf2SignAndStamp.close({saving: "no"})
+		}
+
+		if (afterExportOption.includes("abrir processado")) {
+			previewApp.open(Path(pdf2SignAndStampPathStrNew))
+		}
+
+		if (afterExportOption.includes("Apagar Original")) {
+			finderApp.delete(Path(pdf2SignAndStampPathStr))
+		}
+
+		finderApp.reveal(Path(pdf2SignAndStampPathStrNew)).extensionHidden = true
+	} else {
+		displayLib.alert('O App "Sign & Stamp PDF", corre se for "Preview" em activo!', "")
+	}
+}

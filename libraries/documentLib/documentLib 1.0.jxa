@@ -1,0 +1,1117 @@
+// v1.0
+// const documentLib = Library("documentLib")
+
+ObjC.import('Quartz');
+
+const {
+  // ----- Calendar
+  calendarExtractDatesFromIcs,
+} = Library('appLib');
+
+const { calculateAlarmInputs, formatDateV3, getEventStandardDuration } = Library('datetimeLib');
+const { getContratFolderInfo, getND, getItemNamesFromPathStrs, getPathStrsFromPathStr, moveItems } = Library('finderLib');
+const { cfl, cfl2Str } = Library('cflLib');
+const { alert, dialog } = Library('displayLib');
+const { generateUUID } = Library('numberLib');
+const objCLib = Library('objCLib');
+
+const {
+  // ------------------------------ Exists in NodeJS
+  // generateContractTitle,
+  getCalendarName,
+  // ------------------------------
+  createOrReplaceCalendarEvent,
+  saveChangesAndModifyTags,
+} = Library('xxNodejsJXALib');
+
+const {
+  // ------------------------------ Exists in NodeJS
+  generateContractTitle,
+} = Library('xxNodejsJXALibV2');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+const finderApp = Application('Finder');
+
+const { getContractsPathStr } = Library('pathLib');
+
+const contractsPathStr = getContractsPathStr();
+
+// ---------------------------------------
+const ND = getND();
+const eventStandardDuration = getEventStandardDuration();
+// --------------------------------------- DELAYS
+
+const d1 = 1;
+
+// ---------------------------------------
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const { dateY4M2D2, dateY4M2D2__H2M2S2 } = nowFormatted.formats;
+
+// --------------------------------------- NEW
+
+function listTasks(rawTasks) {
+  const tasks = rawTasks.map(([title, subTasks]) => ({ title, subTasks }));
+
+  const flatTaks = tasks
+    .map(({ title, subTasks }, i) => {
+      if (subTasks && subTasks.length > 0) {
+        subTasks = subTasks.map(subTask => `  • ${subTask}`);
+      }
+
+      return [`${i + 1}.  ${title}`, ...(subTasks ?? [])];
+    })
+    .flat();
+
+  // return flatTaks;
+
+  cfl2Str(flatTaks, `Tarefas e subtarefas (${flatTaks.length})\n🔴🔴🔴`, flatTaks[0]);
+}
+
+// ------
+
+/* // Define the original string and the delimiter
+var str = 'SALARIORW1C01M202409 FDFDDD + PASTORRW1P02N202409SALARIORW1C01M202409 + PASTORRW1P02N202409 FDGDGDC';
+var delimiter = 'SALARIORW1C01M202409';
+
+// Example usage:
+// Split at the second occurrence
+var parts = splitAtOccurrence(str, delimiter, 2);
+
+// Display the result
+console.log(parts);
+
+// Expected Output:
+// [
+//   "SALARIORW1C01M202409 + PASTORRW1P02N202409",
+//   "SALARIORW1C01M202409 + PASTORRW1P02N202409"
+// ] */
+
+/**
+ * Function to split the string at the n-th occurrence of the delimiter
+ * @param {String} str - The string to be split
+ * @param {String} delimiter - The delimiter used for splitting
+ * @param {Number} occurrence - The occurrence number at which to split
+ * @returns {Array} - An array containing part1 and part2
+ */
+function splitAtOccurrence(str, delimiter, occurrence) {
+  if (occurrence < 1) {
+    throw new Error('Occurrence must be a positive integer.');
+  }
+
+  let currentIndex = -1;
+  let nextIndex = -1;
+
+  // Iterate to find the n-th occurrence
+  for (let i = 0; i < occurrence; i++) {
+    currentIndex = nextIndex;
+    nextIndex = str.indexOf(delimiter, currentIndex + 1);
+    if (nextIndex === -1) {
+      // If the specified occurrence is not found, return the original string in an array
+      return [str];
+    }
+  }
+
+  // Extract part1: from the start up to (but not including) the n-th occurrence
+  let part1 = str.substring(0, nextIndex);
+
+  // Extract part2: from the n-th occurrence to the end (includes the delimiter)
+  let part2 = str.substring(nextIndex);
+
+  return [part1, part2];
+}
+
+// NOT USED IN JXA YET
+function replaceAccents(str, replaceFirstFound = false, firstCharOnly = false) {
+  var accents = /[\u0300-\u036f]/g;
+
+  if (firstCharOnly) {
+    var firstChar = str[0].normalize('NFD');
+    var restOfString = str.slice(1);
+
+    if (accents.test(firstChar)) {
+      return firstChar.replace(accents, '').normalize('NFC') + restOfString;
+    } else {
+      return str;
+    }
+  } else {
+    var foundAccent = false;
+    var originalChars = Array.from(str);
+
+    var result = originalChars.map(char => {
+      var isAccented = accents.test(char.normalize('NFD'));
+      if (!foundAccent && isAccented) {
+        foundAccent = true;
+        return char.normalize('NFD').replace(accents, '').normalize('NFC');
+      }
+      return char;
+    });
+
+    return replaceFirstFound && foundAccent ? result.join('') : str.normalize('NFD').replace(accents, '').normalize('NFC');
+  }
+}
+
+/*
+function addContract(newContract) {
+  var contractsTxt = objCLib.readFile(contractsPathStr);
+  const contracts = JSON.parse(contractsTxt);
+  const newContractUpdated = { ...newContract, id: generateUUID() };
+
+  contracts.push(newContractUpdated);
+
+  objCLib.writeToFile(contractsPathStr, JSON.stringify(contracts, null, 2), false);
+}
+  */
+
+function getContractDataByNumber(contractNumber) {
+  if (contractNumber === null) {
+    return null;
+  }
+
+  var contractsTxt = objCLib.readFile(contractsPathStr);
+  const contracts = JSON.parse(contractsTxt);
+
+  let contract = contracts.find(contract => contract.number === contractNumber);
+
+  if (!contract) {
+    contract = contracts.find(contract => contract.number === '400182221');
+  }
+
+  // return contract;
+  return { contract, contracts };
+}
+
+function addContract({
+  appleContactExtended,
+  entityType,
+  contractNumber,
+  entityName,
+  contractName,
+  contractPercentage,
+  contractAmount,
+  contractDateCreated,
+  contractDateStart,
+  contractDateDue,
+  headerInfo,
+  buildings,
+  path,
+  lineItems = [],
+  payments = [],
+  expedients = [],
+}) {
+  const newContract = {
+    id: null,
+    appleContactExtended,
+    entityType,
+    isHub: false,
+    number: contractNumber,
+    entityName,
+    name: contractName,
+    description: '',
+    authors: [],
+    // percentage: contractPercentage,
+    total: contractAmount,
+    amountPaid: 0,
+    amountDue: contractAmount,
+    dateCreated: contractDateCreated,
+    dateStart: contractDateStart ?? contractDateCreated,
+    dateDue: contractDateDue,
+    dateCompleted: '',
+    status: 'OPEN',
+    priority: 0,
+    headerInfo, // 🔴🔴 GET FROM Folder
+    invoiceFinancials: {
+      costPerSquareMeterUSD: 700,
+      exchangeRateToMZN: 65,
+      wagesPercentage: contractPercentage,
+      // vatIncluded: false,
+      vatIncluded: contractNumber[2] !== 'W',
+      vatPercentage: 16,
+      isTotalApplied: false,
+      totalCalculated: 0,
+      totalApplied: 0,
+      total: 0,
+      hasRepetitions: false,
+      numberOfRepetitions: 5,
+      hasPercentageDiscount: false,
+      percentageDiscount: 10,
+      hasAppliedDiscount: false,
+      appliedDiscount: 0, // 7280
+      applyManualAmountsInInvoiceItems: false,
+      notes: '', // Initialize notes as an empty string
+      language: 'pt',
+    },
+    invoiceItems: null,
+    buildingsTotalArea: null,
+    buildingsNotes: null,
+    // // buildingsInfo: null,
+    // buildings: [
+    //   // 🔴🔴 GET FROM Folder
+    //   {
+    //     id: generateUUID(),
+    //     code: 'G301',
+    //     type: 'Residential',
+    //     name: 'NOME',
+    //     floors: 1,
+    //     startStory: 1,
+    //     circulationPercentage: 30,
+    //     stories: [],
+    //   },
+    // ],
+    buildings,
+    path,
+    lineItems,
+    payments,
+    expedients,
+  };
+
+  var contractsTxt = objCLib.readFile(contractsPathStr);
+  const contracts = JSON.parse(contractsTxt);
+  const newContractUpdated = { ...newContract, id: generateUUID() };
+
+  contracts.push(newContractUpdated);
+
+  objCLib.writeToFile(contractsPathStr, JSON.stringify(contracts, null, 2), false);
+
+  const changesAndTagsDetails = {
+    oldObj: null,
+    newObj: newContractUpdated,
+    folderPathStr: newContractUpdated.path,
+    objName: 'contrato',
+  };
+
+  saveChangesAndModifyTags(changesAndTagsDetails);
+}
+
+function addExpedient({
+  contractNumber,
+  customer4Folders,
+  emailId,
+  name,
+  dateCreated,
+  dateStart,
+  dateDue,
+  priority,
+  usePathAbsolute,
+  pathRelative,
+  path,
+}) {
+  const dateStartToUse = dateStart ?? dateCreated;
+  let dateStartIcs = null;
+  let dateDueToUse = dateDue;
+  // const expedientPath = expedient.path;
+  const expedientPath = path;
+
+  let expedientIcsPathStr = null;
+
+  const pathStrs = getPathStrsFromPathStr(expedientPath, 'files');
+
+  const pathStrsIcs = pathStrs.filter(path => path.endsWith('.ics'));
+  const pathStrsIcsL = pathStrsIcs.length;
+
+  const folderName = getItemNamesFromPathStrs([expedientPath], [''])[0];
+  const icsNames = getItemNamesFromPathStrs(pathStrsIcs, ['']);
+
+  if (pathStrsIcsL > 0) {
+    if (pathStrsIcsL === 1) {
+      expedientIcsPathStr = pathStrsIcs[0];
+    } else {
+      alert(
+        `A pasta "${folderName}" tem mais de 1 ICS ficehiros (${pathStrsIcsL}):\n${icsNames
+          .map((n, i) => `${i + 1}. ${n}`)
+          .join('\n')}`
+      );
+    }
+  }
+
+  if (expedientIcsPathStr) {
+    const { startDate, endDate } = calendarExtractDatesFromIcs(expedientIcsPathStr);
+
+    dateStartIcs = startDate;
+    dateDueToUse = endDate;
+  }
+
+  const alarmInputs = calculateAlarmInputs(dateStartToUse, dateDueToUse);
+
+  const expedient = {
+    id: generateUUID(),
+    uid: null,
+    updateEventInCalendar: null,
+    isRecurrence: null,
+    emailId,
+    name,
+    dateCreated,
+    dateStart: dateStartToUse,
+    dateStartIcs,
+    dateDue: dateDueToUse,
+    dateCompleted: '',
+    status: 'OPEN',
+    priority: priority || 0,
+    alarmInputs,
+    usePathAbsolute,
+    pathRelative,
+    path,
+    attendees: [],
+    note: '',
+    recurrenceRule: null,
+  };
+
+  /*
+    var contractsTxt = objCLib.readFile(contractsPathStr);
+    const contracts = JSON.parse(contractsTxt);
+    
+    let contract = contracts.find(contract => contract.number === contractNumber);
+    if (!contract) {
+      expedient.name = customer4Folders + ' - ' + name;
+      contract = contracts.find(contract => contract.number === '400182221');
+      }
+      */
+
+  const { contract, contracts } = getContractDataByNumber(contractNumber);
+  if (contract.number === '400182221') {
+    expedient.name = customer4Folders + ' - ' + name;
+  }
+
+  /* 
+  const contractTitle = generateContractTitle(contract);
+  */
+
+  // ----------- generateContractTitle FUNCTION
+
+  const isHub = contract.isHub;
+  let contractsCountStr = '';
+
+  if (isHub) {
+    contractsCountStr = ` (${contract.number.split(' - ').length})`;
+  }
+
+  const contractTitle = `${contract.entityName}${contractsCountStr}`;
+
+  // -----------
+
+  alert('PASSOU "contractTitle"', contractTitle);
+
+  if (!expedient.usePathAbsolute) {
+    expedient.path = null;
+  }
+  const summary = `${contractTitle} - ${name}`;
+
+  const eventDetails = {
+    environment: 'jxa',
+    eventUid: null,
+    contract,
+    expedient, //
+    expedientIcsPathStr,
+    summary,
+    description: `Note updated by ManagerXD5 yet`,
+  };
+
+  const stdout = createOrReplaceCalendarEvent(eventDetails);
+
+  const { uid: eventUid } = JSON.parse(stdout);
+
+  alert(stdout, eventUid);
+
+  if (eventUid) {
+    expedient.uid = eventUid;
+    expedient.updateEventInCalendar = true;
+  }
+
+  contract.expedients.push(expedient);
+
+  objCLib.writeToFile(contractsPathStr, JSON.stringify(contracts, null, 2), false);
+
+  const changesAndTagsDetails = {
+    oldObj: null,
+    newObj: expedient,
+    folderPathStr: expedientPath,
+    objName: 'expediente',
+  };
+
+  saveChangesAndModifyTags(changesAndTagsDetails);
+}
+
+function generateExpedients(expedientsInfo) {
+  var expedients = [];
+
+  expedientsInfo.forEach(info => {
+    expedients.push({
+      id: generateUUID(),
+      uid: null,
+      updateEventInCalendar: null,
+      isRecurrence: null,
+      emailId: null,
+      name: info.name,
+      dateCreated: info.dateCreated,
+      dateStart: info.dateStart ?? info.dateCreated,
+      dateStartIcs: null,
+      dateDue: info.dateDue,
+      dateCompleted: '',
+      status: info.status ?? 'OPEN',
+      priority: info.priority ?? 0,
+      alarmInputs: [],
+      usePathAbsolute: false,
+      pathRelative: '',
+      path: '',
+      attendees: [],
+      note: '',
+      recurrenceRule: null,
+    });
+  });
+
+  return expedients;
+}
+
+function getFileInfo(filePathStrOrFileObject) {
+  let fileObject;
+
+  if (typeof filePathStrOrFileObject === 'string') {
+    const filePathAlias = seApp.aliases.byName(filePathStrOrFileObject);
+    fileObject = filePathAlias;
+  } else {
+    // Is FileObject
+    fileObject = filePathStrOrFileObject;
+  }
+
+  const extensionName = fileObject.nameExtension();
+  const fileName = fileObject.name().split(extensionName)[0];
+  const dateCreation = fileObject.creationDate();
+  const dateModification = fileObject.creationDate();
+
+  return {
+    extensionName,
+    fileName,
+    dateCreation,
+    dateModification,
+  };
+}
+
+function getDischargeInssPdfInfo(pdtText) {
+  if (!pdtText) {
+    return {
+      isDischargeInssPdf: null,
+      dischargeInssIssueDate: null,
+    };
+  }
+
+  let dischargeInssIssueDate = null;
+
+  const isDischargeInssPdf =
+    pdtText.includes('Certid') &&
+    pdtText.includes('Quita') &&
+    pdtText.includes('Instituto Nacional de Seguran') &&
+    pdtText.includes('mero de Contribuinte: 090174300') &&
+    pdtText.includes('NUIT: 400182221');
+
+  if (isDischargeInssPdf) {
+    const datesMatches = pdtText.match(/\b\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}\b/g);
+    dischargeInssIssueDate = datesMatches[0].split(' ')[0];
+  }
+
+  return {
+    isDischargeInssPdf,
+    dischargeInssIssueDate,
+  };
+}
+
+function getInteractionWayInfo(interactionWay) {
+  const isMultiAuthor =
+    interactionWay === `Encontro` ||
+    interactionWay === `Google Meet` ||
+    interactionWay === `Telefonema` ||
+    interactionWay === `WhatsApp` ||
+    interactionWay === `Zoom`;
+
+  const isPlaceBased = interactionWay === `Encontro` || interactionWay === `Hardcopy`;
+
+  return { isMultiAuthor, isPlaceBased };
+}
+
+function getInteractionWayAndPlaceInfo(folderType, authorNames) {
+  const { officeName } = getXdimInfo();
+
+  let place = null;
+  let interactionWayAndPlace = '';
+
+  if (folderType === 'Produção') {
+    var interactionWay = folderType;
+  } else {
+    var interactionWay = cfl2Str(
+      ['Email', 'Encontro', 'Hardcopy', '---------------', 'Google Meet', 'Mensagem', 'Telefonema', 'WhatsApp', 'Zoom'],
+      'Meio de interação - Produção refere-se a pasta para XD5 somente\n- Encontro inclui apresentação e reuinião',
+      'Email'
+    );
+  }
+
+  const { isMultiAuthor, isPlaceBased } = getInteractionWayInfo(interactionWay);
+
+  if (isPlaceBased) {
+    const placeExampleStr = `"SENAMI" ou "${officeName}" ou "KFC 25 SETEMBRO" ou …`;
+
+    place = cfl2Str(
+      [officeName, '-----', ...authorNames, '-----', 'Escrever'],
+      `Lugar da interação para "${interactionWay}"`,
+      officeName
+    );
+
+    if (place === 'Escrever') {
+      place = dialog(`Escreve o lugar"\n\nEx: ${placeExampleStr}`, '');
+    }
+
+    interactionWayAndPlace = `${interactionWay} || ${place}`;
+  } else {
+    interactionWayAndPlace = interactionWay;
+  }
+
+  if (interactionWayAndPlace === 'WhatsApp') {
+    var whatsAppPersonalOrGroup = cfl2Str(['Grupo', 'Pessoal'], 'WhatsApp pessoal ou grupo', 'Grupo');
+
+    interactionWayAndPlace += ` ${whatsAppPersonalOrGroup.toUpperCase()}`;
+  }
+
+  return {
+    interactionWay,
+    place, // Not used yet
+    interactionWayAndPlace,
+    isMultiAuthor,
+    isPlaceBased,
+  };
+}
+
+// ---------------------------------------
+
+function outputWithQuotes(text) {
+  // 🔴🔴🔴 NÃO EXISTE Extension para fazer isto no OUTPUT do VSCode por default?
+  // CAUTION: Changes this <…, creationDate:Fri Dec 02 2022 13:37:28 GMT+0200 (Central Africa Time), …> to <…, "creationDate":"2022-12-02T11:37:28.000Z", …>
+  /// THIS caution comes from <seApp.libraryFolder.properties()>
+  return console.log(JSON.stringify(text));
+}
+
+// // --------------------------------------- readFile
+//
+// function readFile(fileString) {
+// 	return currentApp.read(Path(fileString))
+// }
+
+// --------------------------------------- INBOX
+
+function generateStrFromCFL(items, prompt, defaultItems, includeCommasInReturn = false) {
+  var itemsSelected = cfl(items, prompt, defaultItems, 'm');
+
+  if (includeCommasInReturn) {
+    return itemsSelected.join(', ');
+  } else {
+    return itemsSelected.join(' ');
+  }
+}
+
+function areStringsEqual(str1, str2) {
+  // NOT USED YET
+  var normalizedStr1 = str1.normalize('NFC');
+  var normalizedStr2 = str2.normalize('NFC');
+
+  return normalizedStr1 === normalizedStr2;
+}
+
+function doesStr1IncludeStr2(str1, str2) {
+  var normalizedStr1 = str1.normalize('NFC');
+  var normalizedStr2 = str2.normalize('NFC');
+
+  // if (normalizedStr1.endsWith("_")) {
+
+  //  alert(`${normalizedStr1}`, ``)
+  // }
+
+  return normalizedStr1.includes(normalizedStr2);
+  //  return (normalizedStr1.includes(normalizedStr2) && !normalizedStr1.endsWith("_.pdf"));
+}
+
+function deletePreviousFile(fileNames, fileName) {
+  return fileNames.find(fileNameExisting => {
+    // 00T02 _ ERMELINDA CHIRUTE _ TERMO DE RESPONSABILIDADE _ 20231109-135336-V1
+
+    let fileNameExistingDate = null;
+
+    const matchesDate = fileNameExisting.match(/\d{8}-\d{6}/);
+
+    if (matchesDate) {
+      fileNameExistingDate = matchesDate[0].split('-')[0];
+    }
+
+    const fileNameDate = dateY4M2D2;
+
+    return doesStr1IncludeStr2(fileNameExisting, fileName) && fileNameExistingDate == fileNameDate;
+  });
+}
+
+// --------------------------------------- pdfMerger
+
+/*
+var pdfFinderSelection  = finderApp.selection()
+
+pdfMerger(pdfFinderSelection, "pdfFinderSelection")
+//pdfMerger(pdfPathStrs, "pdfPathStrs")
+*/
+
+function pdfMerger(pdfFinderSelectionOrPdfPathStrs, inputOption, whereToAddPdfs, openNewPdf = false) {
+  if (inputOption == 'pdfFinderSelection') {
+    var pdfFinderSelection = pdfFinderSelectionOrPdfPathStrs;
+    var pdfPathStrs = [];
+
+    for (var i = 0; i < pdfFinderSelection.length; i++) {
+      var pdfPathStr = decodeURI(pdfFinderSelection[i].url()).slice(7);
+      pdfPathStrs.push(pdfPathStr);
+    }
+  } else if (inputOption == 'pdfPathStrs') {
+    var pdfPathStrs = pdfFinderSelectionOrPdfPathStrs;
+  }
+
+  var newPdfDoc = $.PDFDocument.alloc.init; // new empty PDF Doc;
+  var pdf1PathStr = pdfPathStrs[0];
+
+  // Com este pop() pdf1PathStr indica a pasta pois já não tem nome
+  var pdf1PathStrItems = pdf1PathStr.split('/');
+  var pdf1Name = pdf1PathStrItems.pop();
+
+  var pdf1PathAlias = seApp.aliases.byName(pdf1PathStr);
+
+  // "00T0" - docs de técnicos
+  // "00X0" - docs de parte escrita - Projecto (Memórias, Especificações, …) - Plano (Regulamento, Relatório, …)
+  // "00XYZ" Índice (primeira folha) de Projecto ou Plano
+
+  var a5OrU5WritingPartPdfsFileNames = getItemNamesFromPathStrs(pdfPathStrs, ['00T0', '00X0', '00XYZ']);
+
+  if (pdf1Name.includes(' - 00 CAPA')) {
+    // var newPdfName = pdf1Name.split(" - ")[0] + ".pdf"
+    var newPdfName = `${pdf1Name.split(' _ ')[0]}.pdf`;
+  } else if (pdf1Name.startsWith('X-DIM PERFIL _ ')) {
+    const pdfPathStrLast = pdfFinderSelectionOrPdfPathStrs.slice(-1)[0];
+    const pdfPathStrLastDate = pdfPathStrLast.match(/(\d{8}-\d{6})/)[0];
+
+    var newPdfName = `${pdf1Name.split(' _ ')[0]} ${pdfPathStrLastDate}.pdf`;
+  } else if (a5OrU5WritingPartPdfsFileNames.length > 0) {
+    var contratFolderInfo = getContratFolderInfo(pdfPathStrs[0]);
+
+    var invoiceCs = contratFolderInfo.contractNumber;
+    var customer4Folders = contratFolderInfo.entity4Folders;
+    // var customerFolderName = contratFolderInfo.contractFolderName
+    var consultancyFolderPathStr = contratFolderInfo.contractFolderPathStr;
+
+    if (a5OrU5WritingPartPdfsFileNames[0].includes('XYZ')) {
+      var newPdfName = `00XP02 ${ND} ${customer4Folders} ${ND} PARTE DESENHADA ${invoiceCs} ${ND} ${dateY4M2D2__H2M2S2}-V1.pdf`;
+    } else if (a5OrU5WritingPartPdfsFileNames[0].includes('00X00 CAPA')) {
+      var newPdfName = `00X00EM ${ND} ${customer4Folders} ${ND} QUANTIDADE DE MATERIAL ${invoiceCs} ${ND} ${dateY4M2D2__H2M2S2}-V1.pdf`;
+    } else if (
+      a5OrU5WritingPartPdfsFileNames[0].includes('00T0') &&
+      a5OrU5WritingPartPdfsFileNames.slice(-1)[0].startsWith('00X0')
+    ) {
+      var newPdfName = `00XX00 ${ND} ${customer4Folders} ${ND} DOCUMENTOS DOS TÉCNICOS E PARTE ESCRITA ${invoiceCs} ${ND} ${dateY4M2D2__H2M2S2}-V1.pdf`;
+    } else if (a5OrU5WritingPartPdfsFileNames[0].includes('00T0')) {
+      var newPdfName = `00T00 ${ND} ${customer4Folders} ${ND} DOCUMENTOS DE TÉCNICOS ${invoiceCs} ${ND} ${dateY4M2D2__H2M2S2}-V1.pdf`;
+    } else {
+      var newPdfName = `00XP01 ${ND} ${customer4Folders} ${ND} PARTE ESCRITA ${invoiceCs} ${ND} ${dateY4M2D2__H2M2S2}-V1.pdf`;
+    }
+  } else {
+    if (whereToAddPdfs == 'addInPdf1') {
+      var newPdfName = pdf1Name;
+    } else if (whereToAddPdfs == 'addInNewPdfWihtNewName') {
+      var newPdfName = dialog(`Nome para novo PDF.`, pdf1Name.split('.pdf')[0] + ' + MERGEDPDFs') + '.pdf';
+    }
+  }
+
+  var newPdfPathStrNew = pdf1PathStrItems.join('/') + '/' + newPdfName;
+
+  var pdfNewURL = $.NSURL.fileURLWithPath(newPdfPathStrNew);
+
+  for (var i = 0; i < pdfPathStrs.length; i++) {
+    var newPdfNumPages = newPdfDoc.pageCount;
+
+    var pdfPathStr = pdfPathStrs[i];
+
+    var currentPdfURL = $.NSURL.fileURLWithPath(pdfPathStr);
+    var currentPdfDoc = $.PDFDocument.alloc.initWithURL(currentPdfURL);
+    var currentPdfNumPages = currentPdfDoc.pageCount;
+
+    for (var j = 0; j < currentPdfNumPages; j++) {
+      var page = currentPdfDoc.pageAtIndex(j);
+      newPdfDoc.insertPageAtIndex(page, Number(newPdfNumPages) + j);
+    }
+
+    newPdfDoc.writeToURL(pdfNewURL);
+  }
+
+  if (a5OrU5WritingPartPdfsFileNames.length > 0) {
+    delay(d1);
+
+    moveItems([newPdfPathStrNew], consultancyFolderPathStr);
+    delay(d1);
+
+    var newPdfPathStrNew = consultancyFolderPathStr + '/' + newPdfName;
+    delay(d1);
+  }
+
+  finderApp.reveal(Path(newPdfPathStrNew)).extensionHidden = true;
+
+  if (openNewPdf) {
+    delay(d1);
+    finderApp.open(Path(newPdfPathStrNew));
+  }
+}
+
+function readPdfText(pathStr) {
+  var pdfURL = $.NSURL.fileURLWithPath(pathStr);
+  var pdfDoc = $.PDFDocument.alloc.initWithURL(pdfURL);
+
+  var pdfDocNumPages = pdfDoc.pageCount;
+
+  // alert('Páginas', pdfDocNumPages);
+
+  // pdfDocNumPages == 2 para TVCabo Pagamento e Recibo faltando factura
+  if (pdfDocNumPages == 1 || pdfDocNumPages == 2) {
+    var pageIndex = 0;
+  } else if (pdfDocNumPages > 2) {
+    var pageIndex = 1;
+  }
+
+  // alert(pageIndex.toString());
+
+  var pdfPage1 = pdfDoc.pageAtIndex(pageIndex);
+
+  // alert('2');
+
+  return $(pdfPage1.string).js; // Returns " " is scanned PDF
+}
+
+/* 
+  
+  The issue you're experiencing stems from the inherent complexity of PDF files. PDFs are designed primarily for accurately rendering content on a page, not necessarily for preserving the logical reading order of text. As a result, when you extract text using pdfPage1.string, the words may not come out in the sequence you expect because the PDF's internal structure might store text in a different order than it appears visually.
+
+  The PDFPage class provides a method called selectionsByLine() that returns an array of PDFSelection objects, each representing a line of text on the page. By iterating over these selections, you can extract text line by line, which often preserves the correct reading order.
+*/
+
+/* function readPdfText(pathStr) {
+  var pdfURL = $.NSURL.fileURLWithPath(pathStr);
+  var pdfDoc = $.PDFDocument.alloc.initWithURL(pdfURL);
+  var pdfDocNumPages = pdfDoc.pageCount;
+
+  var pageIndex = pdfDocNumPages > 2 ? 1 : 0;
+
+  // alert('1');
+
+  var pdfPage1 = pdfDoc.pageAtIndex(pageIndex);
+  // alert('2');
+
+  var selectionsByLine = pdfPage1.selectionsByLine();
+  var extractedText = '';
+
+  for (var i = 0; i < selectionsByLine.count; i++) {
+    var lineSelection = selectionsByLine.objectAtIndex(i);
+    var lineString = lineSelection.string;
+    extractedText += $(lineString).js + '\n';
+  }
+
+  return extractedText;
+} */
+
+/* 
+function readPdfText(pathStr) {
+  var pdfURL = $.NSURL.fileURLWithPath(pathStr);
+  var pdfDoc = $.PDFDocument.alloc.initWithURL(pdfURL);
+  var pdfDocNumPages = pdfDoc.pageCount;
+
+  var pageIndex = pdfDocNumPages > 2 ? 1 : 0;
+  var pdfPage1 = pdfDoc.pageAtIndex(pageIndex);
+
+  // Get the full range of text on the page
+  var fullRange = $.NSMakeRange(0, pdfPage1.string.length);
+
+  // Create a selection for the full range
+  var fullSelection = pdfPage1.selectionForRange(fullRange);
+
+  // Get selections by line from the full selection
+  var selectionsByLine = fullSelection.selectionsByLine;
+
+  var extractedText = '';
+
+  // Iterate over each line selection
+  for (var i = 0; i < selectionsByLine.count; i++) {
+    var lineSelection = selectionsByLine.objectAtIndex(i);
+    var lineString = lineSelection.string;
+    extractedText += $(lineString).js + '\n';
+  }
+
+  return extractedText;
+}
+
+ */
+
+/* 
+function readPdfText(pathStr) {
+  // Initialize Objective-C classes
+  ObjC.import('Foundation');
+  ObjC.import('PDFKit');
+
+  // Create NSURL from file path
+  var pdfURL = $.NSURL.fileURLWithPath(pathStr);
+
+  // Initialize PDFDocument
+  var pdfDoc = $.PDFDocument.alloc.initWithURL(pdfURL);
+
+  if (!pdfDoc) {
+    throw new Error('Failed to open PDF document.');
+  }
+
+  var pdfDocNumPages = pdfDoc.pageCount;
+
+  // Determine the page index based on the number of pages
+  var pageIndex = 0;
+//  if (pdfDocNumPages === 1 || pdfDocNumPages === 2) {
+//     pageIndex = 0;
+//   } else if (pdfDocNumPages > 2) {
+//     pageIndex = 1;
+//   } else {
+//     throw new Error('PDF has no pages.');
+//   } 
+
+  // Get the specific page
+  var pdfPage1 = pdfDoc.pageAtIndex(pageIndex);
+
+  if (!pdfPage1) {
+    throw new Error('Failed to retrieve the specified page.');
+  }
+
+  // Get the full range of text on the page
+  var pageString = pdfPage1.string;
+
+  if (!pageString || pageString.length === 0) {
+    // Handle scanned PDFs or empty pages
+    return ''; // Or handle OCR as needed
+  }
+
+  // Create an NSRange object as a JavaScript object
+  var fullRange = { location: 0, length: pageString.length };
+
+  // Create a PDFSelection for the full range
+  var fullSelection = pdfPage1.selectionForRange(fullRange);
+
+  if (!fullSelection) {
+    throw new Error('Failed to create selection for the page.');
+  }
+
+  // Get selections by line
+  var selectionsByLine = fullSelection.selectionsByLine;
+
+  if (!selectionsByLine) {
+    throw new Error('Failed to get selections by line.');
+  }
+
+  var extractedText = '';
+
+  // Iterate over each line selection
+  for (var i = 0; i < selectionsByLine.count; i++) {
+    var lineSelection = selectionsByLine.objectAtIndex(i);
+    if (lineSelection) {
+      var lineString = lineSelection.string;
+      if (lineString) {
+        extractedText += ObjC.unwrap(lineString) + '\n';
+      }
+    }
+  }
+
+  return extractedText;
+}
+
+ */
+function ensureSpaceAfterCommaInStr(string) {
+  // return string.replace(/, /g, ",").replace(/,/g, ", ")
+  return string.replace(/, | , /g, ',').replace(/,/g, ', ');
+}
+
+/* function trimInStringArray(array) {
+
+} */
+
+function replaceAccentC1(str) {
+  // C1 Character 1
+  var str = str.replace(/[ÁÓ]+/g, replaceMatch);
+
+  function replaceMatch(match) {
+    if (match == 'Á') {
+      return 'A';
+    } else if (match == 'Ó') {
+      return 'O';
+    }
+  }
+  return str;
+}
+
+function changeCase(str, caseInput) {
+  if (caseInput == 'lower') {
+    var someStringCaseChanged = str.toLowerCase();
+  } else if (caseInput == 'UPPER') {
+    var someStringCaseChanged = str.toUpperCase();
+  }
+  return someStringCaseChanged;
+}
+
+function replaceC(str) {
+  // Replace character
+  var str = str.replace(/[áãÁÃçÇéÉíÍóõÕÓúÚ]/g, replaceMatch);
+
+  function replaceMatch(match) {
+    if (match == 'á' || match == 'ã') {
+      return 'a';
+    } else if (match == 'Á' || match == 'Ã') {
+      return 'A';
+    } else if (match == 'ç') {
+      return 'c';
+    } else if (match == 'Ç') {
+      return 'C';
+    } else if (match == 'í') {
+      return 'i';
+    } else if (match == 'Í') {
+      return 'I';
+    } else if (match == 'é') {
+      return 'e';
+    } else if (match == 'É') {
+      return 'E';
+    } else if (match == 'ó' || match == 'õ') {
+      return 'o';
+    } else if (match == 'Ó' || match == 'Õ') {
+      return 'O';
+    } else if (match == 'ú') {
+      return 'u';
+    } else if (match == 'Ú') {
+      return 'U';
+    }
+  }
+  return str;
+}
+
+function capitalizeText(text, noOrWithExclusions) {
+  if (noOrWithExclusions == 'NoExclusions') {
+    return text
+      .split(' ')
+      .map(w => w[0].toUpperCase() + w.substr(1).toLowerCase())
+      .join(' ');
+  } else if (noOrWithExclusions == 'WithExclusions') {
+    var textItems = text.split(' ');
+    var textItemsCol = [];
+
+    var abbreviations = ['BIM'];
+    var exclusions = 'com, de, da, das, do, dos, e, em, na, nas, no, nos, para';
+
+    for (i = 0; i < textItems.length; i++) {
+      // var abbreviations = ["BIM"]
+      // var exclusions = "e, de, da, das, do, dos, para, com"
+
+      var word = textItems[i];
+
+      var track = word.toLowerCase().slice(0, 2);
+      var textItemL = word.length;
+
+      if (abbreviations.includes(word)) {
+        textItemsCol.push(word);
+      } else {
+        if (isNaN(track[0])) {
+          if (exclusions.includes(track) && textItemL < 5) {
+            textItemsCol.push(word.toLowerCase());
+          } else {
+            textItemsCol.push(word[0].toUpperCase() + word.slice(1).toLowerCase());
+          }
+        } else {
+          textItemsCol.push(word);
+        }
+      }
+    }
+    return textItemsCol.join(' ');
+  }
+}
+
+function capitalizeTextIfNotInAbbreviation(text) {
+  if (text.includes('CMC') || text.includes('MOPHRH')) {
+    return text;
+  } else {
+    return capitalizeText(text, 'NoExclusions');
+  }
+}
+
+// --------------------------------------------- accentCharacterReplacer
+
+/*
+//var customerName = "banco de moçambique víctor cabo josé"
+//accentCharacterReplacer(customerName, "LOWERCASE")
+
+var customerName = "BANCO"
+var customerName = "BANCO DE MOCAMBIQUE"
+//var customerName = "BANCO DE MOCAMBIQUE VÍCTOR CABO JOSÉ COTAÇÃO"
+accentCharacterReplacer(customerName, "UPPERCASE")
+*/
+
+/* // 🔴🔴🔴 NOT USED ❗️
+function accentCharacterReplacer(customerName, letterCase) {
+
+	var accentCharacters = ["á", "ã", "â", "à", "ç", "é", "ê", "í", "î", "ó", "ô", "õ", "ú", "û", "ü"]
+
+	var accentCharactersDictionary = {"á":"a", "ã":"a", "â":"a", "à":"a", "ç":"c", "é":"e", "ê":"e", "í":"i", "î":"i", "ó":"o", "ô":"o", "õ":"o", "ú":"u", "û":"u", "ü":"u"}
+
+	for (var i = 0; i < accentCharacters.length; i++) {
+
+		var accentCharacter = accentCharacters[i]
+
+		if (letterCase == "UPPERCASE") {
+			var accentCharacter = accentCharacter.toUpperCase()
+		} // else is alread "LOWERCASE"
+
+		if (customerName.includes(accentCharacter)) {
+
+			var customerNameItems = customerName.split("")
+
+			var customerNameCharacters = []
+
+			for (var j = 0; j < customerNameItems.length; j++) {
+
+				var customerNameLetter = customerNameItems[j]
+
+				if (accentCharacter == customerNameLetter) {
+
+					var accentCharacterFound = accentCharactersDictionary[accentCharacter.toLowerCase()]
+
+					if (letterCase == "UPPERCASE") {
+						var accentCharacterFound = accentCharacterFound.toUpperCase()
+					}
+
+					var customerNameLetter = accentCharacterFound
+				}
+
+				customerNameCharacters.push(customerNameLetter)
+			}
+
+			// PARA USAR COMO STRING NO LOOP A SEGUIR, SEM ESTA LINHA FAZ UMA ÚNICA SUBSTITUIÇÃO POIS CONTINUA USANDO customerName RECEBIDO NA FUNÇÃO
+			var customerName = customerNameCharacters.join("")
+		}
+	}
+
+	if (customerNameCharacters == undefined || customerNameCharacters.length == 0) {
+		var customerNameCharacters = customerName
+
+	} else {
+		var customerNameCharacters = customerNameCharacters.join("")
+	}
+
+	return customerNameCharacters
+}
+*/
+
+function getXdimInfo() {
+  return {
+    officeName: 'XDIM ENZ C01',
+  };
+}

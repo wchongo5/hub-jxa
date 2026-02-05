@@ -1,0 +1,601 @@
+// v1.0
+
+// const {
+//    ------------------------------ Exists in NodeJS
+//    generateContractTitle,
+//    getCalendarName,
+//    ------------------------------
+//    createOrReplaceCalendarEvent,
+//    navigateToDateOrEvent,
+//    revealItem,
+//    saveChangesAndModifyTags,
+//    sendMessage,
+// } = Library('xxNodejsJXALib');
+
+const { getContractDataByNumber } = Library('documentLib');
+
+const {
+  // ----- Calendar
+  calendarAddIcsFile,
+} = Library('appLib');
+const { isCs } = Library('projectLib');
+
+const { formatDateV3, getAdjustedEventDatesIfNotSameDay } = Library('datetimeLib');
+
+const { alert, dialog } = Library('displayLib');
+const { activateWindowById, itemProperties } = Library('finderLib');
+const objCLib = Library('objCLib');
+
+// ------------ For getTags and modifyTags
+ObjC.import('Foundation');
+ObjC.import('AppKit');
+
+const calendarApp = Application('Calendar');
+var finderApp = Application('Finder');
+const messagesApp = Application('Messages');
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3;
+
+// ------------------------------ TEMPORAY HERE
+// Convert to AppleScript-style date strings (US English format)
+function formatDateForAppleScript(date) {
+  return date.toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+}
+
+// ------------------------------ Exists in NodeJS
+
+function generateContractTitle(contract) {
+  const isHub = contract.isHub;
+  let contractsCountStr = '';
+
+  if (isHub) {
+    contractsCountStr = ` (${contract.number.split(' - ').length})`;
+  }
+
+  return `${contract.entityName}${contractsCountStr}`;
+}
+
+/*
+function getCalendarName(contractNumber, isRecurrence) {
+  // const calendars = {
+  //   // gg1 Gestão Grupo 01
+  //   cg1: 'Consultoria',
+  //   gg1: 'Gestão 01',
+  //   gg2: 'Gestão 02',
+  // };
+
+  // return calendars[nameId];
+
+  if (isCs(contractNumber)) {
+    return 'Consultoria';
+  } else if (isRecurrence) {
+    return 'Gestão 01';
+  } else {
+    return 'Gestão 02';
+  }
+}
+  */
+
+function getCalendarName(contract, expedient) {
+  // Split for situations of Hub
+  const contractNumber = contract.number.split(' - ')[0];
+  const isRecurrence = expedient.isRecurrence;
+
+  if (isCs(contractNumber)) {
+    return 'Consultoria';
+  } else if (isRecurrence) {
+    return 'Gestão 01';
+  } else {
+    return 'Gestão 02';
+  }
+}
+
+// ------------------------------ createOrReplaceCalendarEvent
+
+/* createOrReplaceCalendarEvent
+var eventDetails = $EVENT_DETAILS$;
+
+createOrReplaceCalendarEvent(eventDetails);
+createOrReplaceCalendarEvent */
+
+function createOrReplaceCalendarEvent({
+  environment, // jxa, nodejs
+  eventUid,
+  contract,
+  expedient,
+  expedientIcsPathStr,
+  summary,
+  description,
+}) {
+  const dateStart = expedient.dateStartIcs || expedient.dateStart;
+  const dateEnd = expedient.dateDue;
+  const recurrenceRule = expedient.recurrenceRule;
+  const alarmInputs = expedient.alarmInputs;
+  const calendarName = getCalendarName(contract, expedient);
+  const calendarNameIcs = 'Convite';
+
+  if (expedientIcsPathStr) {
+    calendarAddIcsFile(expedientIcsPathStr, calendarNameIcs);
+  }
+
+  const { isSameDay, dateStartStr, dateDueStr } = getAdjustedEventDatesIfNotSameDay(dateStart, dateEnd);
+
+  if (!isSameDay && environment === 'jxa') {
+    description += `\n\n• Date Start: ${dateStart}\n• Date End: ${dateEnd}`;
+  }
+
+  const startTime = new Date();
+  console.log(`Starting process at: ${startTime.toISOString()}`);
+
+  // Retrieve the Calendar
+  var calendars = calendarApp.calendars.whose({ name: calendarName });
+  var calendarPlus = calendars.length > 0 ? calendars[0] : null;
+
+  if (!calendarPlus) {
+    // console.log(`Calendar with name "${calendarName}" not found.`);
+    alert(`Calendar with name "${calendarName}" not found.`);
+    return;
+  }
+
+  // — If an existing UID is provided, remove **all** instances
+  if (eventUid) {
+    try {
+      console.log(`Looking up events with UID ${eventUid}…`);
+      // Grab **all** events that share the same UID (master + overrides)
+      var matches = calendarPlus.events.whose({ uid: eventUid });
+
+      if (matches.length > 0) {
+        // First entry is the “master” event
+        var master = matches[0];
+
+        if (recurrenceRule) {
+          const app = Application.currentApplication();
+          app.includeStandardAdditions = true;
+
+          // 🔴 .slice(1) removes main date
+          const datesToExclude = recurrenceRule.previousRecurrenceDates.slice(1).map(dateString => new Date(dateString));
+
+          // Join the dates in AppleScript array format
+          const formattedDates = datesToExclude.map(d => `date "${formatDateForAppleScript(d)}"`).join(', ¬\n\t\t\t');
+
+          // Construct the full AppleScript
+          const asScript = `
+            tell application "Calendar"
+              activate
+              tell calendar "Consultoria"
+                set theEvt to first event whose uid is "${eventUid}"
+                
+                set datesToExclude to {¬
+                  ${formattedDates}}
+                
+                set excluded dates of theEvt to (excluded dates of theEvt & datesToExclude)
+              end tell
+            end tell
+            `;
+
+          // Write to a temp AppleScript file
+          const path = '/tmp/tempCalendarScript.applescript';
+          const file = app.openForAccess(Path(path), { writePermission: true });
+          app.setEof(file, { to: 0 });
+          app.write(asScript, { to: file });
+          app.closeAccess(file);
+
+          // Run it
+          const result = app.doShellScript(`osascript ${path}`);
+
+          // Delete the temp file
+          app.doShellScript(`rm ${path}`);
+        }
+
+        master.delete();
+        console.log(`Event with UID: ${eventUid} deleted successfully at ${new Date().toISOString()}`);
+      } else {
+        console.log(`No existing event found with UID ${eventUid}`);
+      }
+    } catch (err) {
+      alert(`Error while deleting existing events with UID ${eventUid}:\n${err}`);
+      return;
+    }
+  }
+
+  let newEvent;
+  try {
+    // Log before creating a new event
+    const beforeCreateTime = new Date();
+    console.log(`Creating new event at: ${beforeCreateTime.toISOString()}`);
+
+    // Create a new event
+    var eventDetails = {
+      summary: summary,
+      startDate: new Date(dateStartStr),
+      endDate: new Date(dateDueStr),
+      description: description,
+    };
+
+    var recurrenceStr = '';
+    if (recurrenceRule) {
+      if (recurrenceRule.frequencyStandard === 'custom') {
+        recurrenceStr = `FREQ=${recurrenceRule.frequencyCustom};INTERVAL=${recurrenceRule.interval}`;
+        if (recurrenceRule.count) {
+          /* 
+          🔴🔴🔴
+          // MOVE FROM HERE TO CALENDAR RELATED NOT
+          If recurrenceRule.count is not provided, the resulting recurrence rule will not have a COUNT component, meaning:
+
+          The recurrence rule will not be limited by number of occurrences.
+          If UNTIL is also not provided, the event will recur infinitely (depending on the calendar app's internal limits — e.g., Apple Calendar typically shows 1–2 years ahead or up to 730 instances).
+          If UNTIL is provided, the recurrence will end on that date.
+          
+          */
+
+          recurrenceStr += `;COUNT=${recurrenceRule.count}`;
+        }
+        if (recurrenceRule.until) {
+          recurrenceStr += `;UNTIL=${recurrenceRule.until}`;
+        }
+        if (recurrenceRule.weekDays && recurrenceRule.weekDays.length > 0) {
+          recurrenceStr += `;BYDAY=${recurrenceRule.weekDays.join(',')}`;
+        }
+        if (recurrenceRule.monthDays && recurrenceRule.monthDays.length > 0) {
+          recurrenceStr += `;BYMONTHDAY=${recurrenceRule.monthDays.join(',')}`;
+        }
+        if (recurrenceRule.yearMonths && recurrenceRule.yearMonths.length > 0) {
+          recurrenceStr += `;BYMONTH=${recurrenceRule.yearMonths.join(',')}`;
+        }
+      } else {
+        recurrenceStr = `FREQ=${recurrenceRule.frequencyStandard};INTERVAL=${recurrenceRule.interval}`;
+        if (recurrenceRule.count) {
+          recurrenceStr += `;COUNT=${recurrenceRule.count}`;
+        }
+      }
+
+      eventDetails.recurrence = recurrenceStr;
+    }
+
+    newEvent = calendarApp.Event(eventDetails);
+    calendarPlus.events.push(newEvent);
+
+    // Log after creating the new event
+    const afterCreateTime = new Date();
+    console.log(`New event created at: ${afterCreateTime.toISOString()}`);
+
+    // Set Up Alarms
+    for (var k = 0; k < alarmInputs.length; k++) {
+      var alarmInputStr = alarmInputs[k];
+      var alarmTime;
+
+      if (alarmInputStr.endsWith('d')) {
+        var alarmInput = Number(alarmInputStr.replace('d', ''));
+        alarmTime = alarmInput * -60 * 24;
+      } else if (alarmInputStr.endsWith('h')) {
+        var alarmInput = Number(alarmInputStr.replace('h', ''));
+        alarmTime = alarmInput * -60; // Convert hours to minutes
+      } else if (alarmInputStr.endsWith('m')) {
+        var alarmInput = Number(alarmInputStr.replace('m', ''));
+        alarmTime = alarmInput * -1; // Already in minutes
+      }
+
+      var soundAlarm = calendarApp.SoundAlarm({ triggerInterval: alarmTime, soundName: 'Sosumi' });
+      newEvent.soundAlarms.push(soundAlarm);
+    }
+
+    // Finalize and Display
+    calendarApp.reloadCalendars();
+    calendarApp.activate();
+    calendarApp.switchView({ to: 'week view' });
+    newEvent.show();
+
+    const endTime = new Date();
+    console.log(`Process completed at: ${endTime.toISOString()}`);
+    console.log(`Total time taken: ${(endTime - startTime) / 1000} seconds`);
+
+    // return { uid: newEvent.uid() };
+
+    // const result = {
+    //   uid: newEvent.uid(),
+    // };
+
+    // Convert the result object to a JSON string
+    return JSON.stringify({
+      uid: newEvent.uid(),
+    });
+  } catch (error) {
+    console.log(error);
+
+    alert(`error: ${error}`);
+  }
+  // }
+}
+
+// ------------------------------ modifyTags
+
+function modifyTags(filePath, tagsToAdd, tagsToRemove, tagsToOverrideExisting) {
+  var expandedFilePath = $(filePath).stringByExpandingTildeInPath;
+  var fileURL = $.NSURL.fileURLWithPath(expandedFilePath);
+  var updatedTags;
+
+  if (tagsToOverrideExisting && tagsToOverrideExisting.length > 0) {
+    console.log('Tags to override existing:', tagsToOverrideExisting);
+    updatedTags = tagsToOverrideExisting;
+  } else if ((tagsToAdd && tagsToAdd.length > 0) || (tagsToRemove && tagsToRemove.length > 0)) {
+    var currentTags = getTags(expandedFilePath);
+    console.log('Current tags:', currentTags); // ["Red", "Blue"]
+    console.log('Tags to add:', tagsToAdd); // ["Orange", "Yellow"]
+    console.log('Tags to remove:', tagsToRemove); // ["Red"]
+
+    // Add new tags and remove the specified tags
+    updatedTags = currentTags.concat(tagsToAdd).filter((tag, i, arr) => {
+      return arr.indexOf(tag) === i && tagsToRemove.indexOf(tag) === -1;
+    });
+  } else {
+    updatedTags = [];
+  }
+
+  console.log('Updated tags:', updatedTags);
+
+  var tagArray = $.NSArray.arrayWithArray(updatedTags);
+  var error = Ref();
+
+  var success = fileURL.setResourceValueForKeyError(tagArray, $.NSURLTagNamesKey, error);
+
+  if (!success) {
+    throw new Error('Failed to set tags: ' + (error[0] ? error[0].localizedDescription : 'Unknown error'));
+  } else {
+    console.log('Tags "' + updatedTags.join(', ') + '" successfully updated for file: ' + expandedFilePath);
+  }
+}
+
+function getTags(filePath) {
+  var expandedFilePath = $(filePath).stringByExpandingTildeInPath;
+  var fileURL = $.NSURL.fileURLWithPath(expandedFilePath);
+  var currentTags = Ref();
+  var error = Ref();
+
+  var success = fileURL.getResourceValueForKeyError(currentTags, $.NSURLTagNamesKey, error);
+
+  if (!success || currentTags[0] === null || ObjC.unwrap(currentTags[0]) === undefined) {
+    console.log(
+      'No existing tags found or failed to get current tags: ' + (error[0] ? error[0].localizedDescription : 'Unknown error')
+    );
+    return [];
+  }
+
+  return ObjC.unwrap(currentTags[0]).map(tag => ObjC.unwrap(tag));
+}
+
+// ------------------------------ navigateToDateOrEvent
+
+/* navigateToDateOrEvent
+const navigateToDateOrEventDetails = $NAVIGATE_TO_DATE_OR_EVENT_DETAILS$;
+
+navigateToDateOrEvent(navigateToDateOrEventDetails);
+navigateToDateOrEvent */
+
+function navigateToDateOrEvent({ expedient, dateStr }) {
+  const calendarView = 'week view';
+  // const calendarName = 'Plano Plus';
+
+  calendarApp.activate();
+  calendarApp.switchView({ to: calendarView });
+
+  // if (useEventUid && uid) {
+  if (dateStr) {
+    calendarApp.viewCalendar({ at: new Date(dateStr) });
+
+    // 🔴🔴🔴 expedient does not have contractNumber, it has contractId. Inlude it
+  } else if (expedient) {
+    const { uid } = expedient;
+    const contractNumber = expedient.contractNumber;
+
+    const { contract } = getContractDataByNumber(contractNumber);
+    const calendarName = getCalendarName(contract, expedient);
+
+    const calendar = calendarApp.calendars.whose({ name: calendarName })[0];
+    const events = calendar.events.whose({ uid: uid });
+
+    if (events.length > 0) {
+      events[0].show();
+    } else {
+      alert(`Não encontrou Evento com UID: ${uid}`);
+    }
+  } else {
+    alert('Neither UID nor date provided for navigation.');
+  }
+}
+
+// ------------------------------ revealItem
+
+// 🔴🔴🔴 NECESSARY WHILE PROBAPBILY WILL NOT RECEIVE MORE PARAMETERS???? - IN FUTURE PASS OBJECT AND UPDATE IN JXA INSTANCES
+/* revealItem
+var pathStr = $PATH_STR$;
+var revealStatus = $REVEAL_STATUS$;
+var activateFinder = $ACTIVATE_FINDER$;
+revealItem(pathStr, revealStatus, activateFinder);
+revealItem */
+
+function revealItem(pathStr, revealStatus, activateFinder = false) {
+  // 🔴 revealStatus options: "reveal", "reveal-closeTab", "reveal-activatePreviousTab"
+
+  delay(d0p3);
+
+  if (revealStatus.includes('activatePreviousTab')) {
+    var currentWindowId = finderApp.windows[0].id();
+  }
+
+  // Estranho. Usando esta função os PDFs vem alias para "class" e mas directamente é documentFile. Por isso acabei usando kind
+
+  var fileKind = itemProperties(pathStr).kind;
+
+  if (fileKind == 'Alias' || fileKind == 'Folder') {
+    finderApp.reveal(Path(pathStr));
+  } else {
+    finderApp.reveal(Path(pathStr)).extensionHidden = true;
+  }
+
+  if (revealStatus.includes('closeTab')) {
+    delay(d0p3);
+    finderApp.windows[0].close();
+  }
+
+  if (revealStatus.includes('activatePreviousTab')) {
+    activateWindowById(currentWindowId);
+  }
+  delay(d0p3);
+
+  if (activateFinder) {
+    finderApp.activate();
+  }
+}
+
+// ------------------------------ saveChangesAndModifyTags
+
+/* saveChangesAndModifyTags
+const changesAndTagsDetails = $CHANGES_AND_TAGS_DETAILS$;
+
+saveChangesAndModifyTags(changesAndTagsDetails);
+saveChangesAndModifyTags */
+
+function saveChangesAndModifyTags({ oldObj, newObj, folderPathStr, objName }) {
+  const changes = compareObjects(oldObj, newObj);
+  const newTags = determineNewTags(newObj);
+
+  // if (folderPathStr && fs.existsSync(folderPathStr)) {
+  if (finderApp.exists(Path(folderPathStr))) {
+    const changesLogPath = `${folderPathStr}/#changes-log-${objName}.json`;
+    saveChangesLog(changesLogPath, changes);
+    console.log('Changes:', changes);
+
+    modifyTags(folderPathStr, [], [], newTags);
+  } else {
+    console.log({ error: `"modifyTags" not applied, path "${folderPathStr}" not found.` });
+  }
+}
+
+function saveChangesLog(filePath, changes) {
+  // const currentDate = new Date().toISOString();
+  const currentDate = formatDateV3(new Date()).formats.iso8601;
+  const changesFormatted = { date: currentDate, changes };
+
+  let logs = [];
+  // if (fs.existsSync(filePath)) {
+  if (finderApp.exists(Path(filePath))) {
+    // const existingData = fs.readFileSync(filePath, 'utf8');
+
+    const existingData = objCLib.readFile(filePath);
+    logs = JSON.parse(existingData);
+  }
+
+  // Prepend the new log entry to the existing logs
+  logs.unshift(changesFormatted);
+
+  // fs.writeFileSync(filePath, JSON.stringify(logs, null, 2));
+
+  objCLib.writeToFile(filePath, JSON.stringify(logs, null, 2), false);
+}
+
+function determineNewTags(expedient) {
+  if (expedient.isCompleted || expedient.priority === 0) {
+    return [];
+  } else {
+    return [`Prioridade ${expedient.priority}`];
+  }
+}
+
+function compareObjects(oldObj, newObj, path = '') {
+  const changes = { added: {}, removed: {}, changed: {} };
+
+  // Helper function to adjust the path numbering
+  const adjustPath = path => {
+    return path.replace(/\.(\d+)/g, (match, p1) => `.${parseInt(p1) + 1}`);
+  };
+
+  if (!oldObj) {
+    // If oldObj is null, consider everything in newObj as added
+    for (const key in newObj) {
+      let newPath = path ? `${path}.${key}` : key;
+      changes.added[adjustPath(newPath)] = newObj[key];
+    }
+    return changes;
+  }
+
+  // Check for removed or changed properties
+  for (const key in oldObj) {
+    let oldPath = path ? `${path}.${key}` : key;
+    if (!(key in newObj)) {
+      changes.removed[adjustPath(oldPath)] = oldObj[key];
+    } else if (oldObj[key] !== newObj[key]) {
+      if (typeof oldObj[key] === 'object' && typeof newObj[key] === 'object') {
+        const nestedChanges = compareObjects(oldObj[key], newObj[key], oldPath);
+        Object.assign(changes.added, nestedChanges.added);
+        Object.assign(changes.removed, nestedChanges.removed);
+        Object.assign(changes.changed, nestedChanges.changed);
+      } else {
+        changes.changed[adjustPath(oldPath)] = { from: oldObj[key], to: newObj[key] };
+      }
+    }
+  }
+
+  // Check for added properties
+  for (const key in newObj) {
+    let newPath = path ? `${path}.${key}` : key;
+    if (!(key in oldObj)) {
+      changes.added[adjustPath(newPath)] = newObj[key];
+    }
+  }
+
+  return changes;
+}
+
+// ------------------------------ sendMessage
+
+/* sendMessage
+const sendMessageInput = $SEND_MESSAGE_INPUT$;
+
+sendMessage(sendMessageInput);
+sendMessage */
+
+function sendMessage({ message, contacts }) {
+  var participants = messagesApp.participants();
+
+  for (var i = 0; i < contacts.length; i++) {
+    var targetParticipant = undefined;
+    const contact = contacts[i];
+
+    // alert(`"${contact}"`, 'Thanks God - 1!');
+
+    for (var j = 0; j < participants.length; j++) {
+      try {
+        const participant = participants[j];
+        const handle = participants[j].handle();
+        if (handle && handle.includes(contact)) {
+          // alert(`"${contact}"`, 'Thanks God - 1!');
+          targetParticipant = participant;
+          break;
+        }
+      } catch (error) {
+        //
+      }
+    }
+
+    if (targetParticipant) {
+      // alert(`Contact "${contact}" found.`);
+      messagesApp.send(message, { to: targetParticipant });
+
+      return true;
+    } else {
+      alert(`Contact "${contact}" not found.`);
+      return false;
+    }
+  }
+}

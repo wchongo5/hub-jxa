@@ -1,0 +1,1338 @@
+// v5.3
+
+const { getND } = Library('finderLib');
+var systemLib = Library('systemLib');
+var pathLib = Library('pathLib');
+var safariLib = Library('safariLib');
+var iWorkLib = Library('iWorkLib');
+
+const { alert, dialog } = Library('displayLib');
+const { formatDateV3, getYyyyMmPlus1 } = Library('datetimeLib');
+const {
+  doMenu, //
+  paste,
+  setClipboard,
+} = Library('menuLib');
+var appLib = Library('appLib');
+const {
+  addZero, //
+  formatNumber,
+  getMoneyInText,
+} = Library('numberLib');
+
+var paymentLib = Library('paymentLib');
+
+const { cfl2Str, cflV2 } = Library('cflLib');
+
+alert(
+  `• Complete Use of Libraries\n\n• Apply funtion "numbersSaveAsPDF"\n\nJÁ. VERIFICAR SE FALTA EM ALGUM SITIO!\n\n\n 🔴🔴🔴 DON'T DOWNLOAD Excel use "vatReportText" já configurado`,
+  ``
+);
+
+alert(
+  `PORTAGEM COBRA 8.5%\n\n\n\nANOTADO EM SUBSCRICOES\n\nDescritivo de recibo deve incluir o número da factura para ser usado no relatório IVA Apuramento no novo Sheet "IVA_APURAMENTO"`,
+  ``
+);
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var systemEventsApp = Application('System Events');
+
+var finderApp = Application('Finder');
+
+var numbersApp = Application('Numbers');
+var numbersAppControllerP = systemEventsApp.processes['Numbers'];
+
+var safariApp = Application('Safari');
+var safariAppControllerP = systemEventsApp.processes['Safari'];
+
+let accountBankListXDIMX = [
+  '1. CAIXA 90',
+  '2. CAIXA 101',
+  '3. CAIXA 102',
+  '4. BIM1-MZN 135746263',
+  '5. BIM2-MZN 303233835 12/XX',
+];
+
+// ---------------------------------------
+const ND = getND();
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3;
+var d0p5 = 0.5;
+var d1 = 1;
+var d2 = 2;
+var d1p5 = 1.5;
+var d3 = 3;
+var d5 = 5; // Orginal é d5 para abrir Numbers do Processo
+var d7 = 7;
+var d10 = 10;
+var d13 = 13;
+
+// ---------------------------------------------------------
+
+const nowFormatted = formatDateV3(new Date());
+
+const {
+  components: {
+    year: { Y4: yearY4, Y4N: yearY4N },
+    month: {
+      M1: monthM1,
+      M2: monthM2, //
+      long: monthLong,
+      short: monthShort,
+    },
+    day: { D2: dayD2 },
+  },
+  formats: {
+    dateY4M2D2, //
+    dateY4M2D2__H2M2S2,
+    dateDotY4M2D2__H2M2S2,
+    dateDotY4M2D2,
+    yearY4M2,
+  },
+} = nowFormatted;
+
+const yearY4NMinus1 = yearY4N - 1;
+
+// ---------------------------------------------------------
+
+var sheetTaxSummaryName = 'IMPOSTO_RESUMO';
+var tableVatSummaryName = 'tableVatSummary';
+var tableNotes_vatAndOtherTaxesName = 'tableNotes_vatAndOtherTaxes';
+
+var financesPathStr = pathLib.getFinancesPathStr();
+
+var vatProcessFilePathStr = `${financesPathStr}/F0000 PROCESSO/P20XX.numbers`;
+var vatProcessFilePathStrPreviousYear = `${financesPathStr}/F${yearY4NMinus1}/P${yearY4NMinus1}.numbers`;
+var taxPathStr = pathLib.getTaxPathStr();
+
+var option = cfl2Str(
+  ['1. Finanças P' + yearY4 + ' — Info Anual', '---------------', '2. Create - NumbersIRPS', `3. Create - P${yearY4NMinus1}`],
+  'Opção',
+  '2. Create - NumbersIRPS'
+);
+
+if (option == '1. Finanças P' + yearY4 + ' — Info Anual') {
+  numbersApp.activate();
+
+  const docNumProcessPreviousYear = numbersApp.open(Path(vatProcessFilePathStrPreviousYear));
+
+  const previousYearSheetVatDecember = docNumProcessPreviousYear.sheets[`IVA${yearY4NMinus1}12`];
+  const previousYearTableVatDecember = previousYearSheetVatDecember.tables[0];
+
+  const previousYearTaxRecoverAmount = previousYearTableVatDecember.cells['Z59'].value();
+
+  var docNumProcessXXXX = numbersApp.open(Path(vatProcessFilePathStr));
+  // var docNumProcessXXXX = numbersApp.documents[0] // 🔴🔴🔴 FOR TESTING CURRENT DOCNUM
+  delay(d3);
+
+  // --------------- < BASE & VERSÕES >
+  var tableSummary = docNumProcessXXXX.sheets['< INFO >'].tables['RESUMO'];
+
+  var yyyyTrack = tableSummary.cells['C2'].value();
+
+  var vatProcessFileName = vatProcessFilePathStr.split('/').slice(-1).toString().replace('.numbers', '');
+
+  alert(`Valor de IVA${yearY4NMinus1}12\na recupeperar é\n${formatNumber(previousYearTaxRecoverAmount)}.`, ``);
+
+  var displayInfoExtra = `, tem certeza que quer "actualizar a info"?❗️`;
+
+  if (yyyyTrack.toString() == yearY4) {
+    var displayInfo = `Este documento (${vatProcessFileName}) já foi actualizado (${yearY4})`;
+  } else {
+    var displayInfo = `Este documento (${vatProcessFileName}) tem conteúdo de ${yyyyTrack}`;
+  }
+
+  var alertAnswer = currentApp.displayAlert(`${displayInfo}${displayInfoExtra}`, {
+    message: ``,
+    buttons: ['Cancel', 'OK'],
+    defaultButton: 2,
+    cancelButton: 1,
+  }); // , as: "critical"
+
+  if (alertAnswer.buttonReturned == 'OK') {
+    numbersApp.activate();
+
+    // --------------- UPDATE SHEETS NAMES TO CURRENT YEAR
+
+    var vatSheets = docNumProcessXXXX.sheets();
+
+    for (var i = 0; i < vatSheets.length; i++) {
+      var sheet = vatSheets[i];
+      var sheetName = sheet.name();
+
+      var match = sheetName.match(/SALÁRIO\d{4}|IRPS\d{4}|IVA\d{4}/);
+
+      if (match) {
+        sheet.name = sheetName.replace(/\d{4}/, yearY4);
+      }
+    }
+
+    delay(d0p3);
+
+    var procYearInText = getMoneyInText(yearY4).toLowerCase().replace(', ', ' e ').replace(' meticais', '');
+
+    tableSummary.cells['C2'].value = yearY4;
+    tableSummary.cells['B3'].value = procYearInText;
+
+    // ---------------
+    var sheetTaxSummary = docNumProcessXXXX.sheets[sheetTaxSummaryName];
+    // --------------- IVARESUMO
+
+    var tableVatSummary = sheetTaxSummary.tables[tableVatSummaryName];
+
+    tableVatSummary.cells['L8'].value = previousYearTaxRecoverAmount;
+
+    // for (var i = 9; i <= 20; i++) {
+    for (var i = 11; i <= 22; i++) {
+      var yyyyMm = tableVatSummary.cells['B' + i].value().toString();
+      tableVatSummary.cells['C' + i].value = 'CashBasis';
+      tableVatSummary.cells['D' + i].value = getTaxPlaceHolderDate(yyyyMm);
+      tableVatSummary.cells['I' + i].value = 0.0;
+      tableVatSummary.cells['J' + i].value = 0.0;
+    }
+
+    // ----- Delete InvoiceNumbers, not TESTED YET
+    tableVatSummary;
+
+    iWorkLib.selectionRange(tableVatSummary, 'P11:P22');
+    systemLib.pressDelete(1);
+
+    // --------------- TABLEIVAIRPSINSSNOTAS
+    var tableNotes_vatAndOtherTaxes = sheetTaxSummary.tables[tableNotes_vatAndOtherTaxesName];
+
+    iWorkLib.selectionRange(tableNotes_vatAndOtherTaxes, 'C2:G13');
+    systemLib.pressDelete(1);
+
+    for (var i = 2; i <= 13; i++) {
+      var yyyyMm = tableNotes_vatAndOtherTaxes.cells['B' + i].value().toString();
+      var taxPlaceHolderDate = getTaxPlaceHolderDate(yyyyMm);
+
+      tableNotes_vatAndOtherTaxes.cells['D' + i].value = taxPlaceHolderDate;
+      tableNotes_vatAndOtherTaxes.cells['F' + i].value = taxPlaceHolderDate;
+    }
+
+    /* // DEL IN FUTURE THIS FOLDER MUST BE CREATED MANUALY SO THAT NUMBER PXXXX OF PREVIOUS YEAR IS USED ABOVE TO) READ "previousYearTaxRecoverAmount"
+
+
+		// --------------- CREATE Fyyyy FOLDER & AND ALIAS "IVA2021 (IMPOSTO20XX)"
+
+		try { // Descarta já tiver a pasta financeYearFolder
+
+			var financeYearFolder = finderApp.make({new: "folder", at: Path(vatProcessFilePathStr), withProperties: {name: "F" + yearY4 }});
+
+			finderApp.make({new: "aliasFile", to: Path(taxPathStr), at: financeYearFolder, withProperties: {name: "IVA" + yearY4 + " (IMPOSTO20XX)" }});
+
+			finderApp.reveal(financeYearFolder)
+
+		} catch {
+			alert(`Parece que a pasta F${yearY4} já existe❗️`, ``)
+
+		}
+		*/
+
+    docNumProcessXXXX.save();
+  }
+} else if (option == '2. Create - NumbersIRPS') {
+  var docNumProcessXXXX = numbersApp.documents[0];
+
+  var sheetTaxSummary = docNumProcessXXXX.sheets[sheetTaxSummaryName];
+
+  // var irpsSheets = docNumProcessXXXX.sheets().filter(sheet => sheet.name().includes("IRPS"))
+  var irpsSheets = docNumProcessXXXX.sheets().filter(sheet => sheet.name().includes('IRPS') && !isNaN(sheet.name()[4]));
+
+  var mmForTax = monthM1 - 1;
+
+  if (mmForTax == 0) {
+    var mmForTax = 12;
+  }
+
+  const monthM2 = addZero(mmForTax);
+
+  var irpsSheetsNames = irpsSheets.map(sheet => sheet.name());
+  var irpsSheet = irpsSheets.filter(sheet => sheet.name().slice(8, 10) == monthM2)[0];
+  var irpsSheetName = irpsSheet.name();
+
+  var irpsAmoutStr = irpsSheet.tables[0].cells['AP23'].value();
+  var irpsAmoutStr = irpsAmoutStr.replace(/ /g, '');
+
+  docNumProcessXXXX.activeSheet.set(irpsSheet);
+
+  var irpsDocName = `${irpsSheetName} ${ND} ${dateY4M2D2} ${ND} ${formatNumber(irpsAmoutStr)}`;
+
+  var sheetNamesOptions = [irpsSheetName + ' | ' + irpsDocName];
+
+  for (var i = 0; i < sheetNamesOptions.length; i++) {
+    var sheetNamesOptionItems = sheetNamesOptions[i].split(' | ');
+    var sheetName = sheetNamesOptionItems[0];
+
+    iWorkLib.numbersSaveAsPDF(
+      numbersAppControllerP,
+      docNumProcessXXXX,
+      i,
+      sheetNamesOptions,
+      sheetName,
+      taxPathStr,
+      sheetNamesOptionItems[1]
+    );
+  }
+
+  var tableNotes_vatAndOtherTaxes = sheetTaxSummary.tables[tableNotes_vatAndOtherTaxesName];
+
+  paymentLib.writeInssIrpsPayDate(tableNotes_vatAndOtherTaxes, irpsSheetName, dateDotY4M2D2, 'irps');
+} else if (option == `3. Create - P${yearY4NMinus1}`) {
+  // TRIAL BALANCE / BALANCETE
+
+  // Lista de itens com identificadores de contas a serem removidas
+  var items2BeReplaced = [
+    'Matérias-primas (Consumíveis ccc)',
+    'Matérias auxiliares* (Cozinha CZ)',
+    'Equipamento básico (eee)',
+    'Mobiliário e equipamento administrativo e social (mmm)',
+    'Despesas de desenvolvimento (ddd)',
+    'Remunerações dos trabalhadores (rdt)',
+    'Encargos sobre remunerarções (IRPS)',
+    'Lubrificantes (Óleo - ooo)',
+    'Material de manutenção e reparação - Ligeiros (rl)',
+    'Material de manutenção e reparação (Pesados)',
+    'Gasóleo - Viaturas ligeiras de Passageiros (lll)',
+    'Comunicações (cm)',
+    'Despesas de representação (rrr)',
+    'Contencioso e notariado (nn)',
+    'Seguros (sss)',
+    'Comissões Bancárias (cb)',
+    'Outros fornecimentos e serviços (ofs)',
+  ];
+
+  safariApp.activate();
+  delay(d0p3);
+  openURL('https://reporting.xero.com/!CvMGh/v1/Run/4182647');
+  delay(d13); // 7
+
+  /*
+  // Download Excel
+  superSafari('click', 'class', 'xui-pickitem--text', 6, 0); // Era 12
+  delay(d13);
+
+  finderApp.activate();
+  delay(d1p5);
+  var filePathObj = finderApp.selection()[0];
+  var filePathString = decodeURI(filePathObj.url()).slice(7);
+  delay(d1p5);
+
+  numbersApp.activate();
+  var docNumProcessDownloaded = numbersApp.open(Path(filePathString));
+  delay(d7);
+  finderApp.delete(filePathObj);
+
+  var tableTrialBalanceDownloaded = docNumProcessDownloaded.sheets[0].tables[0];
+  var tableTrialBalanceDownloadedL = tableTrialBalanceDownloaded.rowCount();
+
+  tableTrialBalanceDownloaded.selectionRange = tableTrialBalanceDownloaded.ranges['A6:F' + (tableTrialBalanceDownloadedL - 1)]; // Era "A7:F"
+  delay(d0p3);
+
+  doMenu('Numbers', 'Edit', 'Copy');
+  delay(d0p3);
+
+  // ------------------
+[]
+  docNumProcessDownloaded.close();
+  delay(d0p3);
+  */
+
+  const trialBalanceCsv = safariLib.getTableCsv(0);
+
+  let trialBalanceCsvRows = trialBalanceCsv.split('\n'); // Split CSV data into rows
+  trialBalanceCsvRows.splice(0, 1); // Remove the first
+  trialBalanceCsvRows.splice(-1, 1); // Remove the last
+
+  const trialBalanceCsvCleaned = trialBalanceCsvRows.join('\n');
+  const trialBalanceCsvRowsL = trialBalanceCsvRows.length;
+  const numOfRowsToAdd = trialBalanceCsvRowsL - 2; // 2 existing rows in table
+
+  setClipboard(trialBalanceCsvCleaned);
+
+  var docNumYyyyMinus1 = numbersApp.open(Path(financesPathStr + '/F' + yearY4NMinus1 + '/P' + yearY4NMinus1 + '.numbers'));
+
+  var sheetInfoYyyyMinus1 = docNumYyyyMinus1.sheets['< INFO >'];
+
+  var tableSummaryYyyyMinus1 = sheetInfoYyyyMinus1.tables['RESUMO'];
+  var sheetTrialBalanceYyyyMinus1 = docNumYyyyMinus1.sheets['BALANCETE'];
+  var tableTrialBalanceYyyyMinus1 = sheetTrialBalanceYyyyMinus1.tables[0];
+
+  var tableTrialBalanceYyyyMinus1L = tableTrialBalanceYyyyMinus1.rowCount(); // - 10
+
+  // Actualização do ano de comparação // 31 Dez yearY4 - 2
+  tableTrialBalanceYyyyMinus1.cells['F6'].value = '31 Dez ' + (yearY4 - 2);
+
+  delay(d0p5);
+  doMenu('Numbers', 'Table', 'Unhide All Columns');
+  delay(d0p5);
+
+  // Select and Delete some Rows
+  tableTrialBalanceYyyyMinus1.selectionRange = tableTrialBalanceYyyyMinus1.ranges['A9:F' + (tableTrialBalanceYyyyMinus1L - 1)];
+  delay(d1);
+
+  doMenu('Numbers', 'Table', 'Delete Rows');
+  delay(d1);
+
+  iWorkLib.addRows(tableTrialBalanceYyyyMinus1, numOfRowsToAdd, 7, 'addRowBelow');
+
+  delay(d0p5);
+  tableTrialBalanceYyyyMinus1.selectionRange = tableTrialBalanceYyyyMinus1.ranges['A7:A7'];
+  delay(d1);
+  // doMenu("Numbers", "Edit", "Paste")
+  doMenu('Numbers', 'Edit', 'Paste and Match Style');
+
+  tableTrialBalanceYyyyMinus1.columns['2'].textColor = 'gray';
+  delay(d1);
+
+  var tableTrialBalanceYyyyMinus1 = docNumYyyyMinus1.sheets['BALANCETE'].tables[0];
+
+  // ------------------------------------------ BALANCETE
+
+  var sheetTrialBalanceProcessNameYyyyMinus1 = sheetTrialBalanceYyyyMinus1.name();
+
+  //var tableTrialBalanceYyyyMinus1 = sheetTrialBalanceYyyyMinus1.tables[0]
+  var tableTrialBalanceProcessNameYyyyMinus1 = tableTrialBalanceYyyyMinus1.name();
+
+  var tableInfoTrialBalanceYyyyMinus1 = sheetInfoYyyyMinus1.tables['INFO-BALANCETE'];
+  // }
+
+  var tableTrialBalanceYyyyMinus1L = tableTrialBalanceYyyyMinus1.rowCount() - 1; // Menos o Total
+  var items2BeReplacedL = items2BeReplaced.length;
+
+  var [group1InfoDescs, group1InfoSum] = [[], '']; // BANK SUMMARY
+  var [group21InfoDescs, group21InfoSum] = [[], '']; // COMPRAS
+  var [group32InfoDescs, group32InfoSum] = [[], '']; // ACTIVOS TANGÍVEIS
+  var [group331InfoDescs, group331InfoSum] = [[], '']; // DESPESAS DE DESENVOLVIMENTO
+  var [group3421InfoDescs, group3421InfoSum] = [[], '']; // COMPRA DE TERRENOS
+  var [group4413InfoDescs, group4413InfoSum] = [[], '']; // PAGAMENTO ESPECIAL POR CONTA
+  var [group4433InfoDescs, group4433InfoSum] = [[], '']; // IVA LIQUIDADO
+  var [group4437InfoDescs, group4437InfoSum] = [[], '']; // IVA A PAGAR
+  var [group449InfoDescs, group449InfoSum] = [[], '']; // CONTRIBUITES PARA O INSS
+  var [group459InfoDescs, group459InfoSum] = [[], '']; // DEVEDORES DIVERSOS
+  var [group51InfoDescs, group51InfoSum] = [[], '']; // CAPITAL
+  var [group62InfoDescs, group62InfoSum] = [[], '']; // GASTOS COM PESSOAL
+  var [group63InfoDescs, group63InfoSum] = [[], '']; // FORNECIMENTOS E SERVIÇOS DE TERCEIROS
+  var [group68InfoDescs, group68InfoSum] = [[], '']; // OUTROS GASTOS E PERDAS OPERACIONAIS
+  var [group69InfoDescs, group69InfoSum] = [[], '']; // GASTOS E PERDAS FINANCEIROS
+  var [group72InfoDescs, group72InfoSum] = [[], '']; // PRESTAÇÃO DE SERVIÇOS
+
+  // ZZ5 EMPRESTIMO & HISTORICAL ADJUSTMENT
+  var [groupX04AndX06InfoDescs, groupX04AndX06InfoSum] = [[], ''];
+
+  // ----- CASH INFO FOR REPORT
+
+  var cashBoxes = [];
+  var cashBanks = [];
+
+  //var isFoundFieselSmallPassengerVehicles = false
+  //var isFounRepresentationExpenses = false
+
+  for (var i = 0; i < items2BeReplacedL; i++) {
+    var item = items2BeReplaced[i];
+
+    try {
+      var matched = item.match(/\s\(.*/);
+
+      for (var j = 7; j < tableTrialBalanceYyyyMinus1L; j++) {
+        var itemNum = tableTrialBalanceYyyyMinus1.cells['A' + j].value();
+        var itemDesc = tableTrialBalanceYyyyMinus1.cells['B' + j].value();
+        //var itemAmount = tableTrialBalanceYyyyMinus1.cells["D" + j].value()
+
+        if (itemDesc.includes(matched)) {
+          tableTrialBalanceYyyyMinus1.cells['B' + j].value = item.replace(matched, '');
+        }
+
+        if (i == items2BeReplacedL - 1) {
+          var itemAmount = tableTrialBalanceYyyyMinus1.cells['D' + j].value();
+
+          if (itemAmount == null) {
+            var itemAmount = tableTrialBalanceYyyyMinus1.cells['E' + j].value();
+          }
+
+          var itemNumAndDescAndAmount = itemNum + ' ' + itemDesc + ' _ ' + formatNumber(itemAmount);
+
+          // --------------- VALORES PARA ITENS FIXOS EM INFO-BALANCETE
+
+          // ----- CURRENT YEAR AND PREVIOUS
+
+          var basicEquipmentStr = 'Equipamento básico';
+          var administrativeAndSocialFurnitureAndEquimentStr = 'Mobiliário e equipamento administrativo e social';
+          var transportEquipmentStr = 'Equipamento de transporte';
+          var otherTangibleAssetsStr = 'Outros activos tangíveis';
+          var developmentExpensesStr = 'Despesas de desenvolvimento';
+          var purchaseOfLandStr = 'Compra de Terrenos (3.4.2.1)';
+
+          if (itemDesc == basicEquipmentStr) {
+            var basicEquipmentYyyyMinus1 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            var basicEquipmentYyyyMinus2 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::F' + j;
+          }
+
+          if (itemDesc == administrativeAndSocialFurnitureAndEquimentStr) {
+            var administrativeAndSocialFurnitureAndEquimentYyyyMinus1 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            var administrativeAndSocialFurnitureAndEquimentYyyyMinus2 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::F' + j;
+          }
+
+          if (itemDesc == transportEquipmentStr) {
+            var transportEquipmentYyyyMinus1 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            var transportEquipmentYyyyMinus2 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::F' + j;
+          }
+
+          if (itemDesc == otherTangibleAssetsStr) {
+            var otherTangibleAssetsYyyyMinus1 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            var otherTangibleAssetsYyyyMinus2 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::F' + j;
+          }
+
+          if (itemDesc == developmentExpensesStr) {
+            var developmentExpensesYyyyMinus1 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            var developmentExpensesYyyyMinus2 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::F' + j;
+          }
+
+          if (itemDesc == purchaseOfLandStr) {
+            var purchaseOfLandYyyyMinus1 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            var purchaseOfLandYyyyMinus2 =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::F' + j;
+          }
+
+          // ----- CURRENT YEAR
+
+          var paymentByAccountStr = 'Pagamentos por conta';
+          var specialPaymentByAccountStr = 'Pagamento especial por conta';
+
+          var dieselSmallPassengerVehiclesStr = 'Gasóleo - Viaturas ligeiras de Passageiros';
+          var representationExpensesStr = 'Despesas de representação';
+
+          if (itemDesc == paymentByAccountStr) {
+            var paymentByAccount =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+          }
+
+          if (itemDesc == specialPaymentByAccountStr) {
+            var specialPaymentByAccount =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+          }
+
+          if (itemDesc == dieselSmallPassengerVehiclesStr) {
+            var dieselSmallPassengerVehicles =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+          }
+
+          if (itemDesc == representationExpensesStr) {
+            var representationExpenses =
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+          }
+
+          // ---------------
+
+          var itemIndexBase0 = j - 1;
+
+          if (itemNum.slice(0, 1) == '1') {
+            // BANK SUMMARY
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'red';
+
+            group1InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group1InfoDescs.push(itemNumAndDescAndAmount);
+
+            if (itemNum.slice(0, 3) == '1.1') {
+              cashBoxes.push([
+                'Caixa ' + itemNum,
+                sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j,
+              ]);
+            } else if (itemNum.slice(0, 3) == '1.2') {
+              cashBanks.push([
+                'Banco ' + itemNum,
+                sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j,
+              ]);
+            }
+          }
+
+          if (itemNum.slice(0, 3) == '2.1') {
+            // COMPRAS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'blue';
+
+            group21InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group21InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '3.2') {
+            // ACTIVOS TANGÍVEIS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'green';
+
+            group32InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group32InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 5) == '3.3.1') {
+            // DESPESAS DE DESENVOLVIMENTO
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'purple';
+
+            group331InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group331InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 7) == '3.4.2.1') {
+            // COMPRA DE TERRENOS
+            //tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = "green"
+
+            group3421InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group3421InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 7) == '4.4.1.3') {
+            // PAGAMENTO ESPECIAL POR CONTA
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'purple';
+
+            group4413InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group4413InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 7) == '4.4.3.5') {
+            // IVA APURAMENTO
+            //tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = "green"
+
+            group4433InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::E' + j;
+
+            group4433InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 7) == '4.4.3.7') {
+            // IVA A PAGAR
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'red';
+
+            group4437InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group4437InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 5) == '4.4.9') {
+            // CONTRIBUITES PARA O INSS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'purple';
+
+            group449InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group449InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 5) == '4.5.9') {
+            // DEVEDORES DIVERSOS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'blue';
+
+            group459InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::E' + j;
+
+            group459InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '5.1') {
+            // CAPITAL
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'gray';
+
+            group51InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::E' + j;
+
+            group51InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '6.2') {
+            // GASTOS COM PESSOAL
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'blue';
+
+            group62InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group62InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '6.3') {
+            // FORNECIMENTOS E SERVIÇOS DE TERCEIROS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'orange';
+
+            group63InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group63InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '6.8') {
+            // OUTROS GASTOS E PERDAS OPERACIONAI
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'red';
+
+            group68InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group68InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '6.9') {
+            // GASTOS E PERDAS FINANCEIROS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'red';
+
+            group69InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+
+            group69InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          if (itemNum.slice(0, 3) == '7.2') {
+            // PRESTAÇÃO DE SERVIÇOS
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'magenta';
+
+            group72InfoSum +=
+              '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::E' + j;
+
+            group72InfoDescs.push(itemNumAndDescAndAmount);
+          }
+
+          // ZZ5 EMPRESTIMO & HISTORICAL ADJUSTMENT
+          if (itemNum.slice(0, 3) == 'X04' || itemNum.slice(0, 3) == 'X06') {
+            tableTrialBalanceYyyyMinus1.rows[itemIndexBase0].textColor = 'blue';
+
+            //groupX04AndX06InfoSum += "+" + sheetTrialBalanceProcessNameYyyyMinus1 + "::" + tableTrialBalanceProcessNameYyyyMinus1 + "::E" + j
+
+            // 20220529
+            // SE ZZ5 EMPRESTIMO TIVER DÉBITO, O QUE IMPLICA QUE ALGUÊM ESTÁ A DEVER A FIMRA, DEVER SER SUBTRAÇÃO E VALOR DE COLUNA "D" E NÃO "E"
+            // CORRIGIMOS COM IF ABAIXO
+
+            if (itemNum.slice(0, 3) == 'X06') {
+              // HISTORICAL ADJUSTMENT
+              groupX04AndX06InfoSum +=
+                '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::E' + j;
+            } else if (itemNum.slice(0, 3) == 'X04') {
+              // ZZ5 EMPRESTIMO
+
+              var itemAmountDebt = tableTrialBalanceYyyyMinus1.cells['D' + j].value();
+
+              if (itemAmountDebt > 0) {
+                groupX04AndX06InfoSum +=
+                  '-' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::D' + j;
+              } else {
+                groupX04AndX06InfoSum +=
+                  '+' + sheetTrialBalanceProcessNameYyyyMinus1 + '::' + tableTrialBalanceProcessNameYyyyMinus1 + '::E' + j;
+              }
+            }
+
+            groupX04AndX06InfoDescs.push(itemNumAndDescAndAmount);
+          }
+        }
+      }
+    } catch {
+      //
+    }
+  }
+
+  // HIDE COLUMN C // ACCOUNTS TYPE
+  delay(d0p5);
+  tableTrialBalanceYyyyMinus1.selectionRange = tableTrialBalanceYyyyMinus1.ranges['C1:C' + tableTrialBalanceYyyyMinus1L];
+  delay(d0p5);
+  doMenu('Numbers', 'Table', 'Hide Column');
+  delay(d0p5);
+
+  // --------------- VALORES PARA ITENS FIXOS EM INFO-BALANCETE
+
+  // if (option == 'Processo P' + yearY4NMinus1) {
+  // ----- CURRENT YEAR AND PREVIOUS
+
+  fixedItemAmountWrite(10, basicEquipmentYyyyMinus1, basicEquipmentStr);
+
+  fixedItemAmountWrite(10, basicEquipmentYyyyMinus2, basicEquipmentStr);
+
+  fixedItemAmountWrite(11, administrativeAndSocialFurnitureAndEquimentYyyyMinus1, administrativeAndSocialFurnitureAndEquimentStr);
+
+  fixedItemAmountWrite(11, administrativeAndSocialFurnitureAndEquimentYyyyMinus2, administrativeAndSocialFurnitureAndEquimentStr);
+
+  fixedItemAmountWrite(12, transportEquipmentYyyyMinus1, transportEquipmentStr);
+
+  fixedItemAmountWrite(12, transportEquipmentYyyyMinus2, transportEquipmentStr);
+
+  fixedItemAmountWrite(13, otherTangibleAssetsYyyyMinus1, otherTangibleAssetsStr);
+
+  fixedItemAmountWrite(13, otherTangibleAssetsYyyyMinus2, otherTangibleAssetsStr);
+
+  fixedItemAmountWrite(14, developmentExpensesYyyyMinus1, developmentExpensesStr);
+
+  fixedItemAmountWrite(14, developmentExpensesYyyyMinus2, developmentExpensesStr);
+
+  fixedItemAmountWrite(15, purchaseOfLandYyyyMinus1, purchaseOfLandStr);
+
+  fixedItemAmountWrite(15, purchaseOfLandYyyyMinus2, purchaseOfLandStr);
+
+  // ----- CURRENT YEAR
+
+  fixedItemAmountWrite(30, paymentByAccount, paymentByAccountStr);
+
+  fixedItemAmountWrite(31, specialPaymentByAccount, specialPaymentByAccountStr);
+
+  fixedItemAmountWrite(32, dieselSmallPassengerVehicles, dieselSmallPassengerVehiclesStr);
+
+  fixedItemAmountWrite(33, representationExpenses, representationExpensesStr);
+
+  // ---------------
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 60, group1InfoDescs, group1InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 61, group21InfoDescs, group21InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 62, group32InfoDescs, group32InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 63, group331InfoDescs, group331InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 64, group3421InfoDescs, group3421InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 65, group4413InfoDescs, group4413InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 66, group4433InfoDescs, group4433InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 67, group4437InfoDescs, group4437InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 68, group449InfoDescs, group449InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 69, group459InfoDescs, group459InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 70, group51InfoDescs, group51InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 71, group62InfoDescs, group62InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 72, group63InfoDescs, group63InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 73, group68InfoDescs, group68InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 74, group69InfoDescs, group69InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 75, group72InfoDescs, group72InfoSum);
+  processtableInfoTrialBalance(tableInfoTrialBalanceYyyyMinus1, 76, groupX04AndX06InfoDescs, groupX04AndX06InfoSum);
+
+  var yyyyMinus2 = yearY4NMinus1 - 1;
+
+  var docNumYyyyMinus2 = numbersApp.open(Path(financesPathStr + '/F' + yyyyMinus2 + '/P' + yyyyMinus2 + '.numbers'));
+  delay(d3);
+
+  try {
+    doMenu('Numbers', 'Window', 'P' + yearY4NMinus1);
+  } catch (error) {
+    doMenu('Numbers', 'Window', `P${yearY4NMinus1}.numbers`);
+  }
+
+  // ------------------------------------------ AMORTIZAÇÕES YyyyMinus2
+
+  var tableAmortizationYyyyMinus2 = docNumYyyyMinus2.sheets['AMORTIZAÇÕES'].tables[0];
+  var tableInfoAmortizationYyyyMinus1 = sheetInfoYyyyMinus1.tables['INFO-AMORTIZAÇÕES'];
+
+  tableInfoAmortizationYyyyMinus1.cells['B11'].value = tableAmortizationYyyyMinus2.cells['L11'].value();
+  tableInfoAmortizationYyyyMinus1.cells['B16'].value = tableAmortizationYyyyMinus2.cells['L16'].value();
+  tableInfoAmortizationYyyyMinus1.cells['B19'].value = tableAmortizationYyyyMinus2.cells['L19'].value();
+  tableInfoAmortizationYyyyMinus1.cells['B22'].value = tableAmortizationYyyyMinus2.cells['L22'].value();
+  tableInfoAmortizationYyyyMinus1.cells['B28'].value = tableAmortizationYyyyMinus2.cells['L28'].value();
+
+  // ------------------------------------------ MDR YyyyMinus2
+
+  var tableMDRYyyyMinus2 = docNumYyyyMinus2.sheets['MDR'].tables[0];
+  var tableInfoMDRYyyyMinus1 = sheetInfoYyyyMinus1.tables['INFO-MDR'];
+
+  tableInfoMDRYyyyMinus1.cells['B9'].value = tableMDRYyyyMinus2.cells['C9'].value();
+  tableInfoMDRYyyyMinus1.cells['B12'].value = tableMDRYyyyMinus2.cells['C12'].value();
+  tableInfoMDRYyyyMinus1.cells['B13'].value = tableMDRYyyyMinus2.cells['C13'].value();
+  tableInfoMDRYyyyMinus1.cells['B14'].value = tableMDRYyyyMinus2.cells['C14'].value();
+  tableInfoMDRYyyyMinus1.cells['B15'].value = tableMDRYyyyMinus2.cells['C15'].value();
+  tableInfoMDRYyyyMinus1.cells['B19'].value = tableMDRYyyyMinus2.cells['C19'].value();
+  tableInfoMDRYyyyMinus1.cells['B23'].value = tableMDRYyyyMinus2.cells['C23'].value();
+
+  // ------------------------------------------ BALANÇO YyyyMinus2
+
+  var tableBalanceYyyyMinus2 = docNumYyyyMinus2.sheets['BALANÇO'].tables[0];
+  var tableInfoBalanceYyyyMinus1 = sheetInfoYyyyMinus1.tables['INFO-BALANÇO'];
+
+  delay(d0p3); // ÚTIL PARA NÃO FALHAR O PREENCHIMENTO????
+
+  tableInfoBalanceYyyyMinus1.cells['B11'].value = tableBalanceYyyyMinus2.cells['C11'].value();
+  tableInfoBalanceYyyyMinus1.cells['B12'].value = tableBalanceYyyyMinus2.cells['C12'].value();
+  tableInfoBalanceYyyyMinus1.cells['B13'].value = tableBalanceYyyyMinus2.cells['C13'].value();
+  tableInfoBalanceYyyyMinus1.cells['B14'].value = tableBalanceYyyyMinus2.cells['C14'].value();
+  tableInfoBalanceYyyyMinus1.cells['B15'].value = tableBalanceYyyyMinus2.cells['C15'].value();
+  tableInfoBalanceYyyyMinus1.cells['B16'].value = tableBalanceYyyyMinus2.cells['C16'].value();
+
+  tableInfoBalanceYyyyMinus1.cells['B18'].value = tableBalanceYyyyMinus2.cells['C18'].value();
+  tableInfoBalanceYyyyMinus1.cells['B19'].value = tableBalanceYyyyMinus2.cells['C19'].value();
+  tableInfoBalanceYyyyMinus1.cells['B20'].value = tableBalanceYyyyMinus2.cells['C20'].value();
+  tableInfoBalanceYyyyMinus1.cells['B21'].value = tableBalanceYyyyMinus2.cells['C21'].value();
+  tableInfoBalanceYyyyMinus1.cells['B22'].value = tableBalanceYyyyMinus2.cells['C22'].value();
+  tableInfoBalanceYyyyMinus1.cells['B23'].value = tableBalanceYyyyMinus2.cells['C23'].value();
+
+  tableInfoBalanceYyyyMinus1.cells['B27'].value = tableBalanceYyyyMinus2.cells['C27'].value();
+  tableInfoBalanceYyyyMinus1.cells['B28'].value = tableBalanceYyyyMinus2.cells['C28'].value();
+  tableInfoBalanceYyyyMinus1.cells['B29'].value = tableBalanceYyyyMinus2.cells['C29'].value();
+
+  tableInfoBalanceYyyyMinus1.cells['B38'].value = tableBalanceYyyyMinus2.cells['C38'].value();
+  tableInfoBalanceYyyyMinus1.cells['B39'].value = tableBalanceYyyyMinus2.cells['C39'].value();
+  tableInfoBalanceYyyyMinus1.cells['B40'].value = tableBalanceYyyyMinus2.cells['C40'].value();
+  tableInfoBalanceYyyyMinus1.cells['B41'].value = tableBalanceYyyyMinus2.cells['C41'].value();
+
+  var sheetInfoYyyyMinus2 = docNumYyyyMinus2.sheets['< INFO >'];
+
+  var tableSummaryYyyyMinus2 = sheetInfoYyyyMinus2.tables['RESUMO'];
+
+  var tableInfoTrialBalanceYyyyMinus2 = sheetInfoYyyyMinus2.tables['INFO-BALANCETE'];
+
+  // ------------------------------------------ resultTaxYyyyMinus2
+
+  // var resultTaxYyyyMinus2 = tableInfoTrialBalanceYyyyMinus2.cells["C44"].value()
+  // var colectableMaterialYyyyMinus2 = tableInfoTrialBalanceYyyyMinus2.cells["C45"].value()
+
+  var resultTaxYyyyMinus2 = tableInfoTrialBalanceYyyyMinus2.cells['C54'].value();
+  var colectableMaterialYyyyMinus2 = tableInfoTrialBalanceYyyyMinus2.cells['C55'].value();
+
+  //
+  if (colectableMaterialYyyyMinus2 > 0) {
+    tableInfoTrialBalanceYyyyMinus1.cells['C48'].value = 0;
+    tableInfoTrialBalanceYyyyMinus1.cells['C49'].value = 0;
+    tableInfoTrialBalanceYyyyMinus1.cells['C50'].value = 0;
+    tableInfoTrialBalanceYyyyMinus1.cells['C51'].value = 0;
+    tableInfoTrialBalanceYyyyMinus1.cells['C52'].value = 0;
+  } else if (colectableMaterialYyyyMinus2 < 0) {
+    tableInfoTrialBalanceYyyyMinus1.cells['C48'].value = tableInfoTrialBalanceYyyyMinus2.cells['C49'].value();
+
+    tableInfoTrialBalanceYyyyMinus1.cells['C49'].value = tableInfoTrialBalanceYyyyMinus2.cells['C50'].value();
+
+    tableInfoTrialBalanceYyyyMinus1.cells['C50'].value = tableInfoTrialBalanceYyyyMinus2.cells['C51'].value();
+
+    tableInfoTrialBalanceYyyyMinus1.cells['C51'].value = tableInfoTrialBalanceYyyyMinus2.cells['C52'].value();
+
+    /*
+
+			if (resultTaxYyyyMinus2 > 0) {
+				currentApp.displayAlert(`Maior2`)
+
+				tableInfoTrialBalanceYyyyMinus1.cells["C12"].value = ""
+
+
+			} else if (resultTaxYyyyMinus2 < 0) {
+
+				currentApp.displayAlert(`Menor2`)
+
+				tableInfoTrialBalanceYyyyMinus1.cells["C12"].value = resultTaxYyyyMinus2
+			}
+			*/
+
+    // ELIMINEI O IF ACIMA, PARECE QUE TANTO FAZ SE resultTaxYyyyMinus2 positivo ou negativo deve aplicar o valor resultTaxYyyyMinus2
+
+    tableInfoTrialBalanceYyyyMinus1.cells['C52'].value = resultTaxYyyyMinus2;
+  }
+
+  // ------------------------------------------ RELATÓRIO
+
+  var tableReport = docNumYyyyMinus1.sheets['RELATÓRIO'].tables[0];
+
+  var tableReportL = tableReport.rowCount();
+
+  // --------------- DELETE CASH BOXES AND CASH BANKS EXTRAS ROWS - ONE ROW FOR EACH NECESSARY
+
+  var cashBoxesRowsCountTrack = 0;
+  var cashBanksRowsCountTrack = 0;
+
+  for (var i = 20; i < tableReportL; i++) {
+    var itemColumnA = tableReport.cells['A' + i].value();
+
+    try {
+      if (itemColumnA.includes('Caixa 1')) {
+        if (cashBoxesRowsCountTrack == 0) {
+          var cashBoxesRowNumStart = i;
+        }
+        cashBoxesRowsCountTrack += 1;
+      }
+    } catch {
+      //
+    }
+
+    try {
+      if (itemColumnA.includes('Banco 1')) {
+        if (cashBanksRowsCountTrack == 0) {
+          var cashBanksRowNumStart = i;
+        }
+        cashBanksRowsCountTrack += 1;
+      }
+    } catch {
+      //
+    }
+  }
+
+  if (cashBoxesRowsCountTrack > 1) {
+    // -1 para deixar uma fila
+    for (var i = 0; i < cashBoxesRowsCountTrack - 1; i++) {
+      tableReport.rows[cashBoxesRowNumStart].delete(); // +1 para apagar a fila depois da 1ª
+    }
+  }
+
+  if (cashBanksRowsCountTrack > 1) {
+    // FILAS APAGADAS ACIMA PARA SUBTRAIR AQUI
+    if (cashBoxesRowsCountTrack == 1) {
+      var cashBoxesRowsToMinus = 0;
+    } else if (cashBoxesRowsCountTrack > 1) {
+      var cashBoxesRowsToMinus = cashBoxesRowsCountTrack - 1;
+    }
+
+    // -1 para deixar uma fila
+    for (var i = 0; i < cashBanksRowsCountTrack - 1; i++) {
+      tableReport.rows[cashBanksRowNumStart - cashBoxesRowsToMinus].delete(); // +1 para apagar a fila depois da 1ª
+    }
+  }
+
+  // ---------------
+
+  var tableReportL = tableReport.rowCount(); // AFTER DELETED ROWS
+
+  for (var i = 20; i < tableReportL; i++) {
+    var itemColumnA = tableReport.cells['A' + i].value();
+
+    if (itemColumnA == 'Caixa 1.1.1') {
+      for (var j = 0; j < cashBoxes.length; j++) {
+        if (j == 0) {
+          var columnAStartNum = i;
+        }
+
+        if (j == cashBoxes.length - 1) {
+          var columnGEndNum = i + j;
+        }
+
+        if (j > 0) {
+          tableReport.cells['A' + (i + j - 1)].addRowBelow();
+          tableReportL += 1;
+        }
+
+        tableReport.cells['A' + (i + j)].value = cashBoxes[j][0];
+        tableReport.cells['G' + (i + j)].value = '=' + cashBoxes[j][1];
+      }
+
+      tableReport.cells['G' + (columnGEndNum + 1)].value = '=SUM(G' + columnAStartNum + ':G' + columnGEndNum + ')';
+    }
+
+    if (itemColumnA == 'Banco 1.2.1.1') {
+      for (var j = 0; j < cashBanks.length; j++) {
+        if (j == 0) {
+          var columnAStartNum = i;
+        }
+
+        if (j == cashBanks.length - 1) {
+          var columnGEndNum = i + j;
+        }
+
+        if (j > 0) {
+          tableReport.cells['A' + (i + j - 1)].addRowBelow();
+        }
+
+        tableReport.cells['A' + (i + j)].value = cashBanks[j][0];
+        tableReport.cells['G' + (i + j)].value = '=' + cashBanks[j][1];
+      }
+
+      tableReport.cells['G' + (columnGEndNum + 1)].value = '=SUM(G' + columnAStartNum + ':G' + columnGEndNum + ')';
+    }
+  }
+
+  // -------------
+
+  const resultAccountYyyyMinus1 = tableSummaryYyyyMinus1.cells['C6'].value();
+  const resultAccountYyyyMinus1Formatted = formatNumber(resultAccountYyyyMinus1);
+  const resultTaxYyyyMinus1 = tableInfoTrialBalanceYyyyMinus1.cells['C54'].value();
+
+  const resultAccountYyyyMinus1InText = getMoneyInText(Math.abs(resultAccountYyyyMinus1));
+
+  tableSummaryYyyyMinus1.cells['B6'].value = resultAccountYyyyMinus1InText;
+
+  // -------------
+
+  const resultAccountYyyyMinus2 = tableSummaryYyyyMinus2.cells['C6'].value();
+  const resultAccountYyyyMinus2Formatted = formatNumber(resultAccountYyyyMinus2);
+  // -------------
+
+  docNumYyyyMinus1.save();
+
+  const resultYyyyMinus2ResultStr = `Resultados ${yyyyMinus2}\n• Contabilístico: ${resultAccountYyyyMinus2Formatted} (${
+    resultAccountYyyyMinus2 > 0 ? `Lucro` : `Prejuízo`
+  })\n• Fiscal: ${formatNumber(resultTaxYyyyMinus2)}`;
+
+  const resultYyyyMinus1ResultStr = `Resultados ${yearY4NMinus1}\n• Contabilístico: ${resultAccountYyyyMinus1Formatted} (${
+    resultAccountYyyyMinus1 > 0 ? `Lucro` : `Prejuízo`
+  })\n• Fiscal: ${formatNumber(resultTaxYyyyMinus1)}`;
+
+  alert(`${resultYyyyMinus2ResultStr}\n\n--------\n\n${resultYyyyMinus1ResultStr}`, ``);
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function getTaxPlaceHolderDate(yyyyMm) {
+  var yyyyMmPlus1 = getYyyyMmPlus1(yyyyMm); // Prevous month to current
+  return yyyyMmPlus1.slice(0, 4) + '.' + yyyyMmPlus1.slice(4, 6) + '.XX';
+}
+
+function global5GoToFolder(filePathStr) {
+  saApp.setTheClipboardTo(filePathStr);
+  delay(d1);
+  systemEventsApp.keystroke('g', { using: ['shift down', 'command down'] });
+  delay(d0p3);
+  systemEventsApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+  systemEventsApp.keyCode(76); // Go
+  delay(d1p5);
+  systemEventsApp.keyCode(76); // OK
+}
+
+function global5DdEntryWithPreviousAndOrNext30DaysDisplay(previousOrNext, ddEntryDescription) {
+  var dateCalculeted = new Date();
+  //var dateCalculeted = new Date ("5/31/2022") // Testing
+  var currentDay = dateCalculeted.getDate(); //13
+  var numberOfNextDays = 30; // Aceita mais que 30 dias mas não está configurado para zerar se for mais que 1 mês - zero o primeiro mês apenas - 30 dias são suficientes para a necessidade actual
+
+  if (previousOrNext == `Anteriores` || previousOrNext == `Anteriores15dEPróximos15d`) {
+    if (previousOrNext == `Anteriores`) {
+      // numberOfNextDays - 1 para incluir o último dia que é o corrente/hoje
+      var daysToSubtract = 1;
+    } else if (previousOrNext == `Anteriores15dEPróximos15d`) {
+      var daysToSubtract = 16; // (1 + 15) para hoje estar no meio (será 16?)
+    }
+
+    var dateCalculeted = new Date(dateCalculeted.setDate(dateCalculeted.getDate() - (numberOfNextDays - daysToSubtract)));
+  }
+
+  var numberOfDaysInMonth = daysInMonth(dateCalculeted); // 28
+
+  var startDay = dateCalculeted.getDate(); //13
+
+  var monthGridDaysName = `${numberOfNextDays} dias (${previousOrNext})\n* dia de hoje.`;
+
+  // Cada letra inicial do dia tem "espaço" e depois "tab" para centralização
+  var next30DaysDisplay = [' M	 T	 W	 T	 F	 S	 S\n'];
+  var next7DaysCollection = [];
+
+  var startDayOfWeek = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 };
+
+  var currentWeekDay = dateCalculeted.toLocaleString('en', { weekday: 'long' }); //"Wednesday"
+
+  for (var i = 0; i < numberOfNextDays; i++) {
+    if (i == 0) {
+      var loopToWeekDay = startDayOfWeek[currentWeekDay];
+
+      for (var j = 0; j < loopToWeekDay; j++) {
+        next7DaysCollection.push('');
+      }
+    }
+
+    var day = i + startDay;
+
+    if (numberOfDaysInMonth < day) {
+      var day = (day - numberOfDaysInMonth).toString();
+    }
+
+    if (day.toString().length == 1) {
+      var day = ' ' + day;
+    }
+
+    if (
+      (previousOrNext == `Próximos` && i == 0) ||
+      (previousOrNext == `Anteriores` && i == numberOfNextDays - 1) ||
+      (previousOrNext == `Anteriores15dEPróximos15d` && day == currentDay)
+    ) {
+      day += '*';
+    }
+
+    next7DaysCollection.push(day);
+
+    if (next7DaysCollection.length == 7) {
+      next30DaysDisplay.push(next7DaysCollection.join('	') + '\n');
+
+      var next7DaysCollection = [];
+    } else if (next7DaysCollection.length + numberOfNextDays - i < 7) {
+      // O primeiro "	" pode ser "", "tab", não muda nada
+      next30DaysDisplay.push(next7DaysCollection.join('	') + '	');
+
+      var next7DaysCollection = [];
+    }
+  }
+
+  var next30DaysDisplayStr = next30DaysDisplay.join('');
+
+  return dialog(monthGridDaysName + `\n\n` + next30DaysDisplayStr + `\n\n\n${ddEntryDescription}`, currentDay);
+}
+
+function daysInMonth(anyDateInMonth) {
+  // 0 is the last day of Month
+  return new Date(anyDateInMonth.getFullYear(), anyDateInMonth.getMonth() + 1, 0).getDate();
+}
+
+function fixedItemAmountWrite(rowNumber, item, itemStr) {
+  // +BALANCETE::Table 1::D33
+
+  if (item == undefined) {
+    alert(`Este Balancete não tem "${itemStr}", o seu valor será zero (0.00)!`, ``);
+
+    // SOMENTE PARA PROCESS YEAR
+    tableInfoTrialBalanceYyyyMinus1.cells['D' + rowNumber].value = 0;
+  } else {
+    if (item.includes('::D')) {
+      tableInfoTrialBalanceYyyyMinus1.cells['D' + rowNumber].value = '=' + item;
+    } else if (item.includes('::F')) {
+      tableInfoTrialBalanceYyyyMinus1.cells['E' + rowNumber].value = '=' + item;
+    }
+  }
+}
+
+function processtableInfoTrialBalance(tableInfoTrialBalance, rowNumber, groupInfoDescs, groupInfoSum) {
+  tableInfoTrialBalance.cells['C' + rowNumber].value = groupInfoDescs.join('\n');
+
+  // tableInfoTrialBalance.cells["D" + rowNumber].value = "=" + groupInfoSum
+
+  tableInfoTrialBalance.cells['D' + rowNumber].value = groupInfoSum != '' ? '=' + groupInfoSum : 0;
+
+  // Fórmula da Apple // Acho que anotei em ouro sítio
+  // tableInfoTrialBalance.rows[rowNumber-1].height = 20 * groupInfoDescs.length - (8 * groupInfoDescs.length - 8)
+
+  if (groupInfoDescs == '') {
+    var groupInfoDescsL = 1; //groupInfoDescs.length
+  } else {
+    var groupInfoDescsL = groupInfoDescs.length;
+  }
+
+  tableInfoTrialBalance.rows[rowNumber - 1].height = 20 * groupInfoDescsL - (8 * groupInfoDescsL - 8);
+}
+
+function bankSpendAndReceive(sourceAccountOriginal, destinyAccountOriginal) {
+  if (sourceAccountOriginal == '1. CAIXA 90') {
+    selectBank = superSafari('click', 'name', 'rg0', 0, 0);
+  } else if (sourceAccountOriginal == '2. CAIXA 101') {
+    selectBank = superSafari('click', 'name', 'rg0', 1, 0);
+  } else if (sourceAccountOriginal == '3. CAIXA 102') {
+    selectBank = superSafari('click', 'name', 'rg0', 2, 0);
+  } else if (sourceAccountOriginal == '4. BIM1-MZN 135746263') {
+    selectBank = superSafari('click', 'name', 'rg0', 3, 0);
+  } else if (sourceAccountOriginal == '5. BIM2-MZN 303233835 12/XX') {
+    selectBank = superSafari('click', 'name', 'rg0', 4, 0);
+  }
+
+  return selectBank;
+}
+
+function mmStr2mmNum(monthStr) {
+  // Accept any year and day. I need month only
+  // Formato de mês aceite "June", "Jun"
+  var thisD = new Date(monthStr + ' 20 1980');
+  return addZero(thisD.getMonth() + 1);
+}
+
+function monthStr(theDescription, monthM1, monthLong) {
+  if (monthM1 == 10) {
+    var monthM1 = 'Q';
+  }
+  if (monthM1 == 11) {
+    var monthM1 = 'A';
+  }
+  if (monthM1 == 12) {
+    var monthM1 = 'Z';
+  }
+
+  var monthStr = cfl2Str(
+    [
+      '1. January',
+      '2. February',
+      '3. March',
+      '4. April',
+      '5. May',
+      '6. June',
+      '7. July',
+      '8. August',
+      '9. September',
+      'Q. October',
+      'A. November',
+      'Z. December',
+    ],
+    theDescription,
+    monthM1.toString() + '. ' + monthLong
+  );
+
+  return monthStr.slice(3, monthStr.length);
+}
+
+function dateInfo(dateInput, theOptions) {
+  //
+  return dateInput.toLocaleString('en', theOptions);
+}
+
+function getURL() {
+  return safariApp.windows[0].currentTab.url();
+}
+
+function openURL(urlInput) {
+  const firstWindow = safariApp.windows[0];
+  const tab = safariApp.Tab({ url: urlInput });
+  firstWindow.tabs.push(tab);
+  firstWindow.currentTab = tab;
+  delay(d1);
+
+  var urlSubscriptionCurrentTab = getURL();
+
+  // "favorites://" is link of blank page
+  if (urlSubscriptionCurrentTab == 'favorites://') {
+    delay(d0p3);
+
+    // Open Location - garantir que que barra de endereço esteja activa (Spend activa imediatamente mas Create Invoice não)
+    systemEventsApp.keystroke('l', { using: 'command down' });
+    delay(d0p3);
+
+    saApp.setTheClipboardTo(urlInput);
+    delay(d1);
+
+    systemEventsApp.keystroke('v', { using: 'command down' });
+    delay(d1);
+
+    systemEventsApp.keyCode(76); // Press Enter
+    delay(d1);
+  }
+}
+
+function superSafari(theAction, type, identifier, num, input) {
+  // 🔴 superSafari CONVERTED BY X-DIM FROM AS (super) TO JS (superSafari)
+  // Acrescentei "Super" pois em JS a palavra "super" é key word
+
+  safariApp = Application('Safari');
+
+  if (theAction == 'click') {
+    var action = 'click();';
+  } else if (theAction == 'get') {
+    var action = 'innerHTML;';
+  } else if (theAction == 'submit') {
+    var action = 'submit();';
+  } else if (theAction == 'input') {
+    var action = 'value = "' + input + '";';
+  } else if (theAction == 'force') {
+    var action = 'onchange();';
+  }
+
+  if (type == 'id') {
+    var getElementBy = "getElementById('" + identifier + "').";
+  } else if (type == 'class') {
+    var getElementBy = "getElementsByClassName('" + identifier + "')[" + num + '].';
+  } else if (type == 'tag') {
+    var getElementBy = "getElementsByTagName('" + identifier + "')[" + num + '].';
+  } else if (type == 'name') {
+    var getElementBy = "getElementsByName('" + identifier + "')[" + num + '].';
+  }
+
+  var theJS = 'document.' + getElementBy + action;
+
+  return safariApp.doJavaScript(theJS, { in: safariApp.windows[0].currentTab });
+}

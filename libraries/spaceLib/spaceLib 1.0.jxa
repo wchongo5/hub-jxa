@@ -1,0 +1,1916 @@
+// v1.0
+// var spaceLib = Library("spaceLib")
+
+var { alert } = Library('displayLib');
+
+var systemLib = Library('systemLib');
+
+var cflLib = Library('cflLib');
+var numberLib = Library('numberLib');
+var safariLib = Library('safariLib');
+var finderLib = Library('finderLib');
+var documentLib = Library('documentLib');
+var menuLib = Library('menuLib');
+var utmLib = Library('utmLib');
+
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var safariApp = Application('Safari');
+var safariAppControllerP = seApp.processes['Safari'];
+
+var googleEarthProApp = Application('Google Earth Pro');
+var googleEarthProAppControllerP = seApp.processes['Google Earth Pro'];
+
+const { getNextNumberOrLetter } = Library('numberLib');
+const { cfl, cfl2Str } = Library('cflLib');
+
+const currentApp = Application.currentApplication();
+currentApp.includeStandardAdditions = true;
+
+const useThisSiteForProjectStr = getUseThisSiteForProjectStr();
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3;
+var d1p5 = 1.5;
+var d3 = 3;
+var d7 = 7;
+var d8 = 8;
+var d13 = 13;
+var d16 = 16;
+
+// ---------------------------------------------------------
+
+// var provinces = ["1. Niassa", "2. Cabo Delgado", "3. Nampula", "4. Zambézia", "5. Tete", "6. Manica", "7. Sofala", "8. Inhambane", "9. Gaza", "10. Maputo", "11. Maputo (Cidade)"]
+
+function getUseThisSiteForProjectStr() {
+  return `UseThisSiteForProject`;
+}
+
+/*
+function getIsValidUseThisSiteForProjectStr(adminInfoToTestItems) {
+
+	var useThisSiteForProjectStr = getUseThisSiteForProjectStr()
+	//var adminInfoToTestItems = adminInfoToTest.split(" | ")
+
+	var adminInfoToTestItemsL = adminInfoToTestItems.length
+
+	if (adminInfoToTestItemsL == 2) {
+		if (adminInfoToTestItems[1] == useThisSiteForProjectStr) {
+			return true
+
+		} else {
+			alert(`ERRO`, `A segunda opção só pode ser "${useThisSiteForProjectStr}" e não "${adminInfoToTestItems[1]}"!`)
+		}
+	} else {
+		alert(`ERRO`, `Não aceita acima de 2 opções (${adminInfoToTestItemsL}).`)
+	}
+}
+*/
+
+function getIsValidUseThisSiteForProjectStr(adminInfoToTestItems) {
+  // const useThisSiteForProjectStr = getUseThisSiteForProjectStr();
+
+  const adminInfoToTestLastItem = adminInfoToTestItems[adminInfoToTestItems.length - 1];
+
+  if (adminInfoToTestLastItem == useThisSiteForProjectStr) {
+    return true;
+  } else {
+    return alert(
+      `ERRO`,
+      `Em múltiplas selecções, a última opção deve ser "${useThisSiteForProjectStr}" e não "${adminInfoToTestLastItem}"!`
+    );
+  }
+}
+
+/*
+function provinceNum(provinceD) {
+	var province = cflLib.cfl2Str(provinces, 'Província\n\n—\n• Números internacionais recebem o código de Maputo. // TG YES\n', provinceD)
+
+	return numberLib.addZero((province.split(". "))[0])
+}
+*/
+
+/*
+function getProvinces() {
+	return provinces
+}
+*/
+
+function getProvinceInfo(provincesToExclude, provinceD_Filter) {
+  const provincesNumbered = getProvinces(provincesToExclude);
+  const provinceD = provincesNumbered.find(province => province.includes(provinceD_Filter));
+
+  const provinceNumbered = cflLib.cfl2Str(provincesNumbered, 'Província', provinceD);
+
+  const provinceItems = provinceNumbered.split('. ');
+  const provinceNumber = provinceItems[0];
+  const provinceNumberPadded = numberLib.addZero(provinceNumber);
+  const provinceName = provinceItems[1];
+
+  return {
+    provinceNumbered,
+    provinceNumber,
+    provinceNumberPadded,
+    provinceName,
+  };
+}
+
+function getProvinces(provincesToExclude, isNumbered = true) {
+  const provinces = [
+    'Niassa',
+    'Cabo Delgado',
+    'Nampula',
+    'Zambézia',
+    'Tete',
+    'Manica',
+    'Sofala',
+    'Inhambane',
+    'Gaza',
+    'Maputo',
+    'Maputo (Cidade)',
+  ];
+
+  let provincesProcessed = [];
+
+  provincesProcessed = provinces.filter(province => {
+    return provincesToExclude.every(filter => province != filter);
+  });
+
+  if (isNumbered) {
+    provincesProcessed = provincesProcessed.map((province, index) => `${index + 1}. ${province}`);
+  }
+
+  return provincesProcessed;
+}
+
+function getProvinceInfoByPathObjV2(destinyFolder) {
+  // "01 NIASSA", "02 CABO DELGADO"
+
+  const provinces = getProvinces(['']);
+  // var useThisSiteForProjectStr = getUseThisSiteForProjectStr();
+
+  var provincesWithCodesAndUpper = provinces.map(
+    province => numberLib.addZero(Number(province.split('. ')[0])) + ' ' + province.split('. ')[1].toUpperCase()
+  );
+
+  var folderName = destinyFolder.name();
+
+  if (provincesWithCodesAndUpper.includes(folderName)) {
+    var folderNameItems = folderName.split(' ');
+    let provinceWithNum = documentLib.capitalizeText(
+      Number(folderNameItems[0]) + '. ' + folderNameItems.slice(1).join(' '),
+      'NoExclusions'
+    );
+
+    // return documentLib.capitalizeText(provinceWithNum, "NoExclusions")
+    // .replace("cidade", "Cidade") para Maputo (Cidade)
+
+    provinceInfo = provinceWithNum.replace('cidade', 'Cidade');
+
+    return {
+      provinceInfo,
+    };
+  } else {
+    /*
+    var provinceInfo = cflLib.cfl(
+      provinces.concat('---------------', useThisSiteForProjectStr),
+      'Província',
+      '11. Maputo (Cidade)',
+      'm'
+    );
+
+    if (provinceInfo.length == 1) {
+      return provinceInfo[0];
+    } else {
+      if (getIsValidUseThisSiteForProjectStr(provinceInfo)) {
+        return provinceInfo.join(' | ');
+      }
+    }
+      */
+
+    return {
+      provinceInfo: null,
+    };
+  }
+}
+
+function getProvinceInfoByPathObj(destinyFolder) {
+  // "01 NIASSA", "02 CABO DELGADO"
+
+  const provinces = getProvinces(['']);
+  // var useThisSiteForProjectStr = getUseThisSiteForProjectStr();
+
+  var provincesWithCodesAndUpper = provinces.map(
+    province => numberLib.addZero(Number(province.split('. ')[0])) + ' ' + province.split('. ')[1].toUpperCase()
+  );
+
+  var folderName = destinyFolder.name();
+
+  if (provincesWithCodesAndUpper.includes(folderName)) {
+    var folderNameItems = folderName.split(' ');
+    var provinceWithNum = documentLib.capitalizeText(
+      Number(folderNameItems[0]) + '. ' + folderNameItems.slice(1).join(' '),
+      'NoExclusions'
+    );
+
+    // return documentLib.capitalizeText(provinceWithNum, "NoExclusions")
+    // .replace("cidade", "Cidade") para Maputo (Cidade)
+    return provinceWithNum.replace('cidade', 'Cidade');
+  } else {
+    var provinceInfo = cflLib.cfl(
+      provinces.concat('---------------', useThisSiteForProjectStr),
+      'Província',
+      '11. Maputo (Cidade)',
+      'm'
+    );
+
+    if (provinceInfo.length == 1) {
+      return provinceInfo[0];
+    } else {
+      if (getIsValidUseThisSiteForProjectStr(provinceInfo)) {
+        return provinceInfo.join(' | ');
+      }
+    }
+  }
+}
+
+/* // 🔴🔴🔴 NOT USED
+function provinceCode2NameOrCodeWithNameOrNumWithName(provCode, selector) {
+	var provCode = Number(provCode)
+
+	for (i = 0; i < provinces.length; i++) {
+		var extractProvCode = numberLib.addZero(provinces[i].split(". ")[0])
+
+		if (provCode == extractProvCode) {
+
+			if (selector == "name") {
+				return provinces[i].split(". ")[1]
+
+			} else if (selector == "codeWithName") {
+
+				if (provinces[i].includes("Maputo")) {
+					return provinces[i]
+
+				} else {
+					return "0" + provinces[i]
+				}
+
+			} else if (selector == "numWithName") {
+				return provinces[i]
+			}
+
+		}
+	}
+}
+*/
+
+/*
+function coordinatesConvertKmlOrTxtToTxt(filePathStrToConvert, option, customerPrefix, convertedAllCoordPointsFromKMLFileName, convertedAllCoordPointsFromDocNumFileName) {
+
+	safariApp.activate()
+	safariLib.openURL("https://www.gpsvisualizer.com/convert_input")
+	delay(d8)
+
+	safariLib.superSafari("click", "id", "input:uploaded_file_1", 0, 0)
+	delay(d3)
+
+	finderLib.goToFolderCopyPaste(filePathStrToConvert)
+	delay(d1p5)
+
+	safariLib.superSafari("input", "name", "add_elevation", 0, "auto")
+	delay(d0p3)
+
+	safariLib.superSafari("click", "name", "submitted", 0, 0) // CONVERT
+
+
+
+
+
+
+
+	delay(d13)
+
+	//delay(35)
+
+
+
+
+
+
+	safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[21].uiElements.byName("following link").staticTexts.byName("following link").click() // Download
+
+
+	delay(d13)
+
+	finderApp.activate() // Sem este activate, não faz move. Acho que é BUG
+	delay(d0p3)
+
+	var downloadeFilePathObj = finderApp.selection()[0]
+	var downloadeFileName = downloadeFilePathObj.name()
+	delay(d0p3)
+
+	var filePathStrToConvertItems = filePathStrToConvert.split("/")
+	var fileName = filePathStrToConvertItems.pop() // Not used
+
+	var destinyFolderStr = filePathStrToConvertItems.join("/")
+
+	finderApp.move(downloadeFilePathObj, {to: Path(destinyFolderStr)})
+	delay(d0p3)
+
+	var convertedAllCoordPointsFilePathAlias = seApp.aliases.byName(destinyFolderStr + "/" + downloadeFileName)
+
+	if (option == "5. Coordenadas - Pontos KML2TX_DistancesInNumbers") {
+
+		var convertedAllCoordPointsFileNewName = customerPrefix + convertedAllCoordPointsFromKMLFileName
+
+	} else if (option == "6. Coordenadas - Pontos Curvas de Nível") {
+		var convertedAllCoordPointsFileNewName = customerPrefix + convertedAllCoordPointsFromDocNumFileName
+	}
+
+	convertedAllCoordPointsFilePathAlias.name = convertedAllCoordPointsFileNewName
+}
+*/
+function getBoundaryCoordinates(terrainVertixCoordinates, coordinatesType, what2Return) {
+  var topLeftCoord = { latitude: -90, longitude: 180 };
+  var bottomRightCoord = { latitude: 90, longitude: -180 };
+
+  for (var i = 0; i < terrainVertixCoordinates.length; i++) {
+    var coordinate = terrainVertixCoordinates[i];
+
+    topLeftCoord.longitude = Math.min(topLeftCoord.longitude, coordinate[1]);
+    topLeftCoord.latitude = Math.max(topLeftCoord.latitude, coordinate[0]);
+    bottomRightCoord.longitude = Math.max(bottomRightCoord.longitude, coordinate[1]);
+    bottomRightCoord.latitude = Math.min(bottomRightCoord.latitude, coordinate[0]);
+  }
+
+  // -26.011067563, 32.42010316, -26.011667901, 32.420673644
+  //return [[topLeftCoord.latitude,topLeftCoord.longitude], [bottomRightCoord.latitude, bottomRightCoord.longitude]]
+
+  var topRightCoord = { latitude: topLeftCoord.latitude, longitude: bottomRightCoord.longitude };
+
+  var bottomLeftCoord = { latitude: bottomRightCoord.latitude, longitude: topLeftCoord.longitude };
+
+  // return {
+  // 	topLeftCoord: topLeftCoord,
+  // 	topRightCoord: topRightCoord,
+  // 	bottomLeftCoord: bottomLeftCoord,
+  // 	bottomRightCoord: bottomRightCoord,
+  // }
+
+  if (coordinatesType == 'utm') {
+    // "utm" or "decimal"
+    var topLeftCoord = utmLib.fromLatLon(topLeftCoord.latitude, topLeftCoord.longitude, 36);
+    var bottomLeftCoord = utmLib.fromLatLon(bottomLeftCoord.latitude, bottomLeftCoord.longitude, 36);
+
+    var topRightCoord = utmLib.fromLatLon(topRightCoord.latitude, topRightCoord.longitude, 36);
+    var bottomRightCoord = utmLib.fromLatLon(bottomRightCoord.latitude, bottomRightCoord.longitude, 36);
+  } // else is "decimal" already set as default
+
+  var topLeftCoordLat = topLeftCoord.latitude;
+  var topLeftCoordLon = topLeftCoord.longitude;
+  var bottonLeftCoordLat = bottomLeftCoord.latitude;
+  var bottonLeftCoordLon = bottomLeftCoord.longitude;
+
+  var topRightCoordLat = topRightCoord.latitude;
+  var topRightCoordLon = topRightCoord.longitude;
+  var bottonRightCoordLat = bottomRightCoord.latitude;
+  var bottonRightCoordLon = bottomRightCoord.longitude;
+
+  if (what2Return == 'dictionary') {
+    return {
+      topLeftCoordLat: topLeftCoordLat,
+      topLeftCoordLon: topLeftCoordLon,
+      bottonLeftCoordLat: bottonLeftCoordLat,
+      bottonLeftCoordLon: bottonLeftCoordLon,
+      topRightCoordLat: topRightCoordLat,
+      topRightCoordLon: topRightCoordLon,
+      bottonRightCoordLat: bottonRightCoordLat,
+      bottonRightCoordLon: bottonRightCoordLon,
+    };
+  } else if (what2Return == 'arrayOfCoordinates') {
+    return [
+      [topLeftCoordLat, topLeftCoordLon],
+      [topRightCoordLat, topRightCoordLon],
+      [bottonRightCoordLat, bottonRightCoordLon],
+      [bottonLeftCoordLat, bottonLeftCoordLon],
+    ];
+  }
+}
+
+// ---------------
+function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2 - lat1); // deg2rad below
+  var dLon = deg2rad(lon2 - lon1);
+  var a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c; // Distance in km
+  //return d;
+  // 1.003270646 coeficiente XD5
+  // Edição 1.0015 (este coeficiente acertou duas medidas no Terreno Niquisse) e as outras duas com diferença de 14 cm
+  return d * 1000 * 1.0015; // Distance in meters
+}
+// ---------------
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
+// 🔴🔴🔴 --------------- MOVED TO APP
+
+/*
+function addDistanceToLatOrLon(latOrLonCoordinate, latOrLonString, distanceInMeters) {
+	var earth = 6378.137,  //radius of the earth in kilometer
+  pi = Math.PI,
+  m = (1 / ((2 * pi / 360) * earth)) / 1000;  //1 meter in degree
+
+	// 🔴🔴🔴 As distâncias reais deve ser multiplicadas por 0.9388 (Longitude) e 1.0037 (latitude) para corrigir as aproximações da função addDistanceToLatOrLon
+
+	if (latOrLonString == "Latitude") {
+		//var new_latitude = latitude + (distanceInMeters * m);
+
+		var latitude = Number(latOrLonCoordinate)
+		//return latitude + (distanceInMeters * m) * 1.0037
+		// NEW 1.0048231511
+		// 1.0047904389 // Calculado com base 5 m referência e 4.976162 m (Lido 4976.162 mm no QGIS)
+		return latitude + (distanceInMeters * m) * 1.0048015 // 1.005 //1.0049 //1.0048 //1.004791 //1.0047905 //1.00479044 //1.004790439//1.004790438999 //05
+
+	} else if (latOrLonString == "Longitude") {
+		var longitude = Number(latOrLonCoordinate),
+		cos = Math.cos
+		//var new_longitude = longitude + (distanceInMeters * m) / cos(latitude * (pi / 180));
+
+		// cos(latitude * (pi / 180) há falha na função, no lugar de "latitude" deve ser "longitude"
+		//return (longitude + (distanceInMeters * m) * 0.9388 / cos(longitude * (pi / 180)))
+		// 0.9387908374
+		// 0.9387034178 // Calculado com base 5 m referência e 5.326496 m (Lido 5326.496 mm no QGIS)
+		return (longitude + (distanceInMeters * m) * 0.9387034178 / cos(longitude * (pi / 180)))
+	}
+}
+*/
+
+function areaFromCoordinates(points) {
+  var pointA4Area = [];
+  var areaBaseTotal = 0;
+  var areaTotal = 0;
+
+  // 🔴🔴🔴 BASE FROM SWIFT
+  // 🔴🔴🔴 Note that area for 3 points uses 4 points because first one is used two times (is the first and is the last)
+
+  for (var i = 0; i < points.length; i++) {
+    let point = points[i];
+
+    if (i > 0) {
+      let utmCoordinatePointA = pointA4Area;
+      let utmCoordinatePointB = point;
+
+      areaBaseTotal +=
+        Number(utmCoordinatePointA[1]) * Number(utmCoordinatePointB[0]) -
+        Number(utmCoordinatePointB[1]) * Number(utmCoordinatePointA[0]);
+    }
+
+    pointA4Area = point;
+
+    if (i == points.length - 1) {
+      areaTotal = Math.abs(areaBaseTotal / 2);
+    }
+  }
+
+  return areaTotal; // Área em m2
+}
+
+/*
+function goToCoordinates(coordinates, observerAltitude) {
+
+	delay(d0p3)
+	googleEarthProApp.activate()
+
+	for (var i = 0; i < coordinates.length; i++) {
+		menuLib.doMenu("Google Earth Pro", "Add", "Photo")
+
+		if (i == 0) { // Costuma dar erro
+
+			try {
+				// Application("System Events").applicationProcesses.byName("Google Earth").windows.byName("Google Earth - New Photo Overlay").groups.byName("Description").radioButtons.byName("Photo")
+				delay(d0p3)
+				googleEarthProAppControllerP.windows[0].groups["Description"].radioButtons["Photo"].click()
+				delay(d0p3)
+			} catch {
+
+			}
+		}
+
+		systemLib.tab()
+		systemLib.tab()
+
+		for (var k = 0; k < 10; k++) { // Era
+			systemLib.tab() // Dar volta de modo campo de latitude aceitar paste correctamente
+			delay(d0p3)
+		}
+
+		menuLib.copyPasteWithSelectAll(coordinates[i][0].toString())
+		if (i == 0) {
+			delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+		}
+		delay(d0p3) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+		systemLib.tab()
+		if (i == 0) {
+			delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+		}
+		delay(d0p3) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+		menuLib.copyPasteWithSelectAll(coordinates[i][1].toString())
+		delay(d0p3) // Tempo suficiente para mudar de Maputo para Solafa
+		if (i == 0) {
+			delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+		}
+		systemLib.tab()
+		if (i == 0) {
+			delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+		}
+
+
+		if (i == 0) {
+
+			seApp.keyCode(48, { using: "shift down" })
+			delay(d0p3)
+			seApp.keyCode(48, { using: "shift down" })
+			//seApp.keyCode(48, { using: "shift down" })
+			delay(d0p3)
+
+			menuLib.copyPasteWithSelectAll(coordinates[i][0].toString())
+			if (i == 0) {
+				delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+			}
+			delay(d0p3) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+			systemLib.tab()
+			if (i == 0) {
+				delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+			}
+			delay(d0p3) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+			menuLib.copyPasteWithSelectAll(coordinates[i][1].toString())
+			delay(d0p3) // Tempo suficiente para mudar de Maputo para Solafa
+			if (i == 0) {
+				delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+			}
+			systemLib.tab()
+			if (i == 0) {
+				delay(d1p5) // Tempo suficiente para mudar de Obra SPICS Solafa para Mapauto Niquise
+			}
+		}
+
+
+
+		if (i == 0) {
+			menuLib.copyPasteWithSelectAll(observerAltitude)
+			//delay(d1p5)
+			systemLib.tab()
+			delay(d0p3)
+			menuLib.copyPasteWithSelectAll("0") // Heading
+			//delay(d1p5)
+			systemLib.tab()
+			delay(d0p3)
+			menuLib.copyPasteWithSelectAll("0") // Tilt
+			//seApp.keystroke("0")
+			delay(d0p3)
+			systemLib.tab()
+		}
+
+		systemLib.scape()
+	}
+}
+*/
+
+function goToCoordinates(coordinates, observerAltitude) {
+  googleEarthProApp.activate();
+  delay(d0p3);
+
+  for (var i = 0; i < coordinates.length; i++) {
+    var coordinate = coordinates[i];
+    var coordinateLat = coordinate[0].toString();
+    var coordinateLon = coordinate[1].toString();
+    delay(d0p3);
+
+    googleEarthProAppControllerP.windows[0].splitterGroups[0].groups[0].splitterGroups[0].buttons[0].click();
+    delay(d0p3);
+
+    systemLib.tab(2);
+    inputInfoInViewTab(coordinateLat, coordinateLon, observerAltitude, '0', '0');
+    systemLib.scape();
+  }
+}
+
+function inputInfoInViewTab(coordinateLat, coordinateLon, observerAltitude, heading, tilt) {
+  googleEarthProAppControllerP.windows[0].groups['Description'].radioButtons['View'].click();
+  systemLib.tab(1);
+
+  // To Skip date field in v7.3.6.9285 (64-bit) / 20221124
+  // Note que apesar da data estar abaixo de Latitude, … ela é a primeira nos Tabs e depois Latitude …
+  systemLib.tab(6);
+
+  menuLib.copyPaste(coordinateLat);
+  systemLib.tab(1);
+
+  menuLib.copyPaste(coordinateLon);
+  systemLib.tab(1);
+
+  if (observerAltitude != undefined) {
+    // In "updateInput" is undefined
+    menuLib.copyPaste(observerAltitude.toString()); // Range / Altitude
+  }
+  systemLib.tab(1);
+
+  menuLib.copyPaste(heading); // Heading
+  systemLib.tab(1);
+
+  menuLib.copyPaste(tilt); // Tilt
+  systemLib.tab(1);
+}
+
+function getBoundaryCenterCoordinate(points4BoundaryCenterCood) {
+  var boundaryCoordinates = getBoundaryCoordinates(points4BoundaryCenterCood, 'decimal', 'dictionary');
+  var topLeftCoordLat = boundaryCoordinates.topLeftCoordLat;
+  var topLeftCoordLon = boundaryCoordinates.topLeftCoordLon;
+  var bottonRightCoordLat = boundaryCoordinates.bottonRightCoordLat;
+  var bottonRightCoordLon = boundaryCoordinates.bottonRightCoordLon;
+
+  var latitude = topLeftCoordLat - (topLeftCoordLat - bottonRightCoordLat) * 0.5;
+  var longitude = topLeftCoordLon + (bottonRightCoordLon - topLeftCoordLon) * 0.5;
+
+  return [latitude, longitude];
+}
+
+function googlePointsInput(vertixes, inputOption, observerAltitude) {
+  var vertixesL = vertixes.length;
+
+  for (var i = 0; i < vertixesL; i++) {
+    var vertix = vertixes[i];
+    var vertixName = vertix[0];
+
+    if (inputOption == 'initialInput' || (inputOption == 'updateInput' && i == 0)) {
+      var vertixLat = vertix[1].toString();
+      var vertixLon = vertix[2].toString();
+    }
+    delay(d0p3);
+
+    // 🔴🔴 Localização // Go to coordinantes only and the location coordinate is input below
+    if (i == 0) {
+      goToCoordinates([[vertixLat, vertixLon]], observerAltitude);
+      delay(d0p3);
+    }
+
+    if (inputOption == 'initialInput') {
+      googleEarthProAppControllerP.windows[0].splitterGroups[0].groups[0].splitterGroups[0].buttons[0].click();
+    } else if (inputOption == 'updateInput') {
+      delay(d0p3);
+      googleEarthProApp.activate();
+
+      // After ipnut a Point Google activate search as default, tabs below to go to cativate Custmer Foldr
+
+      systemLib.tab(4);
+      systemLib.arrowDown(1);
+
+      menuLib.doMenu('Google Earth Pro', 'Edit', 'Get Info');
+    }
+    delay(d0p3);
+    menuLib.copyPaste(vertixName);
+
+    if (inputOption == 'initialInput' || (inputOption == 'updateInput' && i == 0)) {
+      systemLib.tab(1);
+      menuLib.copyPaste(vertixLat);
+      systemLib.tab(1);
+      menuLib.copyPaste(vertixLon);
+    }
+
+    if (inputOption == 'updateInput' && i == 0) {
+      inputInfoInViewTab(vertixLat, vertixLon, undefined, '0', '0');
+    }
+
+    systemLib.enter(1);
+
+    if (i == vertixesL - 1) {
+      systemLib.tab(4);
+
+      for (var j = 0; j < vertixesL; j++) {
+        systemLib.arrowUp(1);
+      }
+    }
+  }
+}
+
+function getProjectSiteItemsWithShortcuts(siteItems, prompt, multipleStatus) {
+  const optionsToExclude = [useThisSiteForProjectStr, '---------------'];
+  const siteItemsWithShortcuts = siteItems.map((option, index) => {
+    if (optionsToExclude.includes(option)) {
+      return option;
+    } else {
+      return `${getNextNumberOrLetter(index)}. ${option}`;
+    }
+  });
+
+  if (multipleStatus === 'm') {
+    var siteItemsSelected = cfl(siteItemsWithShortcuts, prompt, siteItemsWithShortcuts[0], 'm').map(item => {
+      const splitItem = item.split('. ');
+      return splitItem.length > 1 ? splitItem[1] : item;
+    });
+  } else {
+    var siteItemSelected = cfl2Str(siteItemsWithShortcuts, prompt, siteItemsWithShortcuts[0]).split('. ')[1];
+  }
+
+  return {
+    siteItemSelected,
+    siteItemsSelected,
+  };
+}
+
+function getProjectSite(provinceInfoItems, originType) {
+  // var useThisSiteForProjectStr = spaceLib.getUseThisSiteForProjectStr()
+
+  var mozAdminDict = {
+    // Na divisão administrativa, o (*) indica que é sede.
+    // Onde vem "Manjacaze (vila) ou Cidade de Xai-Xai / vi em Gaza, Sofala" substitui por "Vila de Manjacaze" e Cidade de Xai-Xai
+    /// Assim vai agrupar por cidades e vilas e o resto
+
+    '1. Niassa': {
+      // DISTRITOS
+
+      Chimbonila: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+      },
+
+      Cuamba: {},
+
+      Lago: {},
+
+      'Lichinga*': {
+        'Lichinga (Cidade)*': ['Assumane - Cliente Falhou? (Quando procurei no Mapa calhou outra província)', 'Bring'],
+      },
+
+      Majune: {},
+
+      Mandimba: {},
+
+      Marrupa: {},
+
+      Maúa: {},
+
+      Mavago: {},
+
+      Mecanhelas: {},
+
+      Mecula: {},
+
+      Metarica: {},
+
+      Muembe: {},
+
+      "N'gauma": {},
+
+      Nipepe: {},
+
+      Sanga: {},
+    },
+
+    '2. Cabo Delgado': {
+      // DISTRITOS
+
+      Ancuabe: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+      },
+
+      Balama: {},
+
+      Chiúre: {},
+
+      Ibo: {},
+
+      Macomia: {},
+
+      Mecúfi: {},
+
+      Meluco: {},
+
+      Metuge: {},
+
+      'Mocímboa da Praia': {},
+
+      Montepuez: {},
+
+      Mueda: {},
+
+      Muidumbe: {},
+
+      Namuno: {},
+
+      Nangade: {},
+
+      Palma: {},
+
+      'Pemba*': {},
+
+      Quissanga: {},
+    },
+
+    '3. Nampula': {
+      // DISTRITOS
+
+      Angoche: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+      },
+
+      Eráti: {},
+
+      'Ilha de Moçambique': {},
+
+      Lalaua: {},
+
+      Larde: {},
+
+      Liúpo: {},
+
+      Malema: {},
+
+      Meconta: {},
+
+      Mecubúri: {},
+
+      Memba: {},
+
+      Mogincual: {},
+
+      Mogovolas: {},
+
+      Moma: {},
+
+      Monapo: {},
+
+      Mossuril: {},
+
+      Muecate: {},
+
+      Murrupula: {},
+
+      'Nacala-a-Velha': {},
+
+      'Nacala Porto': {
+        // Edição para projecto de Sinalizacão com Forma Fixa, não encontrei info na Web 20210809
+
+        'Nacala-Porto (Cidade)*': {
+          'Zona X': ['Bairro X'],
+        },
+      },
+
+      Nacarôa: {},
+
+      'Nampula*': {
+        // Momola para BM vai para que distrito?!!!
+        'Urbano Central': ['Bombeiros', '25 de Setembro', '1º de Maio', 'Limoeiros', 'Militar'],
+        Anchilo: ['Anchilo*', 'Namachilo', 'Namigonha', 'Napuri', 'Saua-Saua'],
+        Muahivire: ['22 de Agosto', 'Muahivire*', 'Namiteca'],
+        Muatala: ['Muatala*', 'Mutauhanha'],
+        Muhala: ['Muhala*', 'Namutaqueliua'],
+        Namikopo: ['Namikopo*', 'Mutava-Rex'],
+        Napipine: ['Napipine*', 'Carrupeia'],
+        Natikire: ['Natikire*', 'Marrupaniua', 'Marrere'],
+      },
+
+      Rapale: {},
+
+      Ribáuè: {},
+    },
+
+    '5. Tete': {
+      Angónia: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+        'Ulongué (Vila)*': ['Bring'],
+      },
+
+      'Cahora-Bassa': {},
+
+      Changara: {},
+
+      Chifunde: {},
+
+      Chiuta: {},
+
+      Dôa: {},
+
+      Macanga: {},
+
+      Magoé: {},
+
+      Marara: {},
+
+      Marávia: {},
+
+      /* 
+      
+      O distrito está dividido em três postos administrativos (Kambulatsitsi, Moatize e Zobué), compostos pelas seguintes localidades:
+
+      Posto Administrativo de Kambulatsitsi:
+      Kambulatsitsi
+      Mecungas
+      Posto Administrativo de Moatize:
+      Benga
+      Mhpanzo
+      Município de Moatize
+      Msungo
+      Posto Administrativo de Zobué:
+      Caphiridzange
+      Nkodeze
+      Zobué
+      
+      */
+
+      Moatize: {
+        Kambulatsitsi: {
+          'Kambulatsitsi*': ['Bring'],
+          Mecungas: ['Bring'],
+        },
+
+        'Moatize (Vila)*': {
+          Benga: ['Bring'],
+          Mhpanzo: ['Bring'],
+          'Moatize (Cidade)*': ['Bring'],
+        },
+        Zobué: {
+          Caphiridzange: ['Bring'],
+          Nkodeze: ['Bring'],
+          'Zobué*': ['Bring'],
+        },
+      },
+
+      Mutarara: {},
+
+      'Tete*': {
+        'Tete (Cidade)*': ['Samora Machel (Estrada Nº 7)', 'Bring'],
+      },
+
+      Tsangano: {},
+
+      Zumbo: {},
+    },
+
+    '6. Manica': {
+      // DISTRITOS
+
+      Bárue: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+      },
+
+      'Chimoio*': {
+        'Chimoio (Cidade)*': ['Bairro X'],
+      },
+
+      Gondola: {},
+
+      Guro: {},
+
+      Macate: {},
+
+      Machaze: {},
+
+      Macossa: {},
+
+      Manica: {},
+
+      Mossurize: {
+        Chiurairue: {
+          Chicuecuete: ['Bairro X'],
+          Chirera: ['Bairro X'],
+          Chiurairue: ['Bairro X'],
+        },
+
+        Dacata: {
+          Macuvo: ['Bairro X'],
+          Mave: ['Bairro X'],
+        },
+
+        'Espungabera*': {
+          'Espungabera*': ['Bairro X'],
+        },
+      },
+
+      Sussundenga: {
+        Dombe: {
+          Javera: ['Bairro X'],
+          Mabaia: ['Bairro X'],
+          Matacara: ['Bairro X'],
+          Muoco: ['Bairro X'],
+        },
+
+        Muhoa: {
+          Muhoa: ['Bairro X'],
+          Mupandea: ['Bairro X'],
+        },
+
+        Rotanda: {
+          Munhinga: ['Bairro X'],
+          Mussapa: ['Bairro X'],
+          Rotanda: ['Bairro X'],
+        },
+
+        'Sussundenga*': {
+          Matica: ['Bairro X'],
+          Munhinga: ['Bairro X'],
+          Nhaurombe: ['Bairro X'],
+          'Sussundenga*': ['Bairro X'],
+        },
+      },
+
+      Tambara: {},
+
+      Vanduzi: {},
+    },
+
+    '7. Sofala': {
+      // DISTRITOS
+
+      'Beira*': {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+        'Beira (Cidade)*': ['Ponta-Gea', 'Bring'],
+      },
+
+      Búzi: {},
+
+      Caia: {},
+
+      Chemba: {},
+
+      Cheringoma: {},
+
+      Chibabava: {},
+
+      Dondo: {},
+
+      Gorongosa: {},
+
+      Machanga: {},
+
+      Marínguè: {},
+
+      Marromeu: {},
+
+      Muanza: {},
+
+      Nhamatanda: {},
+    },
+
+    // PROVÍNCIA
+    '8. Inhambane': {
+      // DISTRITOS
+
+      Funhalouro: {},
+
+      Govuro: {},
+
+      Homoíne: {},
+
+      'Inhambane*': {
+        // 🔴 FUTURO – PARECE QUE HÁ NECESSIDADE DE SEPARAR — Inhamissa tem mais bairrros, se for "SIM" deve se SEPARAR
+
+        // "Muele 1" - Residência de Dr. Herculano e ele forneceu
+        'Inhambane (Cidade)*': ['Nhampossa', 'Muele 1'],
+      },
+
+      Inharrime: {},
+
+      Inhassoro: {},
+
+      Jangamo: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+        Cumbana: {
+          Cumbana: ['Bairro X'],
+        },
+        'Jangamo*': {
+          'Jangamo*': ['Tofo'], // Tofo found on web
+          Ligogo: ['Bairro X'],
+          Massavana: ['Bairro X'],
+        },
+      },
+
+      Mabote: {},
+
+      Massinga: {},
+
+      Maxixe: {},
+
+      Morrumbene: {},
+
+      Panda: {},
+
+      Vilankulo: {
+        // Era Vilanculos conforme Web
+
+        // POSTOS ADMINISTRATIVOS
+        Mapinhane: {
+          Belane: ['Bairro X'],
+          'Mapinhane*': ['Bairro X'],
+          Muabsa: ['Bairro X'],
+        },
+
+        'Vilankulo*': {
+          Quwene: ['Bairro X'],
+          'Vilankulo*': ['Bairro X'],
+        },
+      },
+
+      Zavala: {
+        'Quissico*': {
+          Muane: [''],
+          Quissico: [
+            'Dombe',
+            'Macomane',
+            'Mahumane',
+            'Muinhe',
+            'Nhamajacal',
+            'Nhacodue',
+            'Ngomene',
+            'Nhangave',
+            'Nzile',
+            'Ticongolo',
+            'Zavalene',
+            '--- temp',
+            'Bairro X',
+          ],
+        },
+        Zandamela: {
+          Muculuva: [''],
+          Zandamela: [''],
+        },
+      },
+    },
+
+    // PROVÍNCIA
+    '9. Gaza': {
+      // DISTRITOS
+
+      Bilene: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+
+        Incaia: {
+          'Incaia*': ['Bairro X'],
+        },
+
+        Macia: {
+          'Macia (Vila)*': ['Bairro X'],
+        },
+
+        Macuane: {
+          Chichango: ['Bairro X', 'Mais'],
+          'Macuane*': ['Bairro X', 'Mais'],
+          'Tuane Oriental': ['Bairro X', 'Mais'],
+        },
+
+        Mazivila: {
+          'Mazivila*': ['Bairro X', 'Mais'],
+          Olombe: ['Bairro X', 'Mais'],
+          Zimbene: ['Bairro X', 'Mais'],
+        },
+
+        Messano: {
+          Magul: ['Bairro X', 'Mais'],
+          Manonho: ['Bairro X', 'Mais'],
+          'Messano*': ['Bairro X', 'Mais'],
+        },
+
+        'Praia do Bilene*': {
+          'Praia do Bilene (Vila)*': ['Nhiuane', 'Bairro X'],
+          Nhabanga: ['Bairro X'], // Added without search but found that belongs to Praia do Bilene
+        },
+      },
+
+      Chibuto: {
+        // CIDADE, VILA, P. ADMINISTRATIVO : BARROS OU LOCALIDADES
+
+        /*
+				"Chibuto": ["Bairro 3 da Cidade", "Mais"],
+
+				"Alto Changane": ["Alto Changane*", "Funguane", "Maqueze"],
+				"Chaimite": ["Chaimite*", "Mucotuene", "Tlhatlene"],
+				"Changanine": ["Changanine*", "Hate-Hate"],
+				"Chibuto (Cidade)*": ["Canhavane", "Mais"],
+				"Malehice": ["Banbane", "Koca Missava", "Maivene", "Malehice", "Mangume", "Muxaxane"],
+				*/
+
+        'Alto Changane': {
+          'Alto Changane*': ['Bairro X'],
+          Funguane: ['Bairro X'],
+          Maqueze: ['Bairro X'],
+        },
+
+        Chaimite: {
+          'Chaimite*': ['Bairro X'],
+          Mucotuene: ['Bairro X'],
+          Tlhatlene: ['Bairro X'],
+        },
+
+        Changanine: {
+          'Changanine*': ['Bairro X'],
+          'Hate-Hate': ['Bairro X'],
+        },
+
+        Chibuto: {
+          Canhavane: ['Bairro X'],
+          'Chibuto (Cidade)*': ['Bairro 1', 'Bairro 2', 'Bairro 3'],
+          Chikhakhate: ['Bairro X'],
+        },
+
+        Godide: {
+          Chipadje: ['Bairro X'],
+          'Godide*': ['Bairro X'],
+        },
+
+        Malehice: {
+          Banbane: ['Bairro X'],
+          'Koca Missava': ['Bairro X'],
+          Maivene: ['Bairro X'],
+          'Malehice*': ['Bairro X'],
+          Mangume: ['Bairro X'],
+          Muxaxane: ['Bairro X'],
+        },
+      },
+
+      Chicualacuala: {},
+
+      Chigubo: {
+        Chigubo: {
+          Chigubo: ['Bairro X'],
+          Machaila: ['Bairro X'],
+        },
+        'Ndidiza*': {
+          Ndidiza: ['Bairro X'],
+          Nhanale: ['Bairro X'],
+        },
+      },
+
+      Chókwè: {
+        'Chókwè*': {
+          'Chókwè (Cidade)*': ['Bairro X'],
+        },
+        Lionde: {
+          Conhane: ['Bairro X'],
+          'Lionde*': ['Bairro X'],
+          Malau: ['Bairro X'],
+        },
+        Macarretane: {
+          'Macarretane*': ['Bairro X'],
+          Matuba: ['Bairro X'],
+          Maxinhol: ['Bairro X'],
+        },
+        Xilembene: {
+          // Xilembene aparece como vila e simples localidade
+          'Xilembene (Vila)*': ['Bairro X'],
+          Chiduachine: ['Bairro X'],
+          Xilembene: ['Bairro X'],
+        },
+      },
+
+      Chongoene: {
+        // Adicionado "Chongoene":
+        'Chongoene*': {
+          Venhene: ['Bairro X'],
+          'Fidel Castro': ['Bairro 3'],
+        },
+      },
+
+      Guijá: {},
+
+      Limpopo: {
+        //"Zongoene": ["Bairro 1 Chirrambelene Zona Baixa", "Bairro 2"]
+
+        // Web: Distrito do Limpopo … A sua sede é a povoação de Nuvunguene.
+        // Parece que devia ser Chicumbane. Talvez percebam que Chicumbane poderá ser vila daqui a pouco
+
+        Chissano: {
+          Chikotane: ['Bairro X'],
+          Chimonzo: ['Bairro X'],
+          'Chissano*': ['Bairro X'],
+          Licilo: ['Bairro X'],
+        },
+
+        'Chicumbane*': {
+          'Chicumbane*': ['Bairro 1', 'Bairro 2', 'Bairro 3', 'Bairro 4'],
+          Chiridzene: ['Bairro X'],
+          Languene: ['Bairro X'],
+          Muamuasse: ['Bairro X'],
+          Muawasse: ['Bairro X'],
+          Muzingane: ['Bairro X'],
+          Nuvungueni: ['Bairro X'],
+        },
+
+        Zonguene: {
+          Chilaulane: ['Bairro X'],
+          Nhambanga: ['Bairro X'],
+          Novela: ['Bairro X'],
+          'Zonguene*': ['Bairro 1 Chirrambelene Zona Baixa', 'Bairro 2'],
+        },
+      },
+
+      Mabalane: {},
+
+      Manjacaze: {},
+
+      Mapai: {},
+
+      Massangena: {},
+
+      Massingir: {
+        'Massingir*': {
+          Ringane: ['Bairro X'],
+          Tihovene: ['Bairro 5'], // Bairro é o local de acampamento do Eng. Malate
+        },
+        Mavodze: {
+          Chibotane: ['Bairro X'],
+          Machamsa: ['Bairro X'],
+          'Mavodze*': ['Bairro X'],
+        },
+        Zulo: {
+          Chissenguele: ['Bairro X'],
+          Chitar: ['Bairro X'],
+          'Zulo*': ['Bairro X'],
+        },
+      },
+
+      'Xai-Xai*': {
+        // 🔴 FUTURO – PARECE QUE HÁ NECESSIDADE DE SEPARAR — Inhamissa tem mais bairrros, se for "SIM" deve se SEPARAR
+
+        'Xai-Xai (Cidade)*': ['Bairro 6 de Inhamissa', 'Bairro 7', 'Bairro 11', 'Patrice Lumumba'],
+        'Praia de Xai-Xai': ['Chinunguine A', 'Chinunguine B', 'Macanwine', 'Macanwine Oeste', 'Macanwine Sul'],
+      },
+    },
+
+    '10. Maputo': {
+      // Para unifromização do App, Maputo (Cidade) é considerado Distrito, os distritos municipais, Postos Administrativos - bem equilibrado. Matola é distrito.
+
+      // // Aplicado, não aparece na Web: Chiango
+      // // Editado: Inguide (não Inguice)
+      // "Maputo (Cidade)*": {
+      // 	"Distrito Municipal KaMpfumo": ["Central A", "Central B", "Central C", "Alto Maé A", "Alto Maé B", "Malhangalene A", "Malhangalene B", "Polana Cimento A", "Polana Cimento B", "Coop", "Sommerschield"],
+      //
+      // 	"Distrito Municipal de Nhlamankulu": ["Aeroporto A", "Aeroporto B", "Xipamanine", "Minkadjuíne", "Unidade 7", "Chamanculo A", "Chamanculo B", "Chamanculo C, Chamanculo D", "Malanga", "Munhuana"],
+      //
+      // 	"Distrito Municipal KaMaxakeni": ["Mafalala", "Maxaquene A", "Maxaquene B", "Maxaquene C", "Maxaquene D", "Polana Caniço A", "Polana Caniço B", "Urbanização"],
+      //
+      // 	// Subdivisão da Costa do Sol introduzido manualmente on the Fly: Mapulene (Projecto de Adérito Ozias Cordeiro Mongo)
+      // 	// 🔴 Adicionados sem base da Web: Guebo (sem certeza que pertence a este distrito)
+      // 	"Distrito Municipal KaMavota": ["Mavalane A", "Mavalane B", "FPLM", "Hulene A", "Hulene B", "Ferroviário", "Laulane", "3 de Fevereiro", "Mahotas", "Albazine", "Costa do Sol", "Chiango", "Guebo"],
+      //
+      // 	"Distrito Municipal KaMabukwana": ["Bagamoyo", "George Dimitrov (Benfica)", "Inhagoia A", "Inhagoia B", "Jardim", "Luís Cabral", "Magoanine", "Malhazine", "Nsalane", "25 de Junho A", "25 de Junho B", "Zimpeto"],
+      //
+      // 	"Distrito Municipal KaTembe": ["Gwachene", "Chale", "Inguide", "Incassene", "Xamissava"],
+      //
+      // 	"Distrito Municipal KaNyaka": ["Ingwane", "Ribjene", "Nhaquene"]
+      // },
+
+      // Matlemele era Mathlemele (no site origem)
+
+      Boane: {
+        // Boane
+        // // Aplicado, não aparece na Web: Belo Horizonte, Jonasse
+        // "Boane": ["Eduardo Mondlane", "Gueguegue", "Boane (Vila)*"],
+        // "Matola-Rio": ["Belo Horizonte", "Jonasse", "Matola-Rio Sede"]
+
+        // 🔴🔴🔴 HAVIA ERRO ACIMA, FALTAVA BAIRROS — NO FUTURO VERIFICAR A DISTRIBUICAO DE Belo Horizonte, Jonasse pelos Postos Adiminstrativos abaixo
+
+        Boane: {
+          'Eduardo Mondlane': ['Bairro X'],
+          Gueguegue: ['Bairro X'],
+          'Boane (Vila)*': ['Bairro X'],
+        },
+
+        'Matola-Rio*': {
+          'Matola-Rio Sede*': ['Belo Horizonte', 'Jonasse'],
+        },
+      },
+
+      Magude: {},
+
+      Manhiça: {
+        '3 de Fevereiro': {
+          '3 de Fevereiro*': ['Bairro X'],
+          Manchiana: ['Bairro X'],
+          Nwamatibjana: ['Bairro X'],
+          Taninga: ['Bairro X'],
+        },
+
+        Calanga: {
+          Chécua: ['Bairro X'],
+          Chichongue: ['Bairro X'],
+          'Lago Pate': ['Halamane'],
+        },
+
+        'Ilha Josina Machel': {
+          Maguiguana: ['Bairro X'],
+          Nzonguene: ['Bairro X'],
+        },
+
+        Maluana: {
+          'Maluana*': ['Bairro X'],
+          Munguine: ['Bairro X'],
+        },
+
+        'Manhiça*': {
+          // Matadouro Municipal - venda de Gado
+          'Manhiça (Vila)*': ['Bairro X', 'Matadouro Municipal MAT01'],
+          Maciana: ['Bairro X'],
+        },
+
+        Xinavane: {
+          'Eduardo Mondlane': ['Bairro X'],
+          '25 de Setembro': ['Bairro X'],
+        },
+      },
+
+      Marracuene: {
+        // Marracuene / Aplicado, não aparece na Web: Mumemo, Zintava, Possaulane
+        // "Machubo": ["Macandza", "Thaula"],
+        // "Marracuene": ["Cumbeza", "Nhomgonhama", "Michafutene", "Mumemo", "Marracuene (Vila)*", "Possaulane", "Zintava"],
+
+        // 🔴🔴🔴 HAVIA ERRO ACIMA, FALTAVA BAIRROS — NO FUTURO DISTRITUIR "Mumemo", "Cumbeza", "Possaulane", "Zintava" pelos Postos Adiminstrativos abaixo
+
+        // O boletim eleitoral do Centro de Integridade Pública (CIP) de Março de 2023, que apresentou as delimitações do futuro município de Marracuene, lista os bairros da localidade de Michafutene; entre eles estão “Habel Jafar, Guava, Mateque, Cumbeza, Ricatla, Agostinho Neto, Mali, Mumemo 1, Mumemo 4 de Outubro e Mumemo 15 de Agosto”
+
+        Machubo: {
+          Macandza: ['Bairro X'],
+          Thaula: ['Bairro X'],
+        },
+
+        'Marracuene*': {
+          'Marracuene (necessário enquanto tem Vila, Boane não é assim)': ['Bairro X'],
+          'Marracuene (Vila)*': ['Bairro Massinga', 'Bairro X'],
+          Michafutene: [
+            'Habel Jafar',
+            ' Guava',
+            ' Mateque',
+            ' Cumbeza',
+            ' Ricatla',
+            ' Agostinho Neto',
+            ' Mali',
+            // ' Mumemo 1',
+            // ' Mumemo 4 de Outubro',
+            // 'Mumemo 15 de Agosto',
+            'Mumemo',
+          ],
+          Nhomgonhama: ['Bairro X'],
+        },
+      },
+
+      'Matola*': {
+        'Matola Sede*': [
+          'Matola A',
+          'Matola B',
+          'Matola C',
+          'Matola D',
+          'Matola F',
+          'Matola G',
+          'Matola H',
+          'Matola J',
+          'Fomento',
+          'Liberdade',
+          'Mussumbuluco',
+          'Mahlampswene',
+          'Sikwama',
+        ],
+        Infulene: [
+          'Zona Verde',
+          'Ndlavela',
+          'Infulene D',
+          'T-3',
+          'Acordos de Lusaka',
+          'Vale do Infulene',
+          'Khongolote',
+          'Intaca',
+          'Muhalaze',
+          '1º de Maio',
+          'Boquisso',
+          'Boquisso A - USADA V1 sem letra',
+          'Boquisso B - USADA V1 sem letra',
+          'Mali',
+          'Mukatine',
+          'Ngolhoza',
+        ],
+        Machava: [
+          'Infulene',
+          'Unidade A',
+          'Trevo',
+          'Patrice Lumumba',
+          'Machava Sede',
+          'São Damaso',
+          'Bunhiça',
+          'Tsalala',
+          'KM-15',
+          'Mathlemele',
+          'Cobe',
+          'Matola Gare',
+          'Singathela',
+        ],
+      },
+
+      Matutuíne: {
+        Catembe: {
+          Mungazine: ['Bairro X'],
+          Nsime: ['Bairro X'],
+        },
+        Catuane: {
+          'Catuane*': ['Bairro X'],
+          Manhangane: ['Bairro X'],
+        },
+        Machangulo: {
+          Ndelane: ['Bairro X'],
+          'Nhonguane (Santa Maria)': ['Bairro X'],
+        },
+        Missevene: {
+          'Bela Vista': ['Bairro X'],
+          Madjuva: ['Bairro X'],
+          Salamanga: ['Bairro X'],
+          Tinonganine: ['Bairro X'],
+        },
+        Zitundo: {
+          Manhoca: ['Bairro X'],
+          // Mudado de "Ponta d'Ouro" para "Ponta de Ouro"
+          'Ponta de Ouro': ['Bairro X'],
+          'Zitundo*': ['Bairro X'],
+        },
+      },
+
+      Moamba: {
+        // ORGANIZAR COMO MARRACUENE
+
+        // "Moamba*": ["Moamba (Vila)", "Muzongo"],
+        // "Pessene": ["Mahulana", "Pessene", "Vundiça"],
+        // "Ressano Garcia": ["Regue", "Ressano Garcia (Vila)"],
+        // "Sabié": ["Macaene", "Malengane", "Matunganhane", "Sabié"],
+
+        'Moamba*': {
+          'Moamba (Vila)*': ['Bairro X'],
+          Muzongo: ['Bairro X'],
+        },
+
+        Pessene: {
+          Mahulana: ['Bairro X'],
+          Pessene: ['Bairro X'],
+          Vundiça: ['Bairro X'],
+        },
+
+        'Ressano Garcia': {
+          Regue: ['Bairro X'],
+          'Ressano Garcia (Vila)': ['Bairro X'],
+        },
+
+        Sabié: {
+          Macaene: ['Bairro X'],
+          Malengane: ['Bairro X'],
+          Matunganhane: ['Bairro X'],
+          'Sabié*': ['Bairro X'],
+        },
+      },
+
+      Namaacha: {},
+    },
+
+    // Aplicado, não aparece na Web: Chiango
+    // Editado: Inguide (não Inguice)
+    '11. Maputo (Cidade)': {
+      'Distrito Municipal KaMpfumo': [
+        'Central A',
+        'Central B',
+        'Central C',
+        'Alto Maé A',
+        'Alto Maé B',
+        'Malhangalene A',
+        'Malhangalene B',
+        'Polana Cimento A',
+        'Polana Cimento B',
+        'Coop',
+        'Sommerschield',
+      ],
+
+      'Distrito Municipal de Nhlamankulu': [
+        'Aeroporto A',
+        'Aeroporto B',
+        'Xipamanine',
+        'Minkadjuíne',
+        'Unidade 7',
+        'Chamanculo A',
+        'Chamanculo B',
+        'Chamanculo C',
+        'Chamanculo D',
+        'Malanga',
+        'Munhuana',
+      ],
+
+      'Distrito Municipal KaMaxakeni': [
+        'Mafalala',
+        'Maxaquene A',
+        'Maxaquene B',
+        'Maxaquene C',
+        'Maxaquene D',
+        'Polana Caniço A',
+        'Polana Caniço B',
+        'Urbanização',
+      ],
+
+      // Subdivisão da Costa do Sol introduzido manualmente on the Fly: Mapulene (Projecto de Adérito Ozias Cordeiro Mongo)
+      // 🔴 Adicionados sem base da Web: Guebo (sem certeza que pertence a este distrito)
+      'Distrito Municipal KaMavota': [
+        'Mavalane A',
+        'Mavalane B',
+        'FPLM',
+        'Hulene A',
+        'Hulene B',
+        'Ferroviário',
+        'Laulane',
+        '3 de Fevereiro',
+        'Mahotas',
+        'Albazine',
+        'Costa do Sol',
+        'Chiango',
+        'Guebo',
+      ],
+
+      'Distrito Municipal KaMabukwana': [
+        'Bagamoyo',
+        'George Dimitrov (Benfica)',
+        'Inhagoia A',
+        'Inhagoia B',
+        'Jardim',
+        'Luís Cabral',
+        'Magoanine',
+        'Malhazine',
+        'Nsalane',
+        '25 de Junho A',
+        '25 de Junho B',
+        'Zimpeto',
+      ],
+
+      'Distrito Municipal KaTembe': ['Gwachene', 'Chale', 'Inguide', 'Incassene', 'Xamissava'],
+
+      'Distrito Municipal KaNyaka': ['Ingwane', 'Ribjene', 'Nhaquene'],
+    },
+  };
+
+  // provinceNumbered
+  /* // DESACTIVADO, USA BUSCA NO PARAMETER provinceInfo
+	var provinces = Object.keys(mozAdminDict)
+	var provinceNumbered = cfl2Str(provinces, "Província", provinces[1])
+	var provinceNumbered = cfl2Str(provinces, "Província", provinceNumbered)
+	*/
+
+  if (provinceInfoItems.length == 1) {
+    var provinceNumbered = provinceInfoItems[0];
+
+    try {
+      // district
+      var districts = Object.keys(mozAdminDict[provinceNumbered]);
+    } catch {
+      alert('Esta província (' + provinceNumbered + ') ainda não está configurada!', '');
+    }
+
+    currentApp.activate();
+
+    // var districtInfoItems = cfl(districts.concat("---------------", useThisSiteForProjectStr), `Distrito\n—\n🔴 Até o último passo, nenhuma opção deve ter acentuação do tipo "Ponta d'Ouro"`, districts[0], "m")
+
+    var { siteItemsSelected: districtInfoItems } = getProjectSiteItemsWithShortcuts(
+      districts.concat('---------------', useThisSiteForProjectStr),
+      `Distrito\n—\n🔴 Até o último passo, nenhuma opção deve ter acentuação do tipo "Ponta d'Ouro"`,
+      'm'
+    );
+
+    if (districtInfoItems.length == 1) {
+      var district = districtInfoItems[0];
+
+      // Maputo e capitais provinciais (mesmo que distrito sede)
+      if (provinceNumbered == '11. Maputo (Cidade)') {
+        var province = provinceNumbered.split('. ')[1];
+        var cityOrVillageAdministrativePost = '';
+        //var location = ""
+
+        // Neighborhood
+        // Cidade Maputo vem até aqui pois não tem Localidades, não tem Location
+        var neighborhoods = mozAdminDict[provinceNumbered][district];
+
+        // var neighborhood = cfl2Str(neighborhoods, "Bairro", neighborhoods[0])
+        var { siteItemSelected: neighborhood } = getProjectSiteItemsWithShortcuts(neighborhoods, `Bairro`);
+
+        var projectSite = neighborhood + ', ' + district.replace('*', '') + ', ' + province;
+
+        // Maputo e capitais provinciais (mesmo que distrito sede)
+      } else {
+        // cityOrVillageAdministrativePost
+        var cityOrVillageAdministrativePostList = Object.keys(mozAdminDict[provinceNumbered][district]);
+
+        // var cityOrVillageAdministrativePostInfoItems = cfl(cityOrVillageAdministrativePostList.concat("---------------", useThisSiteForProjectStr), "Cidade / Vila / Posto Administrato", cityOrVillageAdministrativePostList[0], "m")
+
+        var { siteItemsSelected: cityOrVillageAdministrativePostInfoItems } = getProjectSiteItemsWithShortcuts(
+          cityOrVillageAdministrativePostList.concat('---------------', useThisSiteForProjectStr),
+          `Cidade / Vila / Posto Administrato`,
+          'm'
+        );
+
+        if (cityOrVillageAdministrativePostInfoItems.length == 1) {
+          var cityOrVillageAdministrativePost = cityOrVillageAdministrativePostInfoItems[0];
+
+          //if (provinceNumbered == "10. Maputo" || district.includes("*")) {
+
+          if (district.includes('*')) {
+            // Neighborhood
+            // Cidade Maputo vem até aqui pois não tem Localidades, não tem Location
+            var neighborhoods = mozAdminDict[provinceNumbered][district][cityOrVillageAdministrativePost];
+
+            // var neighborhood = cfl2Str(neighborhoods, "Bairro", neighborhoods[0])
+
+            var { siteItemSelected: neighborhood } = getProjectSiteItemsWithShortcuts(neighborhoods, `Bairro`);
+          } else {
+            // Outras Províncias e outros distritos depois de capitais provinciais (mesmo que distrito sede)
+
+            // Location
+            var locations = Object.keys(mozAdminDict[provinceNumbered][district][cityOrVillageAdministrativePost]);
+
+            //var location = cfl2Str(locations, "Localidade ou Similar", locations[0])
+
+            // var locationInfoItems = cfl(locations.concat("---------------", useThisSiteForProjectStr), "Localidade ou Similar", locations[0], "m")
+
+            var { siteItemsSelected: locationInfoItems } = getProjectSiteItemsWithShortcuts(
+              locations.concat('---------------', useThisSiteForProjectStr),
+              `Localidade ou Similar`,
+              'm'
+            );
+
+            var location = locationInfoItems[0];
+
+            if (locationInfoItems.length == 1) {
+              // Neighborhood
+              var neighborhoods = mozAdminDict[provinceNumbered][district][cityOrVillageAdministrativePost][location];
+
+              // var neighborhood = cfl2Str(neighborhoods, "Bairro", neighborhoods[0])
+
+              var { siteItemSelected: neighborhood } = getProjectSiteItemsWithShortcuts(neighborhoods, `Bairro`);
+            } else {
+              var isValidUseThisSiteForProjectStr = spaceLib.getIsValidUseThisSiteForProjectStr(locationInfoItems);
+
+              if (isValidUseThisSiteForProjectStr) {
+                // var province = provinceNumbered.split(". ")[1]
+                // var district = districtInfoItems[0]
+                // var cityOrVillageAdministrativePost = cityOrVillageAdministrativePostInfoItems[0]
+                //var neighborhood = undefined
+                //var projectSite = cityOrVillageAdministrativePost.replace("*", "") + ", " + district.replace("*", "") + ", " + province
+              }
+            }
+          }
+
+          var province = provinceNumbered.split('. ')[1];
+
+          var projectSiteItemsCollection = [neighborhood, location, cityOrVillageAdministrativePost, district, province];
+
+          var projectSiteItemsCollectionFiltered = projectSiteItemsCollection.filter(item => item != undefined);
+
+          var projectSiteItems = [];
+
+          for (var i = 0; i < projectSiteItemsCollectionFiltered.length; i++) {
+            var item = projectSiteItemsCollectionFiltered[i];
+            var item = item.replace('*', '');
+
+            if (i == 0) {
+              projectSiteItems.push(item);
+            } else {
+              if (!projectSiteItems[projectSiteItems.length - 1].includes(item)) {
+                projectSiteItems.push(item);
+              }
+            }
+          }
+
+          var projectSite = projectSiteItems.join(', ');
+        } else {
+          var isValidUseThisSiteForProjectStr = spaceLib.getIsValidUseThisSiteForProjectStr(
+            cityOrVillageAdministrativePostInfoItems
+          );
+
+          if (isValidUseThisSiteForProjectStr) {
+            var province = provinceNumbered.split('. ')[1];
+            var district = districtInfoItems[0];
+            // var cityOrVillageAdministrativePost = cityOrVillageAdministrativePostInfoItems[0]
+            var cityOrVillageAdministrativePost = cityOrVillageAdministrativePostInfoItems
+              .slice(0, cityOrVillageAdministrativePostInfoItems.length - 1)
+              .join(' + ');
+
+            var projectSite =
+              cityOrVillageAdministrativePost.replace('*', '') + ', ' + district.replace('*', '') + ', ' + province;
+          }
+        }
+      }
+    } else {
+      var isValidUseThisSiteForProjectStr = spaceLib.getIsValidUseThisSiteForProjectStr(districtInfoItems);
+
+      if (isValidUseThisSiteForProjectStr) {
+        var province = provinceNumbered.split('. ')[1];
+        var district = districtInfoItems
+          .slice(0, districtInfoItems.length - 1)
+          // For "MONTEPUEZ + NAMUNO" in "Y _ XCPCAF240202 _ DPDOPHRHC DELGADO _ 20 FUROS ABASTECIMENTO ÁGUA DISTRITOS NAMUNO (11) E MONTEPUEZ (9) 1P _ MONTEPUEZ + NAMUNO - CABO DELGADO _ XCPCAF240202"
+          .join(' + ');
+        var cityOrVillageAdministrativePost = ''; // Prevent Error
+
+        var projectSite = district.replace('*', '') + ', ' + province;
+      }
+    }
+  } else {
+    // Validade de "useThisSiteForProjectStr" testdada antes desta Função
+    var projectSite = provinceInfoItems[0].split('. ')[1]; // Only province
+    var province = projectSite;
+  }
+
+  if (originType == 'Ajuste Directo (DW)' || provinceInfoItems.length > 1) {
+    var propLocal = province;
+  } else {
+    var propLocalOptions = [province, district.replace('*', ''), cityOrVillageAdministrativePost.replace('*', '')];
+
+    //if (province != "Maputo") {
+    if (province != 'Maputo (Cidade)') {
+      var propLocalOptions = propLocalOptions.concat('---------------', 'Maputo');
+    }
+
+    var propLocal = cfl2Str(
+      propLocalOptions.filter(item => item != ''),
+      'Local que vem junto com data para Propostas.',
+      province
+    );
+  }
+
+  var siteInfoForMinistries = `${province} / ${district} / ${cityOrVillageAdministrativePost}`;
+
+  // return `${projectSite} | ${propLocal} | ${siteInfoForMinistries}`
+
+  return {
+    isValidUseThisSiteForProjectStr,
+    projectSite,
+    propLocal,
+    siteInfoForMinistries,
+  };
+}
+
+function getCentralInfo02Qgis() {
+  return `<!DOCTYPE html>
+<html>
+<head>
+   <style>
+      html, body {
+         margin: 0;
+         padding: 0;
+         font-family: Arial, sans-serif;
+         font-size: 8px;
+      }
+      div {
+         margin: 0;
+         padding: 0;
+      }
+   </style>
+</head>
+<body>
+   <div>END_MOTNHSTR_IN_PT — Todas medias devem ser confrontadas na Obra. Consultar a equipa projectista sempre que necessário.</div>
+</body>
+</html>
+---------------
+<!DOCTYPE html>
+<html>
+<head>
+   <style>
+      html, body {
+         margin: 0;
+         padding: 0;
+         font-family: Arial, sans-serif;
+         font-size: 8px;
+      }
+      .bold {
+         font-weight: bold;
+      }
+      .big {
+         font-size: 20px;
+      }
+      .small {
+         font-size: 6px;
+      }
+      div {
+         margin: 0;
+         padding: 0;
+      }
+   </style>
+</head>
+<body>
+   <div>CUSTOMER4DOCUMENTS</div>
+   <div class="bold">OBJECT4DOCUMENTS</div>
+   <div>PROJECTSITE</div>
+   <br>
+   <div>G101 PAISAGISMO</div>
+   <div class="bold big">SERVICECODE_GROUP_LAYOUT_PAGE_PADDED</div>
+   <div class="bold">PÁG LAYOUT_PAGE/LAYOUT_NUMBER_PAGES</div>
+   <div class="bold">PAGE_NAME</div>
+   <div class="small">Formato: A3</div>
+   <br>
+   <div>INVOICECS</div>
+   <div>PUP.01.XX-YYYYMMDD_HHMMSS</div>
+</body>
+</html>`;
+}

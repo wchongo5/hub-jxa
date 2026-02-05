@@ -1,0 +1,561 @@
+// v1.0
+// const {
+// 	addZero,
+// 	extractDecimalNumbersWithThousandsSeparators,
+// 	formatNumber,
+// 	generateUUID,
+// 	getMoneyInText,
+// 	getNextNumberOrLetter,
+// 	inputNumber,
+// 	sumAllByReduce,
+// } = Library("numberLib")
+
+var displayLib = Library('displayLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+// ---------------------------------------------
+
+/*
+function addZero(number) {
+	return Number(number) < 10 ? "0" + number : number.toString();
+}
+*/
+
+// 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 IN THE FUTURE, rename addZero to numberPad. Also formatNumber to numberFormat.
+function addZero(number, width = 2) {
+  // Is numberPadded not numberPaded
+  // return Number(number) < 10 ? "0" + number : number.toString();
+  return number.toString().padStart(width, '0'); // padStart pads strings too
+}
+
+function extractDecimalNumbers(text) {
+  // Regex to match numbers with or without thousands separators with optional parentheses for negative numbers
+  /* 
+    \d+ matches one or more digits (without the restriction of thousands separators).
+    (?:,\d{3})* allows for optional commas as thousands separators.
+  */
+  var regex = /\(?\d+(?:,\d{3})*\.\d{2}\)?/g;
+  return text.match(regex);
+}
+
+function formatNumber(numberToFomat, toFixedDecimals = 2, maxdecimals = 2) {
+  return Number(parseFloat(numberToFomat).toFixed(toFixedDecimals)).toLocaleString('en', { minimumFractionDigits: maxdecimals });
+}
+
+// Function to generate a UUID v4
+function generateUUID() {
+  function randomDigit() {
+    return Math.floor(Math.random() * 16).toString(16);
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = randomDigit(),
+      v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function getMoneyInText(numberToConvertToTextInPut) {
+  // 🔴🔴🔴 Opções alternativas - instale no NodeJS e localize os ficheiros das bibliotecas que aceitam PT: written-number, num2words
+
+  // --------------- PARTE 1 - ORIGINAL (BEFORE PUT IN numberLib, these functions were out of getMoneyInText())
+
+  function Extenso(vlr) {
+    var Num = parseFloat(vlr);
+    if (vlr == 0) {
+      document.getElementById('teste').value = 'zero';
+    } else {
+      var inteiro = parseInt(vlr); // parte inteira do valor
+      if (inteiro < 1000000000000000) {
+        var resto = Num.toFixed(2) - inteiro.toFixed(2); // parte fracionária do valor
+        resto = resto.toFixed(2);
+        var vlrS = inteiro.toString();
+
+        var cont = vlrS.length;
+        var extenso = '';
+        var auxnumero;
+        var auxnumero2;
+        var auxnumero3;
+
+        var unidade = [
+          '',
+          'um',
+          'dois',
+          'três',
+          'quatro',
+          'cinco',
+          'seis',
+          'sete',
+          'oito',
+          'nove',
+          'dez',
+          'onze',
+          'doze',
+          'treze',
+          'quatorze',
+          'quinze',
+          'dezesseis',
+          'dezessete',
+          'dezoito',
+          'dezenove',
+        ];
+
+        var centena = [
+          '',
+          'cento',
+          'duzentos',
+          'trezentos',
+          'quatrocentos',
+          'quinhentos',
+          'seiscentos',
+          'setecentos',
+          'oitocentos',
+          'novecentos',
+        ];
+
+        var dezena = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+
+        var qualificaS = ['meticais', 'mil', 'milhão', 'bilhão', 'trilhão'];
+        var qualificaP = ['meticais', 'mil', 'milhões', 'bilhões', 'trilhões'];
+
+        for (var i = cont; i > 0; i--) {
+          var verifica1 = '';
+          var verifica2 = 0;
+          var verifica3 = 0;
+          auxnumero2 = '';
+          auxnumero3 = '';
+          auxnumero = 0;
+          auxnumero2 = vlrS.substr(cont - i, 1);
+          auxnumero = parseInt(auxnumero2);
+
+          if (i == 14 || i == 11 || i == 8 || i == 5 || i == 2) {
+            auxnumero2 = vlrS.substr(cont - i, 2);
+            auxnumero = parseInt(auxnumero2);
+          }
+
+          if (i == 15 || i == 12 || i == 9 || i == 6 || i == 3) {
+            extenso = extenso + centena[auxnumero];
+            auxnumero2 = vlrS.substr(cont - i + 1, 1);
+            auxnumero3 = vlrS.substr(cont - i + 2, 1);
+
+            if (auxnumero2 != '0' || auxnumero3 != '0') extenso += ' e ';
+          } else if (auxnumero > 19) {
+            auxnumero2 = vlrS.substr(cont - i, 1);
+            auxnumero = parseInt(auxnumero2);
+            extenso = extenso + dezena[auxnumero];
+            auxnumero3 = vlrS.substr(cont - i + 1, 1);
+
+            if (auxnumero3 != '0' && auxnumero2 != '1') extenso += ' e ';
+          } else if (auxnumero <= 19 && auxnumero > 9 && (i == 14 || i == 11 || i == 8 || i == 5 || i == 2)) {
+            extenso = extenso + unidade[auxnumero];
+          } else if (auxnumero < 10 && (i == 13 || i == 10 || i == 7 || i == 4 || i == 1)) {
+            auxnumero3 = vlrS.substr(cont - i - 1, 1);
+            if (auxnumero3 != '1' && auxnumero3 != '') extenso = extenso + unidade[auxnumero];
+          }
+
+          if (i % 3 == 1) {
+            verifica3 = cont - i;
+            if (verifica3 == 0) verifica1 = vlrS.substr(cont - i, 1);
+
+            if (verifica3 == 1) verifica1 = vlrS.substr(cont - i - 1, 2);
+
+            if (verifica3 > 1) verifica1 = vlrS.substr(cont - i - 2, 3);
+
+            verifica2 = parseInt(verifica1);
+
+            if (i == 13) {
+              if (verifica2 == 1) {
+                extenso = extenso + ' ' + qualificaS[4] + ' ';
+              } else if (verifica2 != 0) {
+                extenso = extenso + ' ' + qualificaP[4] + ' ';
+              }
+            }
+            if (i == 10) {
+              if (verifica2 == 1) {
+                extenso = extenso + ' ' + qualificaS[3] + ' ';
+              } else if (verifica2 != 0) {
+                extenso = extenso + ' ' + qualificaP[3] + ' ';
+              }
+            }
+            if (i == 7) {
+              if (verifica2 == 1) {
+                extenso = extenso + ' ' + qualificaS[2] + ' ';
+              } else if (verifica2 != 0) {
+                extenso = extenso + ' ' + qualificaP[2] + ' ';
+              }
+            }
+            if (i == 4) {
+              if (verifica2 == 1) {
+                extenso = extenso + ' ' + qualificaS[1] + ' ';
+              } else if (verifica2 != 0) {
+                extenso = extenso + ' ' + qualificaP[1] + ' ';
+              }
+            }
+            if (i == 1) {
+              if (verifica2 == 1) {
+                extenso = extenso + ' ' + qualificaS[0] + ' ';
+              } else {
+                extenso = extenso + ' ' + qualificaP[0] + ' ';
+              }
+            }
+          }
+        }
+        resto = resto * 100;
+        var aexCent = 0;
+        if (resto <= 19 && resto > 0) extenso += ' e ' + unidade[resto] + ' centavos';
+        if (resto > 19) {
+          aexCent = parseInt(resto / 10);
+
+          extenso += ' e ' + dezena[aexCent];
+          resto = resto - aexCent * 10;
+
+          if (resto != 0) extenso += ' e ' + unidade[resto] + ' centavos';
+          else extenso += ' centavos';
+        }
+
+        return extenso; // X-DIM
+
+        //document.getElementById('teste').value = extenso;
+        //('teste').value = extenso;
+      } else {
+        document.getElementById('teste').value = 'Numero maior que 999 trilhões';
+      }
+    }
+  }
+
+  function capitalizeC1(str) {
+    return str[0].toUpperCase() + str.slice(1);
+  }
+
+  // --------------- PARTE 2 - FULLY CODED IN X-DIM
+  // .toString() for situations number comes as number
+  var numberToConvertToText = numberToConvertToTextInPut.toString().replace(/,/g, '');
+
+  var moneyInText = Extenso(numberToConvertToText);
+  // O site Invertexto não põe vírgula em mil, se não tiver centavos, pode ser um BUG deles
+
+  var moneyInTextReplaced = moneyInText
+    .replace('milhão', 'milhão,')
+    .replace('mil  e', 'mil,')
+    .replace('milhões', 'milhões,')
+    .replace('mil ', 'mil, ')
+    .replace('milhão,  e', 'milhão,')
+    .replace('bilhão ', 'bilhão, ')
+    .replace('bilhões ', 'bilhões, ')
+    .replace('trilhão ', 'trilhão, ')
+    .replace('trilhões ', 'trilhões, ')
+    .replace(',  meticais ', ' meticais')
+    .replace('milhões,  e', 'milhões,'); // Replacements to use "," not " e " in some cases
+
+  // --------------- MAIS UMA CORREÇÃO
+  // Se for 2021.00, omite "Dois" ficando " mil, vinte e um meticais"
+  // Percebi (20210219) quando que usar para extenso do ano 2021
+  // Falha vesível em alguns valores entre 1,000.00 e 10,000.00
+
+  if (moneyInTextReplaced.slice(0, 4) == ' mil') {
+    var moneyInTextOfMissedDigit = Extenso(numberToConvertToText[0]).replace(' meticais', '');
+
+    // Slice to remove extra space after Digit in Text "dois "
+    var moneyInTextOfMissedDigit = moneyInTextOfMissedDigit.slice(0, -1);
+    var moneyInTextReplaced = moneyInTextOfMissedDigit + moneyInTextReplaced;
+  }
+
+  var moneyInTextFirstLetterCapitalized = capitalizeC1(moneyInTextReplaced); // capitalizeC1
+
+  if (moneyInTextFirstLetterCapitalized.includes('undefined')) {
+    var lastDigit = numberToConvertToText[numberToConvertToText.length - 1];
+
+    // Correcção de undefined .55 a .58
+    if (lastDigit == '5') {
+      var digitCorrectedInText = 'cinco';
+    }
+    if (lastDigit == '6') {
+      var digitCorrectedInText = 'seis';
+    }
+    if (lastDigit == '7') {
+      var digitCorrectedInText = 'sete';
+    }
+    if (lastDigit == '8') {
+      var digitCorrectedInText = 'oito';
+    }
+
+    // Correcção de undefined se tiver .14
+    if (numberToConvertToText.slice(numberToConvertToText.length - 3, numberToConvertToText.length) == '.14') {
+      var digitCorrectedInText = 'catorze';
+    }
+
+    var moneyInTextFirstLetterCapitalized = moneyInTextFirstLetterCapitalized.replace('undefined', digitCorrectedInText);
+  }
+
+  if (!moneyInTextFirstLetterCapitalized.includes('centavos')) {
+    // Remove extra space after meticais se não tiver centavos <"Duzentos meticais ">
+
+    var moneyInTextFirstLetterCapitalizedArray = moneyInTextFirstLetterCapitalized.split(' ');
+    var moneyInTextFirstLetterCapitalizedArrayLastExtraSpaceRemoved = moneyInTextFirstLetterCapitalizedArray.pop();
+    var moneyInTextFirstLetterCapitalized = moneyInTextFirstLetterCapitalizedArray.join(' ');
+  } else {
+    var moneyInTextFirstLetterCapitalized = moneyInTextFirstLetterCapitalized;
+  }
+
+  // Se terminar com <mil>, acrescentar <meticais> // "Cinquenta e cinco milhões, quinhentos mil"
+  var moneyInTextFirstLetterCapitalizedArray = moneyInTextFirstLetterCapitalized.split(' ');
+
+  var moneyInTextFirstLetterCapitalizedArrayLastWord =
+    moneyInTextFirstLetterCapitalizedArray[moneyInTextFirstLetterCapitalizedArray.length - 1];
+
+  if (moneyInTextFirstLetterCapitalizedArrayLastWord == 'mil') {
+    var moneyInTextFirstLetterCapitalizedArray = moneyInTextFirstLetterCapitalizedArray.concat('meticais');
+    var moneyInTextFirstLetterCapitalized = moneyInTextFirstLetterCapitalizedArray.join(' ');
+  }
+
+  return moneyInTextFirstLetterCapitalized.replace('Um mil', 'Mil');
+}
+
+/*
+function getNextNumberOrLetter(sheetNumber) {
+  const isNumeric = /^\d+$/.test(sheetNumber);
+  if (isNumeric) {
+    let number = parseInt(sheetNumber);
+    if (number < 9) {
+      return (number + 1).toString();
+    } else if (number === 9) {
+      return 'A'; // Starting from 'A' after 9
+    } else {
+      // Convert numbers 10 and above to letters starting from 'A'
+      // const code = 'A'.charCodeAt(0) + (number - 10);
+      const code = 'B'.charCodeAt(0) + (number - 10);
+      if (code <= 'Z'.charCodeAt(0)) {
+        return String.fromCharCode(code);
+      } else {
+        throw new Error("Sheet number exceeds 'Z'. Extension beyond 'Z' is not implemented.");
+      }
+    }
+  } else {
+    if (sheetNumber >= 'A' && sheetNumber < 'Z') {
+		// Returns number of letter position. "J" is 75
+      return String.fromCharCode(sheetNumber.charCodeAt(0) + 1);
+    } else if (sheetNumber === 'Z') {
+      throw new Error("Sheet number 'Z' reached. Extension beyond 'Z' is not implemented.");
+    } else {
+      throw new Error("Invalid sheet number format.");
+    }
+  }
+};
+*/
+
+function getNextNumberOrLetter(sheetNumber, nextNumberIsNumber = false) {
+  const isNumeric = /^\d+$/.test(sheetNumber);
+  if (isNumeric) {
+    let number = parseInt(sheetNumber, 10);
+    if (number < 9) {
+      return (number + 1).toString();
+    } else if (number === 9 && !nextNumberIsNumber) {
+      return 'A'; // Transition to 'A' after 9 when nextNumberIsNumber is false
+    } else {
+      // Handle numeric continuation or conversion to letters based on nextNumberIsNumber flag
+      if (nextNumberIsNumber) {
+        return (number + 1).toString(); // Continue with numbers after 9
+      } else {
+        // Convert numbers 10 and above to letters starting from 'A'
+        //   const code = 'A'.charCodeAt(0) + (number - 10);
+        const code = 'B'.charCodeAt(0) + (number - 10);
+        if (code <= 'Z'.charCodeAt(0)) {
+          return String.fromCharCode(code);
+        } else {
+          throw new Error("Sheet number exceeds 'Z'. Extension beyond 'Z' is not implemented.");
+        }
+      }
+    }
+  } else {
+    if (sheetNumber >= 'A' && sheetNumber < 'Z') {
+      return String.fromCharCode(sheetNumber.charCodeAt(0) + 1);
+    } else if (sheetNumber === 'Z') {
+      throw new Error("Sheet number 'Z' reached. Extension beyond 'Z' is not implemented.");
+    } else {
+      throw new Error('Invalid sheet number format.');
+    }
+  }
+}
+
+// ACEITA EXPRESSÃO DE SOMA NO INPUT
+function inputNumber(numberDescription, inputNumberParameter) {
+  var condition = false;
+
+  while (!condition) {
+    try {
+      var titleDisplay = numberDescription + '\n\n—\nPode introduzir soma de valores!';
+
+      var inputNumberParameter = displayLib.dialog(titleDisplay, inputNumberParameter);
+
+      if (inputNumberParameter.includes('+')) {
+        var inputNumberParameterSum = 0;
+
+        var inputNumberParameterItems = inputNumberParameter.split('+');
+
+        for (var i = 0; i < inputNumberParameterItems.length; i++) {
+          inputNumberParameterSum += Number(inputNumberParameterItems[i]);
+        }
+      } else {
+        var inputNumberParameterSum = inputNumberParameter;
+      }
+
+      var theNumber = Number(inputNumberParameterSum);
+
+      if (isNaN(theNumber)) {
+        saApp.beep();
+        var condition = false;
+      } else {
+        if (theNumber > 0) {
+          var condition = true;
+        }
+
+        if (theNumber == 0) {
+          saApp.beep();
+        }
+      }
+    } catch {
+      saApp.beep();
+      displayLib.alert('Introduz número!', '');
+      var condition = false;
+    }
+  }
+  return theNumber.toString();
+}
+
+/*
+// --------------- OPÇÃO 3 (COM PARÂMETRO & ANALISA NOME E PREÇO)
+// NÃO ACEITA SOMENTE O PREÇO
+
+var operationDescription = "Item e preço (i+1)"
+
+thePrice = inputItemNameAndPrice(operationDescription)
+
+function inputItemNameAndPrice(operationDescription) {
+	var condition = false
+
+	while (!(condition)) {
+
+		try {
+
+			var itemNameAndPrice = currentApp.displayDialog(operationDescription, { defaultAnswer: ""}).textReturned;
+
+			var itemNameAndPriceItems = itemNameAndPrice.split(" ")
+
+			var thePrice = itemNameAndPriceItems[itemNameAndPriceItems.length - 1]
+
+			var thePrice = parseInt(thePrice)
+
+			if (isNaN(thePrice) || itemNameAndPriceItems.length == 1) {
+				saApp.beep()
+				var condition = false
+
+			} else {
+				if (thePrice > 0) {
+					var condition = true
+				}
+
+				if (thePrice == 0) {
+					saApp.beep()
+				}
+			}
+		} catch {
+			saApp.beep()
+			currentApp.displayAlert("Introduz número!")
+			var condition = false
+		}
+	}
+	return itemNameAndPrice
+}
+
+*/
+
+/*
+
+// NÃO ACEITA EXPRESSÃO DE SOMA NO INPUT
+
+function inputNumber(numberDescription, inputNumberParameter) {
+	var condition = false
+
+	while (!(condition)) {
+
+		try {
+
+			var theNumber = Number(currentApp.displayDialog(numberDescription, { defaultAnswer: inputNumberParameter}).textReturned);
+
+			if (isNaN(theNumber)) {
+				saApp.beep()
+				var condition = false
+
+			} else {
+				if (theNumber > 0) {
+					var condition = true
+				}
+
+				if (theNumber == 0) {
+					saApp.beep()
+				}
+			}
+		} catch {
+			saApp.beep()
+			currentApp.displayAlert("Introduz número!")
+			var condition = false
+		}
+	}
+	return theNumber.toString()
+}
+
+// --------------- OPÇÃO 2 (COM PARÂMETROS - inputNumberParameter, numberDescription)
+
+
+var inputNumberParameter = "3000"
+var numberDescription = "Valor unitário"
+
+theNumber = inputNumber(numberDescription, inputNumberParameter)
+
+
+// --------------- OPÇÃO 1
+
+referenceNumber = inputReferenceNumber()
+
+
+function inputReferenceNumber() {
+	var condition = false
+
+	while (!(condition)) {
+
+		try {
+
+			var referenceNumber = parseInt(currentApp.displayDialog("Referência parcial - número", { defaultAnswer: ""}).textReturned);
+
+			if (isNaN(referenceNumber)) {
+				saApp.beep()
+				var condition = false
+
+			} else {
+				if (referenceNumber > 0) {
+					var condition = true
+				}
+
+				if (referenceNumber == 0) {
+					saApp.beep()
+				}
+			}
+		} catch {
+			saApp.beep()
+			currentApp.displayAlert("Introduza a referência parcial - número!")
+			var condition = false
+		}
+	}
+	return addZero(referenceNumber)
+}
+*/
+
+// 🔴🔴🔴🔴🔴🔴 EXISTE UM SITIO NUM APP QUE NÃO USEI, ESTA FUNCAO, FOI ANTES DE CRIA-LA, PROCURAR E SUBSTITUIR
+function sumAllByReduce(arryOfNumbers) {
+  return arryOfNumbers.reduce(function (total, number) {
+    // return total + number;
+    return total + Number(number.toString().replace(/,/g, ''));
+  }, 0);
+}

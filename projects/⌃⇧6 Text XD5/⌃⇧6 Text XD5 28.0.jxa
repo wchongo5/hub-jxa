@@ -1,0 +1,4027 @@
+// v28.0
+
+ObjC.import('PDFKit');
+
+const { offsetDateByComponents, formatDateV3, getDelays } = Library('datetimeLib');
+const pathLib = Library('pathLib');
+
+const { getNumXG5PathStr, getP1PathStr, getP5PathStrWithSuffixP5 } = Library('pathLib');
+
+const systemLib = Library('systemLib');
+const projectLib = Library('projectLib');
+const {
+  adjustPathSeparator,
+  getContratFolderInfo,
+  getND,
+  getFinderFilePathSr,
+  getFinderFolderPathSr,
+  getIsInEmailFolderInteraction,
+  getPathStrsFromPathObjs,
+  renameItem,
+} = Library('finderLib');
+const objCLib = Library('objCLib');
+const appLib = Library('appLib');
+const {
+  alignHorizontal,
+  alignVertical,
+  mergeCells,
+  selectionRange,
+  numbersDateAndReference,
+  numbersQuoteChargedPercentage,
+  numbersWriteReference,
+  pagesApplyLetterHeader,
+} = Library('iWorkLib');
+
+const cflLib = Library('cflLib');
+const { alert, dialog } = Library('displayLib');
+const menuLib = Library('menuLib');
+const { formatNumber, getMoneyInText, sumAllByReduce } = Library('numberLib');
+const paymentLib = Library('paymentLib');
+const {
+  getCompanyAndPersonInfo,
+  getAuthorNameFromAuthorLine,
+  getXd5MemberInfo,
+  getNoteTextAtFolderLevel1ByTitle,
+  processCorrespondeceNoteText,
+} = Library('notesLib');
+
+const xeroQuoteInfoFilePathStr = `/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/INBOX/XA5-TEMPORARY5/TF 00 _ XEROQUOTEINFO/XERO_QUOTE_INFO.txt`;
+
+// 🔴🔴🔴 AINDA FALTA APLICAÇÃO DE LIBRARIES
+
+const { areStringsEqual, capitalizeText, generateStrFromCFL, listTasks } = Library('documentLib');
+const safariLib = Library('safariLib');
+const xeroLib = Library('xeroLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+const pagesApp = Application('Pages');
+const pagesAppControllerP = seApp.processes['Pages'];
+const safariApp = Application('Safari');
+
+const mailApp = Application('Mail');
+const mailController = seApp.processes['Mail'];
+
+const numbersApp = Application('Numbers');
+
+const contactsApp = Application('Contacts');
+const messagesApp = Application('Messages');
+
+alert(`UPDATE TO: "C.C.: Magnífico Reitor da [Nome da Outra Instituição]
+" and "C.C.: Arquiteto [Nome] da [Nome da Instituição]"
+`);
+
+listTasks([
+  [`FACTUARCAO - incluir submissão de factura sem mencionar necessidade de pagamento como para FPD parceria`],
+  [`TVCABO - Email do PDF pagamento automaticamente como Renda L100`],
+  [
+    `Resolver`,
+    [
+      `AVAL EMPREITEIRO (MZN5,000,000.00 (Cinco milhões de meticais)) e "de meticais" acrescentei manualmente - Vide pagamentos de 500,000.00 SENAMI`,
+      `Na Referência do AVAL incluir aos número(s) da(s) facturas do empreiteiro`,
+    ],
+  ],
+  [
+    `CONSIDERAR SOLICITAÇÃO DE MUITAS FACTURAS NUMA ÚNCIA CARTA PARA XD5 ASSIM COMO NO EMPREITO (CRIAÇÃO AUTOMÁTICA)`,
+    [`USE AS FACTURAS DE 500,000.00 PARA SENAMI.`, `ASSUNTO SELECIONA AUTOMATICAMENTE AGORA, FALTA PLURAL SE FOR AMIS DE 1`],
+  ],
+
+  [`Opção para Envio de Recibo`, [`Exemplo Banco de Moçambique Condomínio`]],
+  [
+    `Formatar Pastas pata técnciocos (XT36J230203) para serem reconhecidas nas correspondências`,
+    [
+      `Agora usam "NO_CS"`,
+      `Integrar QuickFOLDER para criação de pastas para CARTAS específicas Tipo`,
+      `Suspensão de Contrato (Check "20240226-073000-V1 _ XDXFAF210603 _ SUSPENSÃO DO CONTRATO _ JOJO LAQUIMANE | HARDCOPY")`,
+    ],
+  ],
+  [`Marketing`, [`USAR novo PERFIL e ACTUALIZÁ-LO`, `SITE E EMAIL CORPORATIVO`]],
+]);
+
+// ---------------------------------------
+const ND = getND();
+// --------------------------------------- DELAYS
+
+const { d0p1, d0p3, d1, d2, d3, d5 } = getDelays();
+
+// ---------------------------------------
+var now = new Date();
+const nowFormatted = formatDateV3(now);
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const {
+  components: {
+    year: { Y4: yearY4 },
+    month: {
+      M1: monthM1,
+      M2: monthM2, //
+      long: monthLong,
+      short: monthShort,
+    },
+    day: { D2: dayD2 },
+    time: { H1: timeH1 },
+  },
+  formats: {
+    dateY4M2D2, //
+    dateY4M2D2__H2M2S2: _dateY4M2D2__H2M2S2,
+    dateDashD2M2Y4,
+    dateDashY4M2D2,
+    dateDotY4M2D2__H2M2S2,
+    dateDotY4M2D2,
+    yearY4M2,
+  },
+} = nowFormatted;
+
+let dateY4M2D2__H2M2S2 = _dateY4M2D2__H2M2S2;
+
+// ---------------------------------------
+
+var p5PathStrWithSuffixP5 = getP5PathStrWithSuffixP5();
+var pagesDocLogo5PathStr = `${getP1PathStr()}/P1T TEMPLATES/P1T2P PROP5Y — YES IVA/PT:MI ${ND} LOGO5.pages`;
+const numXG5PathObj = Path(getNumXG5PathStr());
+
+//var xd5DocumentsStr = "Alvará, Certificado de Inscrição no Cadastro Único, BR - Estatutos actualizados, Certidão de quitação pela Obrigações fiscais, Certidão de quitação pela Obrigações com INSS, Certidão de quitação passada pelo Tribunal Judicial, Contabilidade de yearY4 (Processo de contas, Balancete, Balanço e Demonstração de contas), Declaração periódica de rendimentos (Ocasional), Certidão de quitação pela Obrigações do INE"
+
+var xd5DocumentsStr = 'Alvará, Certif, BR - E, Certid, Contab, Declar';
+
+var finderSelection = finderApp.selection(); // For selected files for Email Attachments
+
+var documentXTemplateNameD = 'DocumentX';
+var documentXTemplateNameWitouthLogos = 'DocumentX - WithoutLogos';
+
+var fileSelectedPathStr = getFinderFilePathSr();
+var destinyFolderStr = getFinderFolderPathSr();
+var fileSelectedName = finderApp.selection()[0].name();
+
+// -----------
+
+let selectedObjectsStr = null;
+let filePathSaved = null;
+
+// -----------
+
+if (fileSelectedName.includes(`ENZ ${ND} RENDA`)) {
+  var production = 'Email - Renda ENZ';
+} else {
+  var production = cfl2Str(
+    [
+      'Acta (New) - Já tem listas de nomes de Fiscal, cliente e Empreiteiro*',
+      'Aval para pagamento AO3 (New)*',
+      'Create Xero - Quote Info',
+      'Contrato',
+      'Documento X',
+      'Email',
+      'Email - Renda ENZ',
+      'Mensagem',
+      'Propostas',
+      'Relatório A5 & O5 (New)*',
+      'Quitações (Requerimentos)',
+      '_ Solicitação Garantia (New)*',
+      'Solicitação Pagamento',
+    ],
+    'Tipo de Produção',
+    'Documento X'
+  );
+}
+
+if (production == 'Acta (New)' || production == 'Documento X' || production == 'Email' || production == 'Solicitação Pagamento') {
+  if (production == 'Documento X' || production == 'Solicitação Pagamento') {
+    var docNumXG5 = numbersApp.open(numXG5PathObj);
+  }
+
+  if (production == 'Solicitação Pagamento') {
+    alert('///// INCLUIR VALOR NO WRITEREFERENCE /////');
+  }
+
+  let isXd5GroupEmailTo = false;
+
+  var {
+    entityType,
+    contractNumber: invoiceCs,
+    contractNumbers: invoiceCSs,
+    entity4Folders: customer4Folders,
+    companyIdentifier,
+    parentFolderSubject,
+  } = getContratFolderInfo(destinyFolderStr);
+
+  // --------------- NEW POSITION
+
+  // Useful for situations of folder like "20250605-114627 _ XDXFAF210601 - XDXFAF210602 - XDXFAF210603 _ RELATÓRIOS DE LEVANTAMENTOS DE NECESSIDADES __ X-DIM (JOJÓ LAQUIMANE) | EMAIL" but inside need to create separate Report files
+  let filtersOfTitles = [invoiceCs];
+
+  if (invoiceCSs.length > 0) {
+    invoiceCSs = cfl(invoiceCSs, `CSs encontradas na pasta (${invoiceCSs.length})`, invoiceCSs, 'm');
+
+    filtersOfTitles = invoiceCSs;
+    invoiceCs = invoiceCSs[0];
+  }
+
+  if (production == 'Acta (New)' || production == 'Documento X' || production == 'Solicitação Pagamento') {
+    if (projectLib.isCs(invoiceCs)) {
+      // AQUI para correspondências que usam CS XDWFAP211001, XDXFAP211001, NDXFAP211001
+      var consultancy = projectLib.getServiceByC1(invoiceCs[5]);
+      var productionTypeCode = invoiceCs[4] + '5' + invoiceCs[5];
+    } else {
+      // Fornecedor // TVCABO is "2018105550", BIM 152750848
+
+      var consultancy = 'Gestão';
+      var productionTypeCode = 'X5G';
+
+      // O IF abaixo é para permitir que Os documentos de Gestão da firma (XDIMX - companyIdentifier == "X") continuem usando template com LOGOS
+
+      // if (companyIdentifier == "W" && !isNaN(invoiceCs)) {
+      if (companyIdentifier == 'W' && !invoiceCs.includes('DW')) {
+        var documentXTemplateNameD = documentXTemplateNameWitouthLogos;
+      }
+    }
+
+    if (invoiceCs !== 'NO_CS') {
+      // customer or supplier Name
+      var shortNameCustomerOrSupplier = customer4Folders;
+
+      if (productionTypeCode == 'X5G') {
+        var recipientContractorOrCustomerOrSupplierOrSupervisor = 'Fornecedor';
+      } else {
+        if (production == 'Solicitação Pagamento') {
+          var recipientContractorOrCustomerOrSupplierOrSupervisor = 'Cliente';
+        } else {
+          if (invoiceCs[5] == 'E') {
+            var recipientContractorOrCustomerOrSupplierOrSupervisor = cfl2Str(['Cliente', 'Fiscal'], 'Destinatário', 'Cliente');
+          } else if (invoiceCs[5] == 'F') {
+            var recipientContractorOrCustomerOrSupplierOrSupervisor = cfl2Str(
+              ['Cliente', 'Empreiteiro', 'Fiscal Residente'],
+              'Destinatário',
+              'Cliente'
+            );
+          } else if (invoiceCs[5] == 'P') {
+            var recipientContractorOrCustomerOrSupplierOrSupervisor = 'Cliente';
+          }
+        }
+      }
+    }
+  }
+
+  let groupedReceiptsNumbers = [];
+  let cleanSubject;
+
+  // ---------------
+
+  if (invoiceCs === 'NO_CS') {
+    var headerSelected = 'A Quem Possa Interessar';
+    var subject = 'Carta de Recomendação';
+    var shortNameSelected = dialog('Nome para ficheiro', 'Jojó João de Sousa Laquimane').toUpperCase();
+
+    var selectedObjectsAndCssStr = dialog('Objecto', 'Contrato de Trabalho XT36J230203');
+    selectedObjectsStr = selectedObjectsAndCssStr;
+  } else {
+    // const filtersOfTitles = invoiceCSs.length > 0 ? invoiceCSs : [invoiceCs];
+
+    var {
+      correspondeceNoteText,
+      headerSelected,
+      shortNameSelected,
+      letterBodyInfo,
+      subject,
+      selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs,
+      selectedObjectsAndCssStr,
+      selectedObjectsAndCss,
+      authorsLinesCleanXd5Excluded,
+      authorsLinesCleanXd5Excluded,
+
+      authorsLinesFull,
+
+      author2LinesClean,
+      author3LinesClean,
+      author3NameShort,
+    } = processCorrespondeceNoteText(
+      production,
+      customer4Folders,
+      filtersOfTitles,
+      recipientContractorOrCustomerOrSupplierOrSupervisor,
+      undefined,
+      undefined
+    );
+
+    selectedObjectsStr = selectedObjectsAndCss.join(' & ');
+
+    var invoiceSCSs = projectLib.getCSs(selectedObjectsAndCssStr);
+
+    if (invoiceSCSs) {
+      var invoiceSCSsJoinedWithDash = invoiceSCSs.join(' & ');
+    }
+
+    if (projectLib.isCs(invoiceCs)) {
+      var servicesAndSiteIDsAndCSs = projectLib.processServicesAndSiteIDsAndCSs(
+        selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs,
+        subject
+      );
+
+      if (production === 'Documento X' && selectedObjectsAndCss.length > 1) {
+        var selectedObjectsAndCssStr = cfl2Str(
+          [servicesAndSiteIDsAndCSs, selectedObjectsAndCssStr],
+          `Escolhe a composição dos obejctos` + '\n',
+          servicesAndSiteIDsAndCSs
+        );
+
+        selectedObjectsStr = selectedObjectsAndCssStr;
+      }
+    } else {
+      var servicesAndSiteIDsAndCSs = selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs;
+    }
+
+    if (letterBodyInfo) {
+      var greeting = '';
+      var starting = letterBodyInfo.split('\n').join('\n');
+      var closing = '';
+      var goodBye = '';
+    } else {
+      var customersAndSuppliersNoteText = getNoteTextAtFolderLevel1ByTitle('P1', ['Clientes & Fornecedores']);
+
+      var templateLetterInfoItems = customersAndSuppliersNoteText.match(/—————\n(.*(\n.*)*)\n—————/)[1].split('\n——\n');
+
+      var greeting = templateLetterInfoItems[0]
+        .split('\n')
+        .find(item => item[0] === 'Y')
+        .split(' | ')[1];
+
+      if (production == 'Documento X' || production == 'Email') {
+        var startings = templateLetterInfoItems[1]
+          .split('\n')
+          .filter(item => item.startsWith('Y | '))
+          .map(item => item.replace('Y | ', ''));
+
+        var startingSelected = currentApp.chooseFromList(startings, {
+          withPrompt: 'Opções de começo',
+          defaultItems: startings[0],
+          multipleSelectionsAllowed: true,
+        }); //.toString();
+
+        var starting = startingSelected.join('\n\n');
+      }
+
+      var closing = templateLetterInfoItems[2]
+        .split('\n')
+        .find(item => item[0] === 'Y')
+        .split(' | ')[1];
+
+      closing;
+
+      var goodBye = templateLetterInfoItems[3]
+        .split('\n')
+        .find(item => item[0] === 'Y')
+        .split(' | ')[1];
+    }
+
+    /*
+		
+		if (projectLib.isCs(invoiceCs)) {
+			// AQUI para correspondências que usam CS XDWFAP211001, XDXFAP211001, NDXFAP211001
+			var consultancy = projectLib.getServiceByC1(invoiceCs[5])
+			var productionTypeCode = invoiceCs[4] + "5" + invoiceCs[5]
+	
+		} else {
+			// Fornecedor // TVCABO is "2018105550", BIM 152750848
+	
+			var consultancy = "Gestão"
+			var productionTypeCode = "X5G"
+	
+			// O IF abaixo é para permitir que Os documentos de Gestão da firma (XDIMX - companyIdentifier == "X") continuem usando template com LOGOS
+			
+			// if (companyIdentifier == "W" && !isNaN(invoiceCs)) {
+			if (companyIdentifier == "W" && !invoiceCs.includes("DW")) {
+				var documentXTemplateNameD = documentXTemplateNameWitouthLogos
+			}
+		}
+		*/
+
+    // 🔴🔴🔴🔴🔴 ------------ consultancyInTitle NOT USED, CHECK IN FUTURE AND REMOVE IT
+
+    var consultancyInTitle = consultancy;
+
+    if (consultancyInTitle != 'Projecto') {
+      var consultancyInTitle = 'Obra';
+    }
+  }
+
+  if (production == 'Documento X' || production == 'Solicitação Pagamento') {
+    var {
+      referenceNumber1WithDate,
+      referenceNumber2WithDate,
+      dateDotDdMmYyyy,
+      referenceNumberIncrement1,
+      referenceNumberIncrement2,
+      referenceNumber1,
+      referenceNumber2,
+      referenceNumberPreviousWithDate,
+    } = numbersDateAndReference(docNumXG5, productionTypeCode, dateY4M2D2__H2M2S2, companyIdentifier);
+
+    var dateWithDateStr = `Data: ${dateDotDdMmYyyy}`;
+    var referenceWithReferenceStr1 = 'Referência: ' + referenceNumber1;
+    var referenceWithReferenceStr2 = 'Referência: ' + referenceNumber2;
+
+    if (invoiceCs !== 'NO_CS' && entityType == 'customer') {
+      var invoiceSCS = invoiceSCSs[0];
+
+      if (invoiceSCS) {
+        // XDXFAF210601
+        if (invoiceSCS[5] === 'F' && production == 'Solicitação Pagamento') {
+          try {
+            var referenceWithReferenceStrContractorAval = referenceWithReferenceStr1;
+            var referenceNumberWithDateContractorAval = referenceNumber1WithDate;
+            var referenceNumberIncrementContractorAval = referenceNumberIncrement1;
+
+            var referenceWithReferenceStr1 = referenceWithReferenceStr2;
+            var referenceNumber1WithDate = referenceNumber2WithDate;
+            var referenceNumberIncrement1 = referenceNumberIncrement2;
+
+            const contractorInvoicingInfo = correspondeceNoteText.match(/^Facturação Empreiteiro.*$/gm)[0];
+
+            alert(`Informação da facturação do empreiteiro`, `${contractorInvoicingInfo}`);
+
+            const contractorInvoicingInfoItems = contractorInvoicingInfo.split(' | ');
+
+            // var paymentIdentifier = contractorInvoicingInfoItems[1].split(' ')[1];
+            var paymentIdentifier = contractorInvoicingInfoItems[1];
+
+            const matchPaymentIdentifierNumber = paymentIdentifier.match(/Auto\s\d{3}|TM\d{3}/);
+
+            if (matchPaymentIdentifierNumber) {
+              var paymentIdentifierNumber = matchPaymentIdentifierNumber[0];
+            } else {
+              alert(`Não encontrou "paymentIdentifierNumber" em "${paymentIdentifier}".`, `Deve ter formato Auto 001 ou TM001.`);
+            }
+
+            var invoiceNumberContractor = contractorInvoicingInfoItems[2].split(' ')[1];
+            var invoiceAmountContractorFormatted = contractorInvoicingInfoItems[3];
+
+            var invoiceAmountAndExtensiveContractor =
+              invoiceAmountContractorFormatted + ' - ' + getMoneyInText(invoiceAmountContractorFormatted);
+          } catch (error) {
+            alert(`Talvez não encontrou informação da facturação do empreiteiro.`, ``);
+          }
+        }
+      }
+    }
+  }
+
+  if (production == 'Documento X' || production == 'Email' || production == 'Solicitação Pagamento') {
+    if (parentFolderSubject && (production == 'Documento X' || production == 'Email')) {
+      const parentFolderSubjectCapitalized = adjustPathSeparator(capitalizeText(parentFolderSubject, 'WithExclusions'), true);
+
+      if (!areStringsEqual(parentFolderSubjectCapitalized, subject)) {
+        const subjectsMap = { parentFolderSubjectCapitalized, subject };
+        var subject = projectLib.selectSubject(subjectsMap);
+      }
+    }
+
+    if (production == 'Documento X') {
+      var subject = dDialog(
+        'Assunto - Iniciais maiúsculas / Ref Anterior ' +
+          referenceNumberPreviousWithDate +
+          '\n\n—\n• Actualizar o assunto na nota manualmente❗️',
+        subject
+      );
+
+      if (subject.includes('Recibo') && /\(R\d+/.test(subject)) {
+        groupedReceiptsNumbers = [...subject.matchAll(/\((R[^)]+)\)/g)].map(m => [m[1]]);
+
+        cleanSubject = subject.replace(/\s*\([^)]*\)/g, '').trim();
+
+        alert(`Recibos encontrados no assunto: ${groupedReceiptsNumbers.map(r => `• ${r}`).join('\n')}`);
+      }
+
+      var subjectItems = subject.split(' ');
+
+      if (subjectItems.length <= 3) {
+        var subject4Name = subject;
+      } else {
+        var subjectItemsFiltered = subjectItems.filter(
+          item => item.length > 3 && !item.toLowerCase().includes('sobre') && !item.toLowerCase().includes('envio')
+        );
+
+        var subject4Name = generateStrFromCFL(subjectItems, `Assunto para "subject4Name"`, subjectItemsFiltered);
+      }
+    }
+
+    if (production == 'Email') {
+      var subjUpperCase = subject.toUpperCase();
+    }
+
+    if (production == 'Email') {
+      var attachmentStatus = cfl2Str(['Não', 'Sim'], 'Tem anexos?', 'Não');
+
+      var isInEmailFolderInteraction = getIsInEmailFolderInteraction(finderSelection[0]);
+    }
+
+    if (production == 'Documento X' && productionTypeCode != 'X5G') {
+      var ccStatus = cfl2Str(['Não', 'Sim'], 'Tem C/C?', 'Não');
+
+      if (ccStatus == 'Não') {
+        var theCC = '';
+      } else if (ccStatus == 'Sim') {
+        var shortNameContractorForCC = author3NameShort;
+
+        /*     let authorLines;
+        let shortNameToCc;
+        let categoryName;
+
+        if (recipientContractorOrCustomerOrSupplierOrSupervisor == 'Cliente') {
+          authorLines = author3LinesClean;
+          shortNameToCc = shortNameContractorForCC;
+          categoryName = `Empreiteiro`;
+        } else {
+          // "Empreiteiro" or "Fiscal"
+          authorLines = author2LinesClean;
+          shortNameToCc = shortNameCustomerOrSupplier;
+          categoryName = `Dono da Obra`;
+        } */
+
+        let authorLines = [...author2LinesClean, ...author3LinesClean];
+
+        if (authorLines.length > 0) {
+          // const author2LineClean = cfl2Str(authorLines, `${categoryName} | Nome para CC`, authorLines[0]);
+          const author2LineClean = cfl2Str(authorLines, `Nome para C/C`, authorLines[0]);
+
+          const authorId = author2LineClean.split(' / ').slice(-1)[0];
+
+          const { isCompany, companyShortName, workerName, role } = getCompanyAndPersonInfo(
+            authorsLinesFull,
+            authorId,
+            customer4Folders,
+            true
+          );
+
+          // const nameToCc = getAuthorNameFromAuthorLine(author2LineClean);
+
+          // alert(nameToCc);
+
+          // let shortNameToCc;
+          // let categoryName;
+
+          // var theCC = 'CC: ' + shortNameToCc + ' / ' + nameToCc;
+
+          var theCC = `C/C: ${isCompany ? workerName : `${companyShortName} / ${workerName} (${role})`}`;
+        } else {
+          alert(`Sem nomes para C/C.`, ``);
+        }
+      }
+    }
+
+    if (production == 'Email') {
+      // --------------- Tos
+      const authorLineD = authorsLinesCleanXd5Excluded.find(authorLine => {
+        const [, , authorId] = authorLine.split(' / ');
+
+        return authorId[0] === '2';
+      });
+
+      var authorsTo = cfl(
+        authorsLinesCleanXd5Excluded,
+        `Destinatários "Tos" | ${authorsLinesCleanXd5Excluded.length}`,
+        authorLineD,
+        'm'
+      );
+
+      var emailsTos = [];
+      var authorsToSelectCCs = [];
+      var authorsToSelectCCsD = [];
+      for (var i = 0; i < authorsTo.length; i++) {
+        const [, authorEmailTo] = authorsTo[i].split(' / ');
+
+        for (var j = 0; j < authorsLinesCleanXd5Excluded.length; j++) {
+          const authorLine = authorsLinesCleanXd5Excluded[j];
+          const [, authorEmail, authorId] = authorLine.split(' / ');
+
+          if (authorEmail == authorEmailTo) {
+            if (!emailsTos.includes(authorEmail)) {
+              emailsTos.push(authorEmail);
+            }
+          } else {
+            if (!authorsToSelectCCs.includes(authorLine) && !authorsTo.includes(authorLine)) {
+              authorsToSelectCCs.push(authorLine);
+
+              if (authorId[0] == '2' || authorId[0] == '3') {
+                authorsToSelectCCsD.push(authorLine);
+              }
+            }
+          }
+        }
+      }
+
+      // Milicinho Baptista Massimo (Eng. Hidráulico) / milicinhoeng@gmail.com / 1.1.2
+      const fisrtAuthorOfauthorsTo = authorsTo.find(author => author.includes(emailsTos[0]));
+
+      const [, , authorId] = fisrtAuthorOfauthorsTo.split(' / ');
+
+      const { isXd5Group } = getXd5MemberInfo(authorId);
+
+      // alert(fisrtAuthorOfauthorsTo);
+
+      isXd5GroupEmailTo = isXd5Group;
+
+      var emailsCCs = [];
+
+      var ccResponse = cflLib.cfl2Str(['Não', 'Sim'], 'Tem emails para CC?', 'Não');
+
+      if (ccResponse == 'Sim') {
+        var authorsToSelectCCsXD5Excluded = authorsToSelectCCs.filter(item => !item.includes('xdimag@gmail.com'));
+
+        var authorsToSelectCCsXD5Excluded = cfl(
+          authorsToSelectCCsXD5Excluded,
+          `Destinatários "Ccs" | ${authorsToSelectCCsXD5Excluded.length}\n\n—\nDestinatários "Tos":\n${emailsTos.join('\n')}`,
+          authorsToSelectCCsD,
+          'm'
+        );
+
+        for (var i = 0; i < authorsToSelectCCsXD5Excluded.length; i++) {
+          const [, authorEmailCc] = authorsToSelectCCsXD5Excluded[i].split(' / ');
+
+          for (var j = 0; j < authorsLinesCleanXd5Excluded.length; j++) {
+            const authorLine = authorsLinesCleanXd5Excluded[j];
+            const [, authorEmail] = authorLine.split(' / ');
+
+            if (authorEmail == authorEmailCc) {
+              if (!emailsCCs.includes(authorEmail)) {
+                emailsCCs.push(authorEmail);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (production == 'Documento X') {
+    pagesApp.activate();
+    var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates[documentXTemplateNameD] }).make();
+
+    delay(d1);
+
+    var tableHeader = docPages.tables['tableHeader'];
+
+    pagesApplyLetterHeader(tableHeader, headerSelected, referenceWithReferenceStr1, dateWithDateStr, production);
+
+    var placeHolderTexts_ = docPages.placeholderTexts;
+    var theseTags = placeHolderTexts_.tag();
+
+    var uniqueTags = [];
+
+    for (var i = 0; i < theseTags.length; i++) {
+      var thisTag = theseTags[i];
+
+      //if (!(uniqueTags.includes(thisTag))) { // Motivo de desactivação, ver em Knowledge (• PAGES - TAGS & TABLES)
+      uniqueTags.push(thisTag);
+      //}
+    }
+
+    for (var i = 0; i < uniqueTags.length; i++) {
+      var thisTag = uniqueTags[i];
+
+      if (thisTag == 'theSubject') {
+        // placeHolderTexts_.whose({ tag: thisTag })[0].set(subject.toUpperCase());
+        placeHolderTexts_.whose({ tag: thisTag })[0].set((cleanSubject ?? subject).toUpperCase());
+      } else if (thisTag == 'theObject') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(selectedObjectsAndCssStr.toUpperCase());
+      } else if (thisTag == 'theGreeting') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(greeting);
+      } else if (thisTag == 'theStarting') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(starting);
+      } else if (thisTag == 'theClosing') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(closing);
+      } else if (thisTag == 'theGoodBye') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(goodBye);
+      } else if (thisTag == 'theCC') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(theCC);
+      }
+    }
+
+    var recipientShortName = shortNameSelected;
+
+    // TEMPORARY SPLUTIO BECUSE WAS NOT SAVING PAGES AND CONTINUE
+    menuLib.setClipboard(`${ND} ${subject4Name.toUpperCase()} ${invoiceCs} ${ND} ${recipientShortName}`);
+    menuLib.setClipboard(`${recipientShortName} / ${subject}${processSelectedObjectsStr(selectedObjectsStr)}`);
+
+    // var destinyFolderStr = destinyFolderStr.replace(/\:/g, '/');
+
+    // alert('destinyFolderStr', destinyFolderStr);
+
+    if (invoiceCs === 'NO_CS') {
+      filePathSaved = processSave(docPages, destinyFolderStr, `${ND} ${subject4Name.toUpperCase()} ${ND} ${recipientShortName}`);
+    } else {
+      filePathSaved = processSave(
+        docPages,
+        destinyFolderStr,
+        `${ND} ${subject4Name.toUpperCase()} ${invoiceCs} ${ND} ${recipientShortName}`
+      );
+    }
+
+    var referenceToWrite1 = `${recipientShortName} / ${subject}${processSelectedObjectsStr(selectedObjectsStr)}`;
+  } else if (production == 'Email') {
+    var theContent = greeting + '\n\n' + starting + '\n\n' + closing + '\n\n';
+
+    saApp.setTheClipboardTo(theContent);
+
+    newMessage = mailApp.OutgoingMessage({
+      subject:
+        subjUpperCase + ' _ ' + servicesAndSiteIDsAndCSs.toUpperCase() + `${isXd5GroupEmailTo ? ' _ ' + customer4Folders : ''}`,
+      content: '',
+      visible: true,
+    });
+
+    mailApp.outgoingMessages.push(newMessage);
+
+    // TOs
+    for (var i = 0; i < emailsTos.length; i++) {
+      newMessage.toRecipients.push(mailApp.Recipient({ address: emailsTos[i] }));
+    }
+
+    // CCs
+    for (var i = 0; i < emailsCCs.length; i++) {
+      newMessage.ccRecipients.push(mailApp.Recipient({ address: emailsCCs[i] }));
+    }
+
+    mailApp.activate();
+    delay(d0p3);
+
+    if (attachmentStatus == 'Sim') {
+      if (finderSelection[0] == undefined) {
+        saApp.beep();
+        dAlert('Por favor seleciona anexos e inicia o App de novo!', '', ['Cancel', 'OK'], 2, 1);
+      }
+
+      for (var i = 0; i < finderSelection.length; i++) {
+        let attachmentFile = finderSelection[i];
+
+        const attachmentFileKind = attachmentFile.kind();
+
+        if (attachmentFileKind === 'Alias') {
+          attachmentFile = attachmentFile.originalItem();
+        }
+
+        // ----- FULLPATH
+        var attachmentPathStr = getPathStrsFromPathObjs([attachmentFile])[0];
+
+        // Must be Path(attachmentPathStr) not direct filde object (attachmentFile)
+        newMessage.attachments.push(mailApp.Attachment({ fileName: Path(attachmentPathStr) }));
+      }
+    }
+    delay(d3);
+
+    systemLib.tab(4); // Go to compose area
+
+    if (attachmentStatus == 'Sim') {
+      systemLib.enter(1);
+      systemLib.enter(1);
+      systemLib.arrowUp(2);
+    }
+
+    menuLib.paste();
+    mailController.windows[0].popUpButtons[1].click(); // Assinaturas
+    systemLib.arrowDown(1); // Go down to signature
+    systemLib.enter(1); // Enter to select signature
+
+    // DELETE EXTRA LINES
+
+    if (attachmentStatus == 'Sim') {
+      // Go to Signature Start
+      systemLib.arrowRight(finderSelection.length + 2);
+      systemLib.arrowDown(2);
+      systemLib.pressDelete(2);
+    }
+
+    if (attachmentStatus == 'Não') {
+      // Delete unnecessary lines
+      systemLib.arrowDown(3);
+      systemLib.pressDelete(4);
+    }
+
+    if (isInEmailFolderInteraction) {
+      dateY4M2D2__H2M2S2 = formatDateV3(new Date()).dateY4M2D2__H2M2S2;
+
+      const datePattern = /\d{8}-\d{6}/;
+
+      const folderContainer = finderSelection[0].container();
+      const folderContainerName = folderContainer.name();
+
+      const folderContainerOldDate = folderContainerName.match(datePattern);
+
+      /*    if (folderContainerOldDate) {
+        const folderContainerNameNew = folderContainerName.replace(datePattern, dateY4M2D2__H2M2S2);
+
+        const folderContainerPathStr = getPathStrsFromPathObjs([folderContainer])[0];
+
+        renameItem(folderContainerPathStr, folderContainerNameNew, 'noReveal');
+
+        alert(
+          `Depois de enviar email, actualizar a "datetime" na pasta do email. Agora foi actualizada de "${folderContainerOldDate[0]}" para "${dateY4M2D2__H2M2S2}"`,
+          ``
+        );
+      } else {
+        alert(`Não encontrou data na pasta para actualizar depois do envio do email.`, ``);
+      } */
+    }
+  } else if (production == 'Solicitação Pagamento') {
+    // --------------- SOLICITAÇÃO PAGAMENTO
+
+    var invoiceType = cfl2Str(['Legal', 'Proforma'], 'Tipo de factura', 'Legal');
+
+    if (invoiceType == 'Legal') {
+      var invoicesOpenByCs = paymentLib.invoices(invoiceCs).openByCs2;
+      var invoiceOpenByCsLast = invoicesOpenByCs[invoicesOpenByCs.length - 1];
+
+      // var thanksGodTestng = cfl2Str(invoicesOpenByCs, invoiceOpenByCsLast, invoicesOpenByCs[0]);
+
+      const invoiceOpenByCsLastItems = invoiceOpenByCsLast.split(' ');
+
+      // var invoiceNumber = dDialog(`Número da factura\n\n—\n• Deve ter a factura legal "scanned" e gravada na pasta de IMPOSTO20XX!`, "")
+      var invoiceNumber = invoiceOpenByCsLastItems[1];
+      var invoiceAmount = invoiceOpenByCsLastItems[3].replace(/,/g, '');
+    } else if (invoiceType == 'Proforma') {
+      var invoiceNumber = invoiceSCSsJoinedWithDash; //invoiceSCSs.join(" - ")
+
+      var moneyInTextAmountClipb = saApp.theClipboard();
+
+      if (Number(moneyInTextAmountClipb.replace(/,/g, ''))) {
+        var moneyInTextAmountD = moneyInTextAmountClipb;
+        var extraDialogTitle = ``;
+      } else {
+        var moneyInTextAmountD = ``;
+        var extraDialogTitle = `\n\n—\nCopiar o valor antes, para letura automática❗️`;
+      }
+
+      var invoiceAmount = dDialog(
+        `Valor da factura Nº: ${invoiceNumber} / Ref Anterior ${referenceNumberPreviousWithDate}${extraDialogTitle}`,
+        moneyInTextAmountD
+      ).replace(/,/g, '');
+    }
+
+    // -------------- AVAL TO PAY CONTRACTOR
+
+    if (invoiceSCS[5] === 'F') {
+      /*
+			Facturação Empreiteiro | Auto 1 | Factura 16 | 1,133,930.35
+
+			contractorName
+			paymentIdentifier
+			invoiceNumberContractor
+			invoiceAmountAndExtensiveContractor
+			object
+			*/
+
+      var referenceToWriteContractor =
+        shortNameSelected +
+        ` / Envio do Processo de Facturação do Empreiteiro ${author3NameShort} (F${invoiceNumberContractor}) — ` +
+        selectedObjectsStr;
+
+      pagesApp.activate();
+      var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['AVAL Pagamento Empreiteiro'] }).make();
+
+      var tableHeader = docPages.tables['tableHeader'];
+      pagesApplyLetterHeader(tableHeader, headerSelected, referenceWithReferenceStrContractorAval, dateWithDateStr, production);
+
+      var placeHolderTexts_ = docPages.placeholderTexts;
+      var theseTags = placeHolderTexts_.tag();
+
+      var uniqueTags = [];
+
+      for (var i = 0; i < theseTags.length; i++) {
+        var thisTag = theseTags[i];
+
+        //if (!(uniqueTags.includes(thisTag))) {
+        uniqueTags.push(thisTag);
+        //}
+      }
+
+      for (var i = 0; i < uniqueTags.length; i++) {
+        var thisTag = uniqueTags[i];
+
+        if (thisTag == 'contractorName') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(author3NameShort);
+        } else if (thisTag == 'paymentIdentifier') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(paymentIdentifier);
+        } else if (thisTag == 'invoiceNumberContractor') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(invoiceNumberContractor);
+        } else if (thisTag == 'invoiceAmountAndExtensiveContractor') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(invoiceAmountAndExtensiveContractor);
+        } else if (thisTag == 'object') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(selectedObjectsAndCssStr);
+        }
+      }
+
+      const filePathSavedLocal = processSave(
+        docPages,
+        destinyFolderStr,
+        `${ND} AVAL PAGAMENTO EMPREITEIRO - ${author3NameShort} - ${paymentIdentifierNumber} F${invoiceNumberContractor} ${ND} ${shortNameSelected} ${ND} ${invoiceAmountContractorFormatted}`
+      );
+
+      numbersWriteReference(
+        numbersApp,
+        docNumXG5,
+        referenceNumberWithDateContractorAval,
+        referenceNumberIncrementContractorAval,
+        referenceToWriteContractor,
+        filePathSavedLocal
+      );
+    }
+
+    var invoiceAmountFormated = formatNumber(invoiceAmount);
+    var invoiceAmountInText = getMoneyInText(invoiceAmount);
+    var theInvoiceAmountAndExtensive = invoiceAmountFormated + ' (' + invoiceAmountInText + ')';
+
+    // ------------- CALCULATIONS TO DISPLAY FOR INVOICING
+
+    var invoiceSubtotalAmount = Number(invoiceAmount) / 1.16;
+    var invoiceVatAmount = Number(invoiceAmount) - invoiceSubtotalAmount;
+
+    var invoicingNumbers =
+      formatNumber(invoiceSubtotalAmount) + '\n' + formatNumber(invoiceVatAmount) + '\n' + formatNumber(invoiceAmount);
+
+    pagesApp.activate();
+    var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['Solicitação Pagamento'] }).make();
+
+    var tableHeader = docPages.tables['tableHeader'];
+    pagesApplyLetterHeader(tableHeader, headerSelected, referenceWithReferenceStr1, dateWithDateStr, production);
+
+    var placeHolderTexts_ = docPages.placeholderTexts;
+    var theseTags = placeHolderTexts_.tag();
+
+    var uniqueTags = [];
+
+    for (var i = 0; i < theseTags.length; i++) {
+      var thisTag = theseTags[i];
+
+      //if (!(uniqueTags.includes(thisTag))) {
+      uniqueTags.push(thisTag);
+      //}
+    }
+
+    for (var i = 0; i < uniqueTags.length; i++) {
+      var thisTag = uniqueTags[i];
+
+      if (thisTag == 'theObject') {
+        if (invoiceType == 'Legal') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(selectedObjectsAndCssStr.toUpperCase());
+        } else if (invoiceType == 'Proforma') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(selectedObjectsStr);
+        }
+      } else if (thisTag == 'invoiceNumber') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(invoiceNumber);
+      } else if (thisTag == 'theInvoiceAmountAndExtensive') {
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(theInvoiceAmountAndExtensive);
+      }
+    }
+
+    if (invoiceType == 'Legal') {
+      var theInvoiceNumberStr = 'F' + invoiceNumber;
+    } else if (invoiceType == 'Proforma') {
+      var theInvoiceNumberStr = invoiceNumber;
+    }
+
+    filePathSaved = processSave(
+      docPages,
+      destinyFolderStr,
+      `${ND} SOLICITAÇÃO DE PAGAMENTO ${invoiceCs} ${ND} ${shortNameSelected} ${ND} ${theInvoiceNumberStr} - ${invoiceAmountFormated}`
+    );
+
+    var referenceToWrite1 = `${shortNameSelected} / Solicitação de Pagamento (F${invoiceNumber}) - ${selectedObjectsStr}`;
+
+    delay(d2);
+
+    // --------------- FACTURA PROFORMA
+
+    if (invoiceType == 'Proforma') {
+      var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['Factura Proforma'] }).make();
+
+      var tableInvoicingDetails = docPages.tables['tableInvoicingDetails'];
+
+      // 🔴 As células com merge aplicavam inofrmação nas duas células desactivado o merge automaticamente. Já usei em Numbers sem problemas considerando o nome da primeira célula.
+
+      tableInvoicingDetails.cells['A1'].value = dateWithDateStr;
+      tableInvoicingDetails.cells['A2'].value = headerSelected;
+
+      // 🔴🔴🔴🔴 invoiceNumber // DEL5 THIS LINE
+      tableInvoicingDetails.cells['B3'].value = 'Nº ' + invoiceSCSs.join('\n');
+      tableInvoicingDetails.cells['A5'].value = selectedObjectsStr;
+      tableInvoicingDetails.cells['B8'].value = invoiceAmountFormated;
+      tableInvoicingDetails.cells['B10'].value = invoiceAmountInText;
+
+      processSave(
+        docPages,
+        destinyFolderStr,
+        `${ND} FACTURA PROFORMA ${ND} ${shortNameSelected} ${ND} ${invoiceNumber} - ${invoiceAmountFormated}`
+      );
+    }
+  }
+
+  // ----- WRITE THEREFERENCE IN NUMBERS
+  if (production == 'Documento X' || production == 'Solicitação Pagamento') {
+    numbersWriteReference(
+      numbersApp,
+      docNumXG5,
+      referenceNumber1WithDate,
+      referenceNumberIncrement1,
+      referenceToWrite1,
+      filePathSaved
+    );
+  }
+} else if (production == 'Email - Renda ENZ') {
+  var theContent = 'Prezada Júlia,\n\nJunto enviamos o comprovativo do pagamento do período em destaque.\n\n';
+
+  saApp.setTheClipboardTo(theContent);
+
+  var pdfReceiptPage1Text = pdfText(fileSelectedPathStr);
+
+  const { subjectStr } = paymentLib.getSupplierPaymentsInfoFromPDF(pdfReceiptPage1Text);
+
+  newMessage = mailApp.OutgoingMessage({
+    subject: subjectStr,
+    content: '',
+    visible: true,
+  });
+
+  mailApp.outgoingMessages.push(newMessage);
+
+  newMessage.toRecipients.push(mailApp.Recipient({ address: 'juliameque@yahoo.com.br' }));
+
+  newMessage.toRecipients.push(mailApp.Recipient({ address: 'augustomjunior@gmail.com' }));
+
+  mailApp.activate();
+  delay(d0p3); //0.3
+
+  for (var i = 0; i < finderSelection.length; i++) {
+    var attachmentFile = finderSelection[i];
+
+    // ----- FULLPATH
+    var attachmentPathStr = decodeURI(attachmentFile.url()).slice(7).replace(/%23/g, '#');
+
+    newMessage.attachments.push(mailApp.Attachment({ fileName: Path(attachmentPathStr) }));
+  }
+  delay(d3); //3
+
+  seApp.keyCode([48, 48, 48]); // Go to compose area
+  delay(d0p1);
+
+  seApp.keyCode(36); // Enter for one line
+  delay(d0p1);
+
+  seApp.keyCode([126, 126]); // Go up to start compose
+  delay(d0p1);
+
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3); // 0.3
+
+  mailController.windows[0].popUpButtons[1].click(); // Assinaturas
+
+  seApp.keyCode(125); // Go down to signature
+  delay(d0p1);
+
+  seApp.keyCode(36); // Enter to select signature
+  delay(d0p3);
+
+  // DELETE EXTRA LINES
+  // Go to Signature Start
+  for (var i = 0; i < finderSelection.length + 2; i++) {
+    seApp.keyCode(124);
+  }
+
+  // Go down
+  seApp.keyCode([125, 125]);
+
+  // Delete lines
+  seApp.keyCode([51, 51]);
+} else if (production == 'Create Xero - Quote Info') {
+  // const operation = 'A. Create - Quote (W)';
+  // const invoiceCs = ''; // Just for function
+  // const dateFoldersAndDocuments = '';
+
+  const docNumXG5 = numbersApp.open(numXG5PathObj);
+
+  const activeSheet = docNumXG5.activeSheet();
+  const activeSheetNameItems = activeSheet.name().split(' ');
+  const activeSheetNameLast = activeSheetNameItems[activeSheetNameItems.length - 1];
+
+  if (projectLib.isCs(activeSheetNameLast)) {
+    var propSheet = activeSheet; //docNumXG5.sheets[proposalSheetName]
+  } else {
+    alert(`Erro`, `Talvez o "${activeSheetNameLast}" não é CS.`);
+  }
+
+  // Tables
+  const tableHeaderInfo = propSheet.tables['HeaderInfo'];
+  const tableV1WagesBySpeciality = propSheet.tables['V1-Por especialidade'];
+  const tableConstructionPhases = propSheet.tables['ConstructionPhases'];
+
+  const tableInputs1 = propSheet.tables['Inputs1'];
+  const quoteTotal = formatNumber(tableInputs1.cells['E22'].value());
+  const chargedPercentage = numbersQuoteChargedPercentage(tableInputs1);
+  const objectDetails =
+    tableHeaderInfo.cells['B1'].value() +
+    '\n' +
+    'Localização — ' +
+    tableHeaderInfo.cells['C1'].value() +
+    '\n' +
+    tableHeaderInfo.cells['C2'].value();
+
+  const quoteCs = tableHeaderInfo.cells['A1'].value(); // quoteNumber
+  const paymentMethod = tableHeaderInfo.cells['A3'].value(); // paymentDistribution
+  // const customer4Folders = tableHeaderInfo.cells['B4'].value();
+  // const spendReceiveInvoiceBillPerson = tableHeaderInfo.cells['C3'].value();
+
+  const workDurationItems = tableHeaderInfo.cells['C4'].value().split(' ');
+  const workDuration = Number(workDurationItems[0]);
+  const workDurationUnit = workDurationItems[1];
+
+  let daysToAdd = 0;
+  let weeksToAdd = 0;
+  let monthsToAdd = 0;
+
+  if (workDurationUnit[0] == 'd') {
+    daysToAdd = workDuration;
+  } else if (workDurationUnit[0] == 's') {
+    weeksToAdd = workDuration;
+  } else if (workDurationUnit[0] == 'm') {
+    monthsToAdd = workDuration;
+  }
+
+  const isssueDate_yyyy__mm__dd = dateDashY4M2D2;
+
+  const dueDateObj = offsetDateByComponents(now, { daysToAdd, weeksToAdd, monthsToAdd });
+
+  const dueDateFormatted = formatDateV3(dueDateObj);
+
+  if (!dueDateFormatted) {
+    throw new Error(`"Data" inválida`);
+  }
+
+  const {
+    formats: { dateDashY4M2D2: dueDate_yyyy__mm__dd },
+  } = dueDateFormatted;
+
+  const quoteInfoPart1 = `${quoteCs} | ${isssueDate_yyyy__mm__dd} | ${dueDate_yyyy__mm__dd} | ${paymentMethod}`;
+
+  // Responsabilities
+  const consultantResponsabilitiesTitle = tableHeaderInfo.cells['C11'].value();
+  const consultantResponsability1 = tableHeaderInfo.cells['C12'].value();
+
+  const customerResponsabilitiesTitle = tableHeaderInfo.cells['C14'].value();
+  const customerResponsability1 = tableHeaderInfo.cells['C15'].value();
+
+  const manualNeedsStatus = tableHeaderInfo.cells['B10'].value();
+
+  if (manualNeedsStatus == 1) {
+    var needsTextXero = tableHeaderInfo.cells['C10'].value();
+    var needsHTML = needsTextXero;
+    var needsNotesStr = '';
+  } else {
+    var a5pNeedsText = projectLib.getNeedsA5Text(propSheet);
+    var needsHTML = projectLib.needsTextFormatter(a5pNeedsText, 'html');
+
+    var a5pNeedsTextXero = projectLib.needsTextFormatter(a5pNeedsText, 'textXero');
+
+    var needsTextXero = projectLib.needsA5RemoveAreaDetails([a5pNeedsTextXero]);
+
+    var needsLandscapeStr = projectLib.getNeedsA5Landscape(propSheet);
+    var needsNotesStr = projectLib.getNeedsA5Notes(propSheet);
+
+    var needsTextXero = `${needsTextXero}${needsLandscapeStr}`;
+
+    if (needsLandscapeStr == '') {
+      var needsLandscapeHTML = '';
+      alert(`Não têm itens de "Landscape"`, ``);
+    } else {
+      var needsLandscapeHTML = projectLib.needsTextFormatter(needsLandscapeStr, 'html');
+    }
+
+    if (needsNotesStr == '') {
+      var needsNotesNotes = '';
+      alert(`Não têm notas referentes a Necessidades`, ``);
+    } else {
+      var needsNotesNotes = projectLib.needsTextFormatter(needsNotesStr, 'html');
+    }
+
+    var needsHTML = `${needsHTML}${needsLandscapeHTML}\n${needsNotesNotes}`;
+
+    try {
+      // Pode não ter Muro de vedação
+      //var fencesObjects = needsTextXero.match(/G2\d{2}.*/g)
+      var fencesObjects = needsTextXero.match(/Muro.*\(G2\d{2}\)/g);
+      var fencesObjects = fencesObjects.map(function (item) {
+        var fenceID = item.match(/G2\d{2}/);
+        return fenceID + ' ' + item.split(' (')[0].toUpperCase();
+      });
+    } catch {
+      var fencesObjects = [];
+    }
+
+    var buildingObjects = needsTextXero.match(/G3\d{2}.*/g);
+    var buildingObjectsStr = fencesObjects.concat(buildingObjects).join('\n');
+  }
+
+  if (quoteCs.slice(4, 6) == 'AP') {
+    projectLib.writeNeeds(docNumXG5, quoteCs, needsHTML, buildingObjectsStr);
+  }
+
+  // ----- WORK ITEM COLLECTING FROM NUMBERS
+  const workDescrAndAmountList = [];
+  let contractDescr = '';
+
+  if (quoteCs.slice(4, 6) == 'AP') {
+    // ARQUITECTURA
+
+    const consultantResponsability2 = tableHeaderInfo.cells['C13'].value();
+
+    const responsabilities =
+      consultantResponsabilitiesTitle +
+      '\n' +
+      consultantResponsability1 +
+      '\n' +
+      consultantResponsability2 +
+      '\n\n' +
+      customerResponsabilitiesTitle +
+      '\n' +
+      customerResponsability1;
+
+    contractDescr = objectDetails + '\n\n' + needsTextXero + needsNotesStr + '\n\n' + responsabilities;
+
+    for (var i = 3; i < tableV1WagesBySpeciality.rowCount(); i++) {
+      var lineChecker = tableV1WagesBySpeciality.rows[i].cells[4].value();
+
+      if (lineChecker == 1) {
+        var workDescr = tableV1WagesBySpeciality.rows[i].cells[1].value();
+        var amount = tableV1WagesBySpeciality.rows[i].cells[6].value();
+
+        workDescrAndAmountList.push([workDescr, formatNumber(amount)]);
+      }
+    }
+  } else {
+    // ASSISTÊNCIA / CONSTRUÇÃO / EMPREITADA
+
+    let equipmentDescription = tableHeaderInfo.cells['C17'].value();
+
+    // XDWCAC241001
+    if (quoteCs[5] === 'A') {
+      equipmentDescription = '';
+    } else {
+      if (equipmentDescription == 'Sem equipmento') {
+        equipmentDescription = '';
+      } else {
+        const equipmentSection = tableHeaderInfo.cells['C16'].value();
+
+        equipmentDescription = '\n\n---------------\n' + equipmentSection + '\n' + equipmentDescription;
+      }
+    }
+
+    const responsabilities =
+      consultantResponsabilitiesTitle +
+      '\n' +
+      consultantResponsability1 +
+      '\n\n' +
+      customerResponsabilitiesTitle +
+      '\n' +
+      customerResponsability1 +
+      equipmentDescription;
+
+    contractDescr = objectDetails + '\n\n' + responsabilities;
+
+    for (var i = 4; i < tableConstructionPhases.rowCount() - 4; i++) {
+      const iSum = i + 1;
+
+      const lineChecker = tableConstructionPhases.cells['F' + iSum].value();
+      // const amount = tableConstructionPhases.cells['G' + iSum].value();
+      const amount = tableConstructionPhases.cells['I' + iSum].value();
+      const amountFormatted = formatNumber(amount);
+      const amountFormattedNumber = Number(amountFormatted.replace(/,/g, ''));
+
+      if (lineChecker == 1 && amountFormattedNumber > 0) {
+        const workDescr = tableConstructionPhases.cells['B' + iSum].value();
+
+        workDescrAndAmountList.push([workDescr, amountFormatted]);
+      }
+    }
+  }
+
+  delay(d0p3);
+
+  const quoteInfo =
+    quoteInfoPart1 +
+    '\n--------------------\n' +
+    contractDescr +
+    '\n--------------------\n' +
+    workDescrAndAmountList.map(item => item.join(' || ')).join('\n');
+
+  menuLib.setClipboard(quoteInfo);
+
+  delay(d0p3);
+  tableHeaderInfo.cells['C18'].value = quoteInfo;
+  delay(d0p3);
+
+  objCLib.writeToFile(xeroQuoteInfoFilePathStr, quoteInfo);
+
+  // 🔴 ---------------------------- UPDATE PROPOSALAMOUT AND PERCENTAGE IN QUOTE FOLDER
+
+  // 🔴🔴🔴🔴🔴 ACHO QUE É NECESSÁRIO: var dueAmountAndTotalWithPrefix = ""
+
+  // projectLib.updateQuotePAndCFolderName(p5PathStrWithSuffixP5, quoteCs, quoteTotal, chargedPercentage)
+  projectLib.updatePAndCFolderName({ p5DisciplinePath: p5PathStrWithSuffixP5, cs: quoteCs, quoteTotal, chargedPercentage });
+
+  projectLib.contractsDetails(
+    '',
+    'ReadInvoiceInfoAndUpdateJSON',
+    p5PathStrWithSuffixP5,
+    ['All'],
+    ['All'],
+    yearY4,
+    '',
+    '',
+    3,
+    undefined
+  );
+} else if (production == 'Contrato') {
+  var docNumXG5 = numbersApp.open(numXG5PathObj);
+  numbersApp.activate();
+  docNumXG5.activeSheet.set(docNumXG5.sheets['CONTRATOS']);
+
+  // COMUM
+  var sheetContract = docNumXG5.sheets['CONTRATOS'];
+  //var tableContractGeneral = sheetContract.tables["Table - ContractGeneral"];
+  //var contractType = tableContractGeneral.cells["B1"].value()
+
+  currentApp.activate();
+  var contractType = cfl2Str(['Consultoria (Ainda)', 'Imobiliária', 'Mestre', 'PUP (Ainda)'], 'Tipo de Contrato', 'Mestre');
+
+  // CONSULTORIA
+  if (contractType == 'Consultoria (Ainda)') {
+    // IMOBILIÁRIA
+  } else if (contractType == 'Imobiliária') {
+    // Esta tabela por ter somente data não é usada pois data está na tableContractPropertyInfo `tablePropertyGeneral`
+    //var tablePropertyGeneral = sheetContract.tables["Table - ContractPropertyGeneral"];
+    var tableContractPropertyInfo = sheetContract.tables['Table - ContractPropertyInfo'];
+
+    var columnNumber = tableContractPropertyInfo.columnCount();
+
+    for (var h = 1; h < columnNumber; h++) {
+      if (h == 1) {
+        var constructorColumnLetter = 'B';
+      }
+      if (h == 2) {
+        var constructorColumnLetter = 'C';
+      }
+      if (h == 3) {
+        var constructorColumnLetter = 'D';
+      }
+      if (h == 4) {
+        var constructorColumnLetter = 'E';
+      }
+      if (h == 5) {
+        var constructorColumnLetter = 'F';
+      }
+      if (h == 6) {
+        var constructorColumnLetter = 'G';
+      }
+      if (h == 7) {
+        var constructorColumnLetter = 'H';
+      }
+      if (h == 8) {
+        var constructorColumnLetter = 'I';
+      }
+      if (h == 9) {
+        var constructorColumnLetter = 'J';
+      }
+      if (h == 10) {
+        var constructorColumnLetter = 'K';
+      }
+      if (h == 11) {
+        var constructorColumnLetter = 'L';
+      }
+      if (h == 12) {
+        var constructorColumnLetter = 'M';
+      }
+      if (h == 13) {
+        var constructorColumnLetter = 'N';
+      }
+
+      if (h > 13) {
+        dAlert('Codeit!', 'O limite de processamento de documentos é ' + (h - 1) + '.', ['Cancel'], 1, 1);
+      }
+
+      var selectionStatus = tableContractPropertyInfo.cells[constructorColumnLetter + '1'].value();
+
+      if (selectionStatus == 1) {
+        var leaseSpaceNumberDescr = tableContractPropertyInfo.cells[constructorColumnLetter + '2'].value();
+        var leaseSpaceNumber = leaseSpaceNumberDescr.match(/IW5\w+/)[0];
+
+        var tenantName = tableContractPropertyInfo.cells[constructorColumnLetter + '3'].value();
+        var tenantNameUpper = tenantName.toUpperCase();
+
+        var contractSignatureDateMonthInNumber = tableContractPropertyInfo.cells[constructorColumnLetter + '4'].value();
+        var contractSignatureDateInPt = getDateEnglishToPortugue(contractSignatureDateMonthInNumber, 'long');
+        var date = contractSignatureDateInPt;
+
+        var tenantIDNumber = tableContractPropertyInfo.cells[constructorColumnLetter + '5'].value();
+
+        var leaseType = tableContractPropertyInfo.cells[constructorColumnLetter + '7'].value();
+        var leaseTypeTitleWithLeaseSpaceNumber = leaseType.toUpperCase() + ' ' + leaseSpaceNumber;
+
+        var leaseActivity = tableContractPropertyInfo.cells[constructorColumnLetter + '9'].value();
+        var leasePlaceDescr = tableContractPropertyInfo.cells[constructorColumnLetter + '11'].value();
+        var leasePeriod = tableContractPropertyInfo.cells[constructorColumnLetter + '12'].value();
+        var leasePeriodUnity = tableContractPropertyInfo.cells[constructorColumnLetter + '13'].value();
+        var leaseStartDate = tableContractPropertyInfo.cells[constructorColumnLetter + '15'].value();
+        var leaseEndDate = tableContractPropertyInfo.cells[constructorColumnLetter + '16'].value();
+        var leaseAmount = tableContractPropertyInfo.cells[constructorColumnLetter + '17'].value();
+
+        var leasePeriodStartDescr =
+          leasePeriod + ' ' + leasePeriodUnity + ', no período de ' + getDateEnglishToPortugue(leaseStartDate, 'numeric');
+
+        var leasePeriodEndDescr = leaseEndDate;
+
+        var leaseAmountDescr = formatNumber(leaseAmount) + ' (' + getMoneyInText(leaseAmount) + ')';
+
+        pagesApp.activate();
+        var docPagesInContract = pagesApp.Document({ documentTemplate: pagesApp.templates['Contrato - Imobiliária'] }).make();
+
+        var placeHolderTexts_ = docPagesInContract.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag == 'leaseTypeTitleWithLeaseSpaceNumber') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leaseTypeTitleWithLeaseSpaceNumber);
+          } else if (thisTag == 'tenantName') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(tenantName);
+          } else if (thisTag == 'tenantIDNumber') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(tenantIDNumber);
+          } else if (thisTag == 'leaseType') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leaseType);
+          } else if (thisTag == 'leasePlaceDescr') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leasePlaceDescr);
+          } else if (thisTag == 'leasePeriodStartDescr') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leasePeriodStartDescr);
+          } else if (thisTag == 'leasePeriodEndDescr') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leasePeriodEndDescr);
+          } else if (thisTag == 'leaseAmountDescr') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leaseAmountDescr);
+          } else if (thisTag == 'leaseActivity') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(leaseActivity);
+          } else if (thisTag == 'date') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(date);
+          }
+        }
+
+        var docPages = docPagesInContract;
+
+        processSave(
+          docPages,
+          destinyFolderStr,
+          `${leaseSpaceNumber} ${ND} CONTRATO ARRENDAMENTO ${
+            leaseTypeTitleWithLeaseSpaceNumber.split(' ')[0]
+          } ${ND} ${formatNumber(leaseAmount)} ${ND} ${tenantNameUpper}`
+        );
+      }
+    }
+  } else if (contractType == 'Mestre') {
+    var tableConstructorGeneral = sheetContract.tables['Table - ContractConstructorGeneral'];
+    var tableContractConstructorInfo = sheetContract.tables['Table - ContractConstructorInfo'];
+
+    var tableContractConstructorProc = docNumXG5.sheets['CONTRATOS'].tables['Table - ContractConstructorProc'];
+
+    var obj = tableConstructorGeneral.cells['B2'].value();
+    var customerAndCs = tableConstructorGeneral.cells['B3'].value();
+
+    var invoiceCs = customerAndCs.match(/\w{6}\d{6}/)[0];
+    var customer = customerAndCs.split(' ' + invoiceCs)[0];
+    var objAndCustomer = obj + ' — ' + capitalizeText(customer, 'WithExclusions');
+
+    var columnNumber = tableContractConstructorInfo.columnCount();
+
+    for (var h = 1; h < columnNumber; h++) {
+      if (h == 1) {
+        var constructorColumnLetter = 'B';
+      }
+      if (h == 2) {
+        var constructorColumnLetter = 'C';
+      }
+      if (h == 3) {
+        var constructorColumnLetter = 'D';
+      }
+      if (h == 4) {
+        var constructorColumnLetter = 'E';
+      }
+      if (h == 5) {
+        var constructorColumnLetter = 'F';
+      }
+      if (h == 6) {
+        var constructorColumnLetter = 'G';
+      }
+      if (h == 7) {
+        var constructorColumnLetter = 'H';
+      }
+      if (h == 8) {
+        var constructorColumnLetter = 'I';
+      }
+      if (h == 9) {
+        var constructorColumnLetter = 'J';
+      }
+      if (h == 10) {
+        var constructorColumnLetter = 'K';
+      }
+      if (h == 11) {
+        var constructorColumnLetter = 'L';
+      }
+      if (h == 12) {
+        var constructorColumnLetter = 'M';
+      }
+      if (h == 13) {
+        var constructorColumnLetter = 'N';
+      }
+
+      if (h > 13) {
+        dAlert('Codeit!', 'O limite de processamento de documentos é ' + (h - 1) + '.', ['Cancel'], 1, 1);
+      }
+
+      var selectionStatus = tableContractConstructorInfo.cells[constructorColumnLetter + '1'].value();
+
+      if (selectionStatus == 1) {
+        var constructorTypeAndName =
+          tableContractConstructorInfo.cells[constructorColumnLetter + '2'].value() +
+          ' — ' +
+          tableContractConstructorInfo.cells[constructorColumnLetter + '3'].value();
+
+        var contractSignatureDateMonthInNumber = tableContractConstructorInfo.cells[constructorColumnLetter + '4'].value();
+        var contractSignatureDateInPt = getDateEnglishToPortugue(contractSignatureDateMonthInNumber, '2-digit');
+
+        var contractDuration = tableContractConstructorInfo.cells[constructorColumnLetter + '5'].value();
+
+        var durationTrackC = contractDuration.slice(-1);
+        var durationNum = Number(contractDuration.replace(durationTrackC, ''));
+
+        if (durationTrackC == 'd') {
+          if (durationNum == 1) {
+            var unitTracked = ' dia';
+          } else {
+            var unitTracked = ' dias';
+          }
+
+          var contractDuration = contractDuration.replace('d', unitTracked);
+        } else if (durationTrackC == 'm') {
+          if (durationNum == 1) {
+            var unitTracked = ' mês';
+          } else {
+            var unitTracked = ' meses';
+          }
+
+          var contractDuration = contractDuration.replace('m', unitTracked);
+        }
+
+        var contractDueDateMonthInNumber = tableContractConstructorInfo.cells[constructorColumnLetter + '8'].value();
+        var contractDueDateInPt = getDateEnglishToPortugue(contractDueDateMonthInNumber, '2-digit');
+
+        //Data — 23.03.2021 / Duração — 15d (21/4/2021)
+
+        var dateAndDueDateAndDuration =
+          'Data — ' +
+          contractSignatureDateInPt.replace(/\//g, '.') +
+          ' / Duração — ' +
+          contractDueDateInPt.replace(/\//g, '.') +
+          ' (' +
+          contractDuration +
+          ')';
+
+        var constructorName = constructorTypeAndName.split(' — ')[1];
+
+        var rowNumber = tableContractConstructorInfo.rowCount() - 1;
+
+        var values = [];
+
+        var totalAmount = 0;
+
+        for (var i = 8; i < rowNumber; i++) {
+          var value = tableContractConstructorInfo.rows[i].cells[h].value();
+          if (value != '' && value != null) {
+            values.push([tableContractConstructorInfo.rows[i].cells[0].value(), formatNumber(value)]);
+
+            totalAmount += value;
+          }
+        }
+
+        for (var i = 0; i < values.length; i++) {
+          var newRow = tableContractConstructorProc.cells['A' + tableContractConstructorProc.rowCount()].addRowBelow();
+          tableContractConstructorProc.rows[i].cells[0].value = values[i][0];
+          tableContractConstructorProc.rows[i].cells[1].value = values[i][1];
+        }
+
+        // -------------- COPY TABLE PROCESS INFO
+        var lastTableLengthWithoutTotal = tableContractConstructorProc.rowCount();
+
+        // -1 para excluir a última fila sem info
+        selectionRange(tableContractConstructorProc, 'A1:B' + (lastTableLengthWithoutTotal - 1));
+        delay(d0p1);
+
+        numbersApp.activate();
+        delay(d0p1); // Era 1
+        seApp.keystroke('c', { using: 'command down' });
+        delay(d0p1); // Era 0.3
+
+        // -------------- EMPTY TABLE FOR FUTURE PROCESS
+        var tableProcessLength = tableContractConstructorProc.rowCount() - 2; // -1 (error não pode apagar a última fila), -2, -3 deixam uma fila, -4 deixa duas, estudar no futuro
+
+        for (var i = -tableProcessLength; i < tableProcessLength; i++) {
+          tableContractConstructorProc.rows[i].delete();
+        }
+        delay(d0p1);
+
+        seApp.keyCode(51); // Clear row info with Delete
+
+        // IN PAGES
+        pagesApp.activate();
+        var docPagesInContract = pagesApp.Document({ documentTemplate: pagesApp.templates['Contrato - Mestres'] }).make();
+
+        var tableConstructorsWagesInPages = docPagesInContract.tables['tableConstructorsWagesInPages'];
+
+        pagesApp.activate();
+        delay(d0p1);
+
+        selectionRange(tableConstructorsWagesInPages, 'A2:A2');
+        delay(d0p3); // Se falhar Paste, regula o delay
+
+        seApp.keystroke('v', { using: 'command down' });
+        delay(d0p1);
+
+        // placeHolderTexts_
+        var placeHolderTexts_ = docPagesInContract.placeholderTexts;
+        var theseTags = placeHolderTexts_.tag();
+
+        var uniqueTags = [];
+
+        for (var i = 0; i < theseTags.length; i++) {
+          var thisTag = theseTags[i];
+          uniqueTags.push(thisTag);
+        }
+
+        for (var i = 0; i < uniqueTags.length; i++) {
+          var thisTag = uniqueTags[i];
+
+          if (thisTag == 'invoiceCs') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(invoiceCs);
+          } else if (thisTag == 'dateAndDueDateAndDuration') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(dateAndDueDateAndDuration);
+          } else if (thisTag == 'objAndCustomer') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(objAndCustomer);
+          } else if (thisTag == 'constructorTypeAndName') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(constructorTypeAndName);
+          } else if (thisTag == 'constructorName') {
+            placeHolderTexts_.whose({ tag: thisTag })[0].set(constructorName);
+          }
+        }
+
+        pagesApp.activate();
+        delay(d0p1);
+
+        var docPages = docPagesInContract;
+
+        processSave(
+          docPages,
+          destinyFolderStr,
+          `XG5${invoiceCs[4]} ${ND} CONTRATO OBRA ${ND} ${formatNumber(
+            totalAmount
+          )} ${ND} ${constructorTypeAndName.toUpperCase()}`
+        );
+      }
+    }
+  }
+} else if (production == 'Mensagem') {
+  var TimeYYXDIM = yearY4 - 2008;
+
+  if (timeH1 < 12) {
+    var greeting = 'Bom dia, ';
+  }
+  if (timeH1 >= 12) {
+    var greeting = 'Boa tarde, ';
+  }
+  if (timeH1 >= 18) {
+    var greeting = 'Boa noite, ';
+  }
+
+  for (var i = 0; i < 3; i++) {
+    var thePassWord = currentApp.displayDialog('Password', { defaultAnswer: 'wrong', hiddenAnswer: true }).textReturned;
+
+    if (thePassWord == 'qaz23') {
+      break;
+    }
+  }
+
+  if (thePassWord == 'qaz23') {
+    var arrayGroupIdentifier = 'ZP3Msg - ';
+
+    var groupsNames = messageGroupsArraysNames();
+
+    // Get Group Name
+    var groupsNamesSelected = cfl2Str(groupsNames, 'Grupos - Nomes', groupsNames[0]); /* "Test1 - Group A" */
+
+    // Remover a indexação para correcto nome do Grupo
+    var groupsNamesSelected = groupsNamesSelected.split('. ')[1];
+
+    // Get Group based on Identifier
+    var filteredGroup = contactsApp.groups.whose({ name: { _contains: groupsNamesSelected } })()[0];
+
+    var peopleNamesAndPhones = peopleAndPhonesArraysValues();
+
+    if (
+      groupsNamesSelected.includes('Azaldo') ||
+      groupsNamesSelected.includes('Melindo') ||
+      groupsNamesSelected.includes('Tancya') ||
+      groupsNamesSelected.includes('RKA') ||
+      groupsNamesSelected.includes('WalterTest5')
+    ) {
+      var selectedPeopleArray = peopleNamesAndPhones;
+    } else {
+      var selectedPeopleArray = currentApp.chooseFromList(peopleNamesAndPhones, {
+        withPrompt: 'Contactos • Pessoas',
+        defaultItems: peopleNamesAndPhones,
+        multipleSelectionsAllowed: true,
+      }); // Array
+    }
+
+    var contactsOfSelected = selectedPeopleArray.map(function (newVariable) {
+      return newVariable.split(' • ')[0];
+    });
+
+    if (groupsNamesSelected.includes('Dia Inter dos Trabalhadores')) {
+      var message = 'Feliz 1º de Maio,\n' + 'O Dia Internacional dos Trabalhadores.\n\n' + yearY4 + ' X-DIM';
+    } else if (groupsNamesSelected.includes('Dia da Mulher Moçambicana')) {
+      var message = 'Feliz 7 de Abril,\nO dia da Mulher Moçambicana!\n\n' + yearY4;
+    } else if (groupsNamesSelected.includes('Dia da X-DIM')) {
+      var message =
+        'Feliz 19 de Setembro,\nO Dia da X-DIM.\n\n' +
+        'Os ' +
+        TimeYYXDIM +
+        ' anos de existência oficial.\n\n' +
+        yearY4 +
+        ' X-DIM';
+    } else if (groupsNamesSelected.includes('Azaldo')) {
+      var theVariable = cfl2Str(
+        ['Hi, How are you with family?', 'Viva, Reforcei a C90 com 10,000.00 (X para operações) transferido para BIM. Abraços!'],
+        'Referência',
+        'Viva, Reforcei a C90 com 10,000.00 (X para operações) transferido para BIM. Abraços!'
+      );
+
+      var theMessageSelection = dDialog('Mensagem', theMessageSelection);
+    } else if (groupsNamesSelected.includes('Melindo')) {
+      var theMessageSelection = cfl2Str(
+        [
+          'Energia',
+          'Transferência - Rancho',
+          'Transferência - X',
+          '---------------',
+          greeting + ' Como estão?',
+          'Manda cumprimentos a todos!',
+          'Ok. Manda cumprimentos a família!',
+        ],
+        'Referência',
+        'Transferência - Rancho'
+      );
+
+      var theGreetingSend = 'Manda cumprimentos!';
+
+      if (theMessageSelection == 'Ok. Manda cumprimentos a família!' || theMessageSelection == 'Manda cumprimentos a todos!') {
+        var message = dDialog('Mensagem', theMessageSelection);
+      } else {
+        if (theMessageSelection == 'Energia') {
+          var theCredelecValue = dDialog('Valor da Energia', '');
+          var theCredelecCode = dDialog('Código da Energia', '');
+
+          var message = dDialog(
+            'Referência',
+            greeting + '\nEnergia de ' + formatNumber(theCredelecValue) + ' — ' + theCredelecCode + '\n\nManda cumprimentos!'
+          );
+        } else if (theMessageSelection == 'Transferência - Rancho') {
+          var iw1AndIa5MonthBuying = dDialog('Valor para IW1 + IA5', '7420.00');
+          var theIA5MonthBuying = dDialog('Valor para IA5 - Chiconela', '1000.00');
+
+          var message = dDialog(
+            'Referência',
+            greeting +
+              '\nTransferi ' +
+              formatNumber(iw1AndIa5MonthBuying) +
+              ' dos quais ' +
+              formatNumber(theIA5MonthBuying) +
+              ' para mamã Izabel.\n\n' +
+              theGreetingSend
+          );
+        } else if (theMessageSelection == 'Transferência - X') {
+          var message = dDialog('Referência', greeting + '\nTransferi 0.00\n\n' + theGreetingSend);
+        }
+      }
+    } else if (groupsNamesSelected.includes('Tancya')) {
+      var theEmojiList = ['💋', '🌹', '🌺', '💐', '❤️', '🌸', '🌼'];
+
+      var theMessageSelection =
+        cfl2Str(
+          [
+            'Test5',
+            'Amora, O Almoço já está pronto?',
+            'Obrigado, Até já!',
+            'Amora, Transferi 13,000.00 para BIM, o valor para rancho.',
+            'Energia de X — Código',
+          ],
+          'Mensagem',
+          'Amora, Transferi 13,000.00 para BIM, o valor para rancho.'
+        ) +
+        ' ' +
+        theEmojiList[Math.floor(Math.random() * theEmojiList.length)];
+
+      var message = dDialog('Mensagem (Edição)', theMessageSelection);
+    } else if (groupsNamesSelected.includes('RKA')) {
+      var theMessageSelection = cfl2Str(['Escrever', '---------------', 'Crédito'], 'Mensagem', 'Crédito');
+
+      if (theMessageSelection == 'Crédito') {
+        var creditAmount = dDialog('Crédito', '');
+        var creditCode = dDialog('Código da recarga', '');
+
+        var theOperator = cfl2Str(['Mcel', 'Movitem', 'Vodacom'], 'Operadora', 'Vodacom');
+
+        var theMessageString = `Olá minha filha,\nAqui está crédito de ${creditAmount} da ${theOperator}:\n${creditCode}`;
+
+        var message = dDialog('Mensagem (Edição)', theMessageString);
+      } else {
+        var message = dDialog('Mensagem (Edição)', '\n');
+      }
+    } else if (groupsNamesSelected.includes('WalterTest5')) {
+      var message = 'Test5 WalterOnlyMcel - MapOut!';
+    }
+
+    messagesApp.activate();
+
+    for (var i = 0; i < contactsOfSelected.length; i++) {
+      let phoneNumber = contactsOfSelected[i].replace(/ /g, '');
+      alert(phoneNumber, message);
+
+      Application('Messages').send(message, {
+        to: Application('Messages').buddies.whose({ handle: { _equals: phoneNumber } })[0],
+      });
+    }
+  } else {
+    dAlert('Password incorrecto!', '');
+  }
+} else if (production == 'Propostas') {
+  var productionTypeCode = 'X5G';
+  var recipientContractorOrCustomerOrSupplierOrSupervisor = 'Cliente';
+
+  var docNumXG5 = numbersApp.open(numXG5PathObj);
+
+  const { contractNumber: quoteCs, entity4Folders: customer4Folders, companyIdentifier } = getContratFolderInfo(destinyFolderStr);
+
+  const filtersOfTitles = [quoteCs];
+
+  const {
+    // correspondeceNoteText,
+    // headerSelected,
+    // shortNameSelected,
+    // letterBodyInfo,
+    // subject,
+    // selectedObjectsAndCssStr4servicesAndSiteIDsAndCSs,
+    // selectedObjectsAndCssStr,
+    // selectedObjectsAndCss,
+    selectedObjects,
+  } = processCorrespondeceNoteText(
+    production,
+    customer4Folders,
+    filtersOfTitles,
+    recipientContractorOrCustomerOrSupplierOrSupervisor,
+    undefined,
+    undefined
+  );
+
+  selectedObjectsStr = selectedObjects[0];
+
+  const {
+    referenceNumber1WithDate,
+    referenceNumber2WithDate,
+    // dateDotDdMmYyyy,
+    referenceNumberIncrement1,
+    referenceNumberIncrement2,
+    referenceNumber1,
+    referenceNumber2,
+    // referenceNumberPreviousWithDate,
+  } = numbersDateAndReference(docNumXG5, productionTypeCode, dateY4M2D2__H2M2S2, companyIdentifier);
+
+  const propSheets = docNumXG5.sheets.whose({ name: { _endsWith: quoteCs } });
+  const propSheetsL = propSheets.length;
+
+  if (propSheetsL === 1) {
+    var propSheet = propSheets[0];
+    var propSheetName = propSheet.name();
+  } else if (propSheetsL > 1) {
+    alert(`Devia ser "1", mas são "${propSheetsL}" sheets com "${quoteCs}"`, ``);
+  } else {
+    alert(`Sheet de "${quoteCs}" não encontrado!`, ``);
+  }
+
+  var allowTecnicalBaseDocsSelection = false;
+
+  // ----- COMUM
+
+  // ----- PROPOSTA TÉCNICA / INTERESSE
+  var projectPlanInNumbers = propSheet.tables['projectPlanInNumbers'];
+
+  // ----- PROPOSTA FINANCEIRA
+  var tableInputs1 = propSheet.tables['Inputs1'];
+  var chargedPercentage = numbersQuoteChargedPercentage(tableInputs1);
+
+  var tableHeaderInfo = propSheet.tables['HeaderInfo'];
+  var scheduleDurationUnit = tableHeaderInfo.cells['C4'].value().split(' ')[1];
+
+  var tableProposalInfo = propSheet.tables['Table - ProposalInfo'];
+  var tableCustomerAndObjectInfo = propSheet.tables['Table - CustomerAndObjectInfo'];
+
+  // ----- Comum
+  var consultancyCode = tableProposalInfo.cells['A1'].value();
+  var intervention = tableProposalInfo.cells['A2'].value();
+  // var quoteCs = tableProposalInfo.cells["B1"].value()
+  var theWageType = tableProposalInfo.cells['A3'].value();
+
+  // const objectAndNumberOfStories = tableProposalInfo.cells['B2'].value();
+
+  // More
+  var technicalProposalOrInterestExpression = tableProposalInfo.cells['A4'].value();
+  var commentsAndSuggestions = tableProposalInfo.cells['A6'].value();
+  var serviceMethodology = tableProposalInfo.cells['A7'].value();
+
+  var lot = tableProposalInfo.cells['A9'].value().toUpperCase();
+  if (lot == '—') {
+    var lot = ' ';
+  } // Se for "", célula que busca info aqui será "0", não ""
+
+  // ----- Proposta Técnica/Financeira
+  var requestType = tableProposalInfo.cells['A5'].value();
+  var requestDate = tableProposalInfo.cells['B5'].value();
+
+  if (requestDate == null) {
+    var requestDate = '';
+  }
+
+  // --------------- CUSTOMER & OBJECT INFO
+  var customer = tableCustomerAndObjectInfo.cells['A1'].value();
+  var customerShortName = tableCustomerAndObjectInfo.cells['A11'].value();
+  var obj = tableCustomerAndObjectInfo.cells['A2'].value();
+  var dateAlert = tableCustomerAndObjectInfo.cells['A6'].value();
+  var localAndDate = tableCustomerAndObjectInfo.cells['A8'].value();
+
+  // CP Concurso Público
+  var dateToUpdateInPropostasInCP = tableCustomerAndObjectInfo.cells['B8'].value();
+  var proposalTypeEnvelope = tableCustomerAndObjectInfo.cells['A4'].value();
+  var proposalType = tableCustomerAndObjectInfo.cells['A5'].value();
+
+  if (technicalProposalOrInterestExpression == 'Manifestação de Interesse') {
+    var proposals = ['Manifestação de Interesse'];
+  } else if (technicalProposalOrInterestExpression == 'Proposta Técnica') {
+    var proposals = ['Proposta Financeira', 'Proposta Técnica'];
+  }
+
+  const referencesInfo = [
+    {
+      referenceNumberWithDate: referenceNumber1WithDate,
+      referenceNumberIncrement: referenceNumberIncrement1,
+    },
+    {
+      referenceNumberWithDate: referenceNumber2WithDate,
+      referenceNumberIncrement: referenceNumberIncrement2,
+    },
+  ];
+
+  numbersApp.activate();
+  docNumXG5.activeSheet.set(docNumXG5.sheets[propSheetName]);
+
+  for (var b = 0; b < proposals.length; b++) {
+    var proposal = proposals[b];
+
+    if (proposal == 'Proposta Financeira') {
+      var proposalTrack = proposal;
+    }
+
+    // -------------- PAGES
+
+    // ----- PF
+    pagesApp.activate();
+
+    if (proposal == 'Proposta Financeira') {
+      var docPagesInProposta = pagesApp.Document({ documentTemplate: pagesApp.templates['PropostaF'] }).make();
+    } else if (proposal == 'Manifestação de Interesse' || proposal == 'Proposta Técnica') {
+      var ptOptions = ptOptionsLists('Proposta Técnica - Opções', 1);
+
+      // Projecto (A5P, U5P) e não Fiscalização (A5F)
+      if (consultancyCode[2] == 'P') {
+        /*
+				if (consultancyCode == "A5P") {
+					var commentsAndSuggestionsCode =
+				} else if (consultancyCode == "U5P") {
+
+				}
+				*/
+
+        //var ptOptions = ptOptions.concat("---------------", "A5CS - Comentários e Sugestões TdR")
+
+        // A5P // A5P
+
+        var ptOptions = ptOptions.concat('---------------', consultancyCode.slice(0, 2) + 'CS - Comentários e Sugestões TdR');
+      }
+
+      if (allowTecnicalBaseDocsSelection) {
+        currentApp.activate();
+        var ptOptionsSel = cfl(
+          ptOptions,
+          'Proposta Técnica',
+          [
+            'PE5 - Perfil da Empresa',
+            'CA5 - Cartas Abonatórias',
+            'RE5 - Referências da Empresa',
+            consultancyCode.slice(0, 2) + 'CS - Comentários e Sugestões TdR',
+          ],
+          'm'
+        );
+      } else {
+        var ptOptionsSel = ptOptions;
+      }
+
+      if (consultancyCode == 'A5P' || consultancyCode == 'U5P') {
+        // PX - Projecto visto que P5 é plataforma 5
+        //var ptOptionsSel = ["PX"].concat(ptOptionsSel) // NÃO USADO AGORA
+
+        if (consultancyCode == 'A5P') {
+          var ptOptionsSel = ['A5P'].concat(ptOptionsSel);
+
+          if (
+            intervention == 'Ampliação' ||
+            intervention.includes('Conclusão') ||
+            intervention.includes('Reabilitação') ||
+            intervention.includes('Restauração')
+          ) {
+            var ptOptionsSel = ['A5PRQ'].concat(ptOptionsSel);
+          }
+
+          if (intervention == 'Construção' || intervention.includes('Ampliação')) {
+            var ptOptionsSel = ['A5PCO'].concat(ptOptionsSel);
+          }
+
+          if (intervention == 'As Built') {
+            var ptOptionsSel = ['A5PAB'].concat(ptOptionsSel);
+          }
+        } else if (consultancyCode == 'U5P') {
+          var ptOptionsSel = ['U5P'].concat(ptOptionsSel);
+        }
+      } else if (consultancyCode == 'A5F') {
+        var ptOptionsSel = ['A5F'].concat(ptOptionsSel);
+
+        if (intervention == 'Construção') {
+          var ptOptionsSel = ['A5FCO'].concat(ptOptionsSel);
+        }
+      }
+
+      var ptOptionsSel = ['X'].concat(ptOptionsSel);
+
+      if (technicalProposalOrInterestExpression == 'Manifestação de Interesse') {
+        var ptOptionsSel = ['MI5'].concat(ptOptionsSel);
+      } else if (technicalProposalOrInterestExpression == 'Proposta Técnica') {
+        var ptOptionsSel = ['PT5'].concat(ptOptionsSel);
+      }
+
+      var docPagesInProposta = pagesApp.Document({ documentTemplate: pagesApp.templates['PropostaT'] }).make();
+    }
+
+    var tablePFPTInfoInPages = docPagesInProposta.tables['tablePFPTInfoInPages'];
+
+    // ------------------------------------------------------------ SAVE BEFORE PROCESSING
+    // O Save no fim, guarda um documento mas mantém outra cópia "Untitled" aberta.
+    // Por isso fazemos SAVE antes de qualquer PROCESSING
+
+    // NOME & SAVE
+
+    pagesApp.activate();
+    delay(d0p1);
+
+    var proposalItems = proposal.split(' ');
+    var proposalItemsFiltered = proposalItems.filter(item => !item.includes('de'));
+    var proposalCode = `${proposalItemsFiltered[0][0]}${proposalItemsFiltered[1][0]}`;
+    var proposalNameWithQuoteCs = `${proposal.toUpperCase()} ${quoteCs}`;
+
+    var docPages = docPagesInProposta;
+
+    filePathSaved = processSave(
+      docPages,
+      destinyFolderStr,
+      `${proposalCode}${consultancyCode} ${ND} ${proposalNameWithQuoteCs} ${ND} ${customerShortName}`
+    );
+
+    // delay(d3);
+
+    const { referenceNumberWithDate, referenceNumberIncrement } = referencesInfo[b];
+
+    var referenceToWrite1 = `${customerShortName} / ${proposalNameWithQuoteCs} - ${selectedObjectsStr}`;
+
+    numbersWriteReference(
+      numbersApp,
+      docNumXG5,
+      referenceNumberWithDate,
+      referenceNumberIncrement,
+      referenceToWrite1,
+      filePathSaved
+    );
+
+    // --------------- PAGES
+
+    pagesApp.activate();
+
+    var placeHolderTexts_ = docPagesInProposta.placeholderTexts;
+    var theseTags = placeHolderTexts_.tag();
+
+    var uniqueTags = [];
+
+    for (var i = 0; i < theseTags.length; i++) {
+      var thisTag = theseTags[i];
+      uniqueTags.push(thisTag);
+    }
+
+    //PFPT - TableInfo
+    tablePFPTInfoInPages.cells['A1'].value = customer;
+    tablePFPTInfoInPages.cells['A2'].value = obj;
+
+    if (proposal == 'Proposta Financeira') {
+      // tablePFPTInfoInPages
+      tablePFPTInfoInPages.cells['A3'].value = 'PROPOSTA FINANCEIRA\n' + quoteCs;
+      tablePFPTInfoInPages.cells['A7'].value = `Referência: ${referenceNumber1}`;
+    }
+
+    if (proposal == 'Manifestação de Interesse' || proposal == 'Proposta Técnica') {
+      //Envelope - TableInfo
+      docPagesInProposta.tables['Envelope - TableInfo'].cells['A3'].value = proposalTypeEnvelope;
+
+      // tablePFPTInfoInPages
+      tablePFPTInfoInPages.cells['A3'].value = proposalType + '\n' + quoteCs;
+
+      tablePFPTInfoInPages.cells['A9'].value = `Referência: ${
+        proposal === 'Manifestação de Interesse' ? referenceNumber1 : referenceNumber2
+      }`;
+    }
+
+    tablePFPTInfoInPages.cells['A4'].value = lot;
+    tablePFPTInfoInPages.cells['A5'].value = dateAlert;
+    tablePFPTInfoInPages.cells['A6'].value = localAndDate;
+
+    if (proposal == 'Manifestação de Interesse' || proposal == 'Proposta Técnica') {
+      // Esta info só usa tabela em PT
+      tablePFPTInfoInPages.cells['A7'].value = requestType;
+      tablePFPTInfoInPages.cells['A8'].value = requestDate;
+    }
+
+    // --------------- GET TABLE INFO FROM NUMBERS
+
+    var wagesByMemberTableName = 'V2-Por profissional'; // 🔴🔴🔴 get from Numbers
+
+    var tableTeamForWagesOrTasksProperties = tableTeamForWagesOrTasks(propSheetName, wagesByMemberTableName);
+
+    var teamTasks = tableTeamForWagesOrTasksProperties.teamTasks;
+    var teamWages = tableTeamForWagesOrTasksProperties.teamWages;
+
+    // -------------- PF
+
+    if (proposal == 'Proposta Financeira') {
+      var tableWagesFormBySpeciality = propSheet.tables['V1-Por especialidade'];
+
+      // Usa Loop não set value to cell para ter possibilidade de escrevr o valor da proposta por Extenso.
+
+      for (var i = 0; i < uniqueTags.length; i++) {
+        var thisTag = uniqueTags[i];
+
+        if (thisTag == 'requestType') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(requestType);
+        } else if (thisTag == 'requestDate') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(requestDate);
+        }
+      }
+
+      if (theWageType == 'V1-Por especialidade') {
+        var wagesBySpeciality = [];
+
+        for (var i = 2; i < tableWagesFormBySpeciality.rowCount() - 3; i++) {
+          var iNum = i + 1;
+
+          var consultancyCheck = tableWagesFormBySpeciality.cells['E' + iNum].value();
+
+          if (consultancyCheck == 1) {
+            // Estas variáveis incluem o cabeçalho
+            var specialityName = tableWagesFormBySpeciality.cells['B' + iNum].value();
+            var amount = tableWagesFormBySpeciality.cells['G' + iNum].value();
+
+            if (i > 2) {
+              var amount = formatNumber(amount);
+            }
+
+            wagesBySpeciality.push(specialityName + '\t0.00\t0.00\t0.00\t0.00\t' + amount);
+          }
+        }
+
+        saApp.setTheClipboardTo(wagesBySpeciality.join('\n'));
+        delay(d0p1);
+      } else if (theWageType == 'V2-Por profissional') {
+        saApp.setTheClipboardTo(teamWages.join('\n'));
+        delay(d0p1);
+      }
+
+      // --------------------------------
+
+      var tableWagesInPages = docPagesInProposta.tables['tableWagesInPages'];
+      var activityReimbursementsInPages = docPagesInProposta.tables['activityReimbursementsInPages'];
+      var miscellaneousExpensesInPages = docPagesInProposta.tables['miscellaneousExpensesInPages'];
+
+      selectionRange(tableWagesInPages, 'A1:A1');
+      delay(d0p3); // Se falhar Paste, regula o delay
+
+      //seApp.keystroke("v", { using: "command down" })
+
+      menuLib.doMenu('Pages', 'Edit', 'Paste and Match Style');
+      delay(d0p1);
+
+      deleteEmptyRowsInPagesTable(tableWagesInPages);
+      delay(d0p1);
+
+      if (theWageType == 'V1-Por especialidade') {
+        // Delete columns B, C, D, E se for Por Especialidade
+        for (var k = 0; k < 4; k++) {
+          tableWagesInPages.columns[1].delete();
+        }
+      } else if (theWageType == 'V2-Por profissional') {
+        // Delete column C - Tarefas
+        tableWagesInPages.columns[2].delete();
+      }
+      delay(d0p3); // Era 0.5
+
+      // Reembolsos Por Actividade
+      //numbersApp.activate()
+      //delay(d0p1) // Era 1
+
+      var activityReimbursements = propSheet.tables['activityReimbursements'];
+
+      var activityReimbursementsList = activityReimbursementsOrMiscellaneousExpenses(propSheetName, 'activityReimbursements');
+      delay(d0p1);
+
+      saApp.setTheClipboardTo(activityReimbursementsList.join('\n'));
+
+      selectionRange(activityReimbursementsInPages, 'A2:A2');
+      delay(d0p3); // Era 0.3
+
+      //menuLib.doMenu("Pages", "Edit", "Paste Formula Results")
+      menuLib.doMenu('Pages', 'Edit', 'Paste and Match Style');
+      delay(d0p1);
+
+      deleteEmptyRowsInPagesTable(activityReimbursementsInPages);
+      delay(d0p1);
+
+      // Gastos Diversos
+      //numbersApp.activate()
+      //delay(d0p3) // Era 1
+
+      var miscellaneousExpenses = propSheet.tables['miscellaneousExpenses'];
+
+      var miscellaneousExpensesList = activityReimbursementsOrMiscellaneousExpenses(propSheetName, 'miscellaneousExpenses');
+      delay(d0p1);
+
+      saApp.setTheClipboardTo(miscellaneousExpensesList.join('\n'));
+      selectionRange(miscellaneousExpensesInPages, 'A2:A2');
+      delay(d0p3);
+
+      //menuLib.doMenu("Pages", "Edit", "Paste Formula Results")
+      menuLib.doMenu('Pages', 'Edit', 'Paste and Match Style');
+      delay(d0p1);
+
+      deleteEmptyRowsInPagesTable(miscellaneousExpensesInPages);
+      delay(d0p1);
+
+      // -----------------------------
+
+      var tableSumarioCustos = docPagesInProposta.tables['Sumário dos Custos'];
+
+      var total = tableSumarioCustos.cells['B4'].value();
+      var vat = tableSumarioCustos.cells['B3'].value();
+
+      var total = formatNumber(total);
+      var totalAmountAndExtensive = total + ' (' + getMoneyInText(total) + ')';
+
+      var vat = formatNumber(vat);
+      var vatAndExtensive = vat + ' (' + getMoneyInText(vat) + ')';
+
+      pagesApp.activate();
+
+      var placeHolderTexts_ = docPagesInProposta.placeholderTexts;
+      var theseTags = placeHolderTexts_.tag();
+
+      var uniqueTags = [];
+
+      for (var i = 0; i < theseTags.length; i++) {
+        var thisTag = theseTags[i];
+
+        //if (!(uniqueTags.includes(thisTag))) {
+        uniqueTags.push(thisTag);
+        //}
+      }
+
+      for (var i = 0; i < uniqueTags.length; i++) {
+        var thisTag = uniqueTags[i];
+
+        if (thisTag == 'totalAmountAndExtensive') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(totalAmountAndExtensive);
+        } else if (thisTag == 'vatAndExtensive') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(vatAndExtensive);
+        }
+      }
+
+      var message = 'Total=' + total + ', IVA=' + vat;
+      saApp.setTheClipboardTo(message);
+    } else if (proposal == 'Manifestação de Interesse' || proposal == 'Proposta Técnica') {
+      var pt4Lists = ptInfoLists('Proposta Técnica', ptOptionsSel, scheduleDurationUnit);
+      var ptInfoLines = pt4Lists[0];
+      var heading1List = pt4Lists[1];
+      var heading2List = pt4Lists[2];
+      var heading3List = pt4Lists[3];
+
+      var workPhasesNameAndWeeks = pt4Lists[4];
+
+      var ptInfoLinesText = ptInfoLines.join('\n');
+
+      pagesApp.activate();
+
+      if (thisTag.includes('ptInfoLinesText')) {
+        delay(d0p1);
+
+        seApp.keyCode(53); // Scape to deselect Table Cover of PT
+        delay(d0p1);
+
+        placeHolderTexts_.whose({ tag: thisTag })[0].set(ptInfoLinesText);
+      }
+      delay(d0p3);
+
+      // Selecionar alguma coisa para activar FORMAT INSPECTOR para permitir a formatação e mostrar a substituição em <paragraphs[i].set(…)> na func numberingHeadings
+      menuLib.selectAll();
+
+      numberingHeadings(heading1List, 'H1');
+      numberingHeadings(heading2List, 'H2');
+      numberingHeadings(heading3List, 'H3');
+
+      // --------------- PAGE BREAKS
+      pageBreaking();
+
+      // --------------- COPY AND PAST TABLES
+
+      if (technicalProposalOrInterestExpression == 'Manifestação de Interesse') {
+        var technicalProposalOrInterestExpressionTable = 'Manifestação de Interesse';
+
+        docPagesInProposta.tables['Proposta Técnica'].delete();
+        seApp.keyCode(51); // Delete
+        seApp.keyCode(51); // Delete
+      } else if (technicalProposalOrInterestExpression == 'Proposta Técnica') {
+        var technicalProposalOrInterestExpressionTable = 'Proposta Técnica';
+
+        docPagesInProposta.tables['Manifestação de Interesse'].delete();
+        seApp.keyCode(51); // Delete
+        seApp.keyCode(51); // Delete
+      }
+
+      // 🔴🔴🔴 DESACTIVADO POIS A SEQUENCIA DE NOMES DE TABELAS CONTA NO CODE ACTUAL PARA A5P ou U5P FAZENDO concat de "Cronograma de Trabalho" acaba dando resultados inesperados
+
+      // var generalTablesToCopy = ["Declaração de Inexistência de Impedimentos", "Composição da Equipa e Tarefas", technicalProposalOrInterestExpressionTable]
+
+      if (consultancyCode == 'A5P' || consultancyCode == 'U5P') {
+        var tableNamesToCopyAndOPaste = [
+          'Declaração de Inexistência de Impedimentos',
+          'Composição da Equipa e Tarefas',
+          'Cronograma de Trabalho',
+          technicalProposalOrInterestExpressionTable,
+        ];
+      } else if (consultancyCode == 'A5F') {
+        // Cronograma de Trabalho
+        docPagesInProposta.tables['projectPlanInPages'].delete();
+        seApp.keyCode(51); // Delete
+        seApp.keyCode(51); // Delete
+
+        var tableNamesToCopyAndOPaste = [
+          'Declaração de Inexistência de Impedimentos',
+          'Composição da Equipa e Tarefas',
+          technicalProposalOrInterestExpressionTable,
+        ];
+      }
+
+      copyAndPasteTables(tableNamesToCopyAndOPaste);
+
+      delay(d1);
+
+      // --------------- APPLY TABLE INFO IN PAGES
+
+      var tableTeamInPages = docPagesInProposta.tables['tableTeamInPages'];
+      var projectPlanInPages = docPagesInProposta.tables['projectPlanInPages'];
+
+      // ----- Composição da Equipa e Tarefas
+
+      saApp.setTheClipboardTo(teamTasks.join('\n'));
+      selectionRange(tableTeamInPages, 'A1:A1');
+      delay(d0p3);
+
+      seApp.keystroke('v', { using: 'command down' });
+      delay(d0p3);
+
+      // ----- projectPlanInPages // Cronograma de Trabalho
+      if (consultancyCode == 'A5P' || consultancyCode == 'U5P') {
+        // CODE
+        fillWorkSchedule(docPagesInProposta, workPhasesNameAndWeeks, scheduleDurationUnit);
+      }
+
+      // ----- DEELTE EXTRA ROWS IN TABLES
+
+      deleteEmptyRowsInPagesTable(tableTeamInPages);
+      delay(d0p3);
+
+      // -------------- APPLY LOGO5
+      var paragraphs = docPagesInProposta.bodyText.paragraphs;
+
+      for (var i = 0; i < paragraphs.length; i++) {
+        var paragraph = paragraphs()[i];
+
+        if (paragraph.includes('Manifestação de Interesse') || paragraph.includes('Proposta Técnica')) {
+          pagesApp.activate();
+          delay(d0p1);
+          seApp.keyCode(53); // Scape
+          delay(d0p1);
+
+          // Selecionar alguma coisa para mostrar a substituição em <paragraphs[i].set(paragraph)> abaixo
+          menuLib.selectAll();
+
+          delay(d0p1);
+          paragraphs[i].set(paragraph);
+          delay(d0p1);
+          seApp.keyCode(123, { using: 'command down' });
+          delay(d0p1);
+          seApp.keyCode(76); // Press Enter
+          delay(d0p1);
+          seApp.keyCode(126); // Up
+          delay(d0p1);
+          seApp.keyCode(51); // Delete
+          delay(d0p1);
+          seApp.keyCode([76, 76, 76, 76]);
+          delay(d0p3);
+          var pagesDocLogo5 = pagesApp.open(Path(pagesDocLogo5PathStr));
+          delay(d2);
+          menuLib.copyWithSelectAll();
+          pagesDocLogo5.close();
+          delay(d0p3);
+          menuLib.paste();
+          delay(d0p3);
+
+          break;
+        }
+      }
+    }
+    delay(d0p3);
+    menuLib.doMenu('Pages', 'View', 'Page Thumbnails');
+    delay(d0p3);
+
+    if (proposal == 'Manifestação de Interesse') {
+      // 🔴 SOLUÇÃO ACTUAL USIGNG GUI TO DELETE PAGE 1 (ENVELOPE GERAL) IF IS MI5
+      seApp.keyCode(53); // Scape
+      delay(d0p3);
+      seApp.keyCode(48, { using: ['control down', 'option down'] });
+      delay(d0p3);
+      menuLib.doSubMenu('Pages', 'View', 'Go To', 'First Page');
+      delay(d0p3);
+      seApp.keyCode(51); // Delete
+      delay(d0p3);
+      seApp.keyCode(76); // Press Enter
+      delay(d0p3);
+    }
+    // Save of PF & PT in Pages
+    seApp.keystroke('s', { using: 'command down' });
+    delay(d0p3); // Era d1
+  }
+
+  if (proposalTrack == 'Proposta Financeira') {
+    //var destinyFolderName = destinyFolder.name()
+
+    // 🔴 If CP (concurso Público) Update Date in Name in folderName below:
+    // + 20220199* S1Q2.2 P&C | 20220116-20220416 | C0,000.00 5%
+
+    var destinyFolderName = destinyFolderStr.split('/').slice(-1)[0];
+
+    if (destinyFolderName.includes('S1Q2.2 P&C')) {
+      var destinyFolderName = destinyFolderName.replace(
+        /\d{6}99\*\sS1Q2.2|\d{8}\sS1Q2.2/,
+        dateToUpdateInPropostasInCP + ' S1Q2.2'
+      );
+    }
+
+    //destinyFolder.name = destinyFolderName.replace(/C\d[0-9,.]*\sX|C\d[0-9,.]*\s[0-9.]*/, "C" + total + " " + chargedPercentage)
+
+    var folderPathAlias = seApp.aliases.byName(destinyFolderStr);
+
+    folderPathAlias.name = destinyFolderName.replace(
+      /C\d[0-9,.]*\sX|C\d[0-9,.]*\s[0-9.]*/,
+      'C' + total + ' ' + chargedPercentage
+    );
+
+    var proposalTrack = ''; // Reset
+
+    global5ContractDetailsForEventAndFolderAndSubscricoes(
+      '',
+      'ReadInvoiceInfoAndUpdateJSON',
+      '',
+      p5PathStrWithSuffixP5,
+      '',
+      ['All'],
+      ['All'],
+      yearY4,
+      '',
+      '',
+      3
+    );
+  }
+} else if (production == 'Quitações (Requerimentos)') {
+  var destinyFolderStr =
+    '/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P2/PROFISSIONAIS/P2DG GESTÃO (G5)/QUITAÇÕES/REQUERIMENTOS/';
+
+  var dischargeInstitutionShortNames = cfl(['ATM', 'INE', 'TJCM'], 'Referência', ['ATM', 'INE', 'TJCM'], 'm');
+
+  var docNumXG5 = numbersApp.open(numXG5PathObj);
+  var customerAndSupplierSheet = docNumXG5.sheets['CUSTOMERS&SUPPLIERS'];
+
+  for (var h = 0; h < dischargeInstitutionShortNames.length; h++) {
+    const {
+      referenceNumber1WithDate,
+      // referenceNumber2WithDate,
+      dateDotDdMmYyyy,
+      referenceNumber1,
+      // referenceNumber2,
+      // referenceNumberPreviousWithDate,
+    } = numbersDateAndReference(docNumXG5, 'X5G', dateY4M2D2__H2M2S2, 'X'); //.split(" / ")
+
+    // var referenceNumberWithDateItems = dateAndReferenceItems[0].split(" // ")
+    // var referenceNumber1WithDate = referenceNumberWithDateItems[0]
+
+    // var dateWithDateStr = "Data: " + dateAndReferenceItems[1]
+    var dateWithDateStr = `Data: ${dateDotDdMmYyyy}`;
+
+    // var referenceItems = dateAndReferenceItems[2].split(" // ")
+    // var referenceNumber1 = referenceItems[0]
+
+    var referenceWithReferenceStr1 = 'Referência: ' + referenceNumber1;
+    var dischargeInstitutionShortName = dischargeInstitutionShortNames[h];
+
+    pagesApp.activate();
+
+    if (dischargeInstitutionShortName == 'ATM' || dischargeInstitutionShortName == 'INE') {
+      var dischargeInstitutionShortNameTemplate = 'Req-Quitação ' + dischargeInstitutionShortName;
+
+      var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates[dischargeInstitutionShortNameTemplate] }).make();
+
+      var tableHeader = docPages.tables['tableHeader'];
+      pagesApplyLetterHeader(tableHeader, '', referenceWithReferenceStr1, dateWithDateStr, production);
+
+      // var placeHolderTexts_ = docPages.placeholderTexts
+      // var theseTags = placeHolderTexts_.tag()
+      //
+      // var uniqueTags = []
+      //
+      // for(var i=0; i < theseTags.length; i++){
+      // 	var thisTag = theseTags[i]
+      // 	uniqueTags.push(thisTag)
+      // }
+      //
+      // for(var i=0; i < uniqueTags.length; i++){
+      // 	var thisTag = uniqueTags[i]
+      //
+      // 	if (thisTag == "dateWithDateStr") {
+      // 		placeHolderTexts_.whose( { tag: thisTag })[0].set(dateWithDateStr)
+      //
+      // 	} else if (thisTag == "theReference") {
+      // 		placeHolderTexts_.whose( { tag: thisTag })[0].set(referenceNumber1)
+      //
+      // 	}
+      // }
+    } else if (dischargeInstitutionShortName == 'TJCM') {
+      var tableTjcm = customerAndSupplierSheet.tables['Tribunal Judicial Períodos Quitação'];
+
+      var tableTjcmRowsL = tableTjcm.rowCount();
+
+      for (var i = 1; i < tableTjcmRowsL; i++) {
+        var iNum = i + 1;
+
+        var verifcationPeriod = tableTjcm.cells['A' + iNum].value();
+
+        if (verifcationPeriod == null) {
+          var verifcationPeriodLast = tableTjcm.cells['A' + (iNum - 1)].value();
+          break;
+        }
+      }
+
+      if (verifcationPeriodLast == undefined) {
+        // Caso não tenha nenhuma fila vazia
+        var verifcationPeriodLast = tableTjcm.cells['A' + tableTjcmRowsL].value();
+      }
+
+      delay(d1);
+
+      var dateStartYyyyMmDd = verifcationPeriodLast.split('-')[1];
+
+      // 20200901-20210708
+      var dateStart = `${dateStartYyyyMmDd.slice(6, 8)}/${dateStartYyyyMmDd.slice(4, 6)}/${dateStartYyyyMmDd.slice(0, 4)}`;
+      var dateEnd = `${dateDashD2M2Y4.replace(/-/g, '/')}`;
+
+      var dateStartAndDateEnd = `${dateStartYyyyMmDd}-${dateY4M2D2}`;
+
+      var docPages = pagesApp.Document({ documentTemplate: pagesApp.templates['Req-Quitação TJCM'] }).make();
+
+      var tableHeader = docPages.tables['tableHeader'];
+      pagesApplyLetterHeader(tableHeader, '', referenceWithReferenceStr1, dateWithDateStr, production);
+
+      var placeHolderTexts_ = docPages.placeholderTexts;
+      var theseTags = placeHolderTexts_.tag();
+
+      var uniqueTags = [];
+
+      for (var i = 0; i < theseTags.length; i++) {
+        var thisTag = theseTags[i];
+        uniqueTags.push(thisTag);
+      }
+
+      for (var i = 0; i < uniqueTags.length; i++) {
+        var thisTag = uniqueTags[i];
+
+        // if (thisTag == "dateWithDateStr") {
+        // 	placeHolderTexts_.whose( { tag: thisTag })[0].set(dateWithDateStr)
+        //
+        // } else if (thisTag == "theReference") {
+        // 	placeHolderTexts_.whose( { tag: thisTag })[0].set(referenceNumber1)
+        //
+        // } else
+
+        if (thisTag == 'dateStart') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(dateStart);
+        } else if (thisTag == 'dateEnd') {
+          placeHolderTexts_.whose({ tag: thisTag })[0].set(dateEnd);
+        }
+      }
+
+      var blankCellsList = [];
+
+      for (var i = 1; i < tableTjcmRowsL; i++) {
+        var value = tableTjcm.rows[i].cells[0].value();
+
+        if (value == '' || value == null) {
+          tableTjcm.rows[i].cells[0].value = dateStartAndDateEnd;
+          blankCellsList.push(value);
+          break;
+        }
+      }
+
+      if (blankCellsList.length == 0) {
+        var newRow = tableTjcm.cells['A' + tableTjcmRowsL].addRowBelow();
+        tableTjcm.rows[tableTjcmRowsL].cells[0].value = dateStartAndDateEnd;
+      }
+    }
+
+    try {
+      var pathStrTo = destinyFolderStr + '/+ ARQUIVO REQS QUITAÇÕES';
+
+      moveFile(destinyFolderStr, pathStrTo, dischargeInstitutionShortName);
+    } catch (error) {
+      dAlert(`${error.name}`, `${error.message}\n\n—\nTalvez não tem o Requeriemnto da Quitação anterior.`);
+    }
+
+    var shortNameSelected = dischargeInstitutionShortName.toUpperCase();
+
+    filePathSaved = processSave(docPages, destinyFolderStr, `XG5 ${ND} REQ - QUITAÇÃO ${ND} ${shortNameSelected}`);
+
+    var referenceToWrite1 = `${shortNameSelected} / Requerimento de Quitação`;
+
+    numbersWriteReference(
+      numbersApp,
+      docNumXG5,
+      referenceNumber1WithDate,
+      referenceNumberIncrement1,
+      referenceToWrite1,
+      filePathSaved
+    );
+    delay(d1);
+  }
+
+  dAlert(
+    `EXEMPLARES\n\n• ATM — 3 (Dois para JFiscal incluindo protocolado na ATM Zimpeto e 3º protocolado no JFiscal)\n• INE & TRIBUNAL JUDICIAL — 2\n\n\n🔴🔴🔴\nDEL5 THIS AFETR DOMINATE!`,
+    ``
+  );
+} else if (production == '_ Solicitação Garantia (New)*') {
+}
+
+if (
+  production == 'Propostas' ||
+  production == '_ Solicitação Garantia (New)*' ||
+  production == 'Contrato' ||
+  production == 'Acta (New)' ||
+  production == 'Documento X' ||
+  production == 'Solicitação Pagamento' ||
+  production == 'Quitações (Requerimentos)'
+) {
+  docNumXG5.save();
+
+  if (
+    production == 'Acta (New)' ||
+    production == 'Documento X' ||
+    production == 'Solicitação Pagamento' ||
+    production == 'Quitações (Requerimentos)'
+  ) {
+    pagesApp.activate();
+    delay(d0p3);
+
+    if (production == 'Solicitação Pagamento') {
+      saApp.setTheClipboardTo(invoicingNumbers);
+      dAlert('COPIADO\n\n' + invoicingNumbers, ``);
+    }
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+
+// --------------- FUNCTIONS GLOBAL5
+
+function global5EnsureSpaceAfterCommaInStr(string) {
+  return string.replace(/, /g, ',').replace(/,/g, ', ');
+}
+
+function global5ContractDetailsForEventAndFolderAndSubscricoes(
+  company,
+  action,
+  invoiceNumberEdition,
+  p5PathStrWithSuffixP5,
+  dueAmountAndTotalWithPrefix,
+  disciplines,
+  consultancyCategs,
+  yearY4,
+  whatReturn,
+  typeOfInvoicingC1,
+  numberOfYearsToRead
+) {
+  var disciplinesStr = disciplines.toString();
+  var consultancyCategsStr = consultancyCategs.toString();
+
+  if (disciplinesStr == 'All') {
+    var disciplines = ['Arquitectura', 'Design', 'Simplitask', 'Urbanismo'];
+  }
+
+  if (consultancyCategsStr == 'All') {
+    var consultancyCategs = ['Projecto', 'Construção', 'Empreitada', 'Fiscalização', 'Técnica'];
+  }
+
+  try {
+    if (action.includes('Read')) {
+      if (action.includes('ReadFolderName')) {
+        var filterInputStrs = dDialog(`Filtros\n\n—\nAdicione "-3", <filtro-3> 3 são anos a ler`, `magai, hercu`);
+
+        if (filterInputStrs.includes('-')) {
+          var filterInputStrs = filterInputStrs.replace(/" "/g, '');
+
+          var filterInputStrsItems = filterInputStrs.split('-');
+
+          var filterStrs = filterInputStrsItems[0];
+
+          var numberOfYearsToRead = Number(filterInputStrsItems[1]);
+        } else {
+          var filterStrs = filterInputStrs;
+        }
+      }
+
+      // filterStrs == "n" and filterStrs == "s" USED IN EVENT
+      if (filterStrs == 'n') {
+        // New work
+        return 'NEW';
+      } else if (filterStrs == 's') {
+        // Select old Object
+        return 'SELECTINOLDPROJECTS';
+      } else {
+        var xproj5xbuild5FoldersNames = [];
+        var contractsInfo = [];
+
+        try {
+          for (var g = 0; g < disciplines.length; g++) {
+            var discipline = disciplines[g];
+            var disciplineUpperCase = discipline.toUpperCase();
+
+            var p5PathStrWithSuffixP5InCateg = p5PathStrWithSuffixP5 + disciplineUpperCase[0] + ' ' + disciplineUpperCase;
+
+            for (var h = 0; h < consultancyCategs.length; h++) {
+              var consultancyCateg = consultancyCategs[h];
+
+              if (consultancyCateg == 'Projecto') {
+                try {
+                  var xproj5PathStr = p5PathStrWithSuffixP5InCateg + '/P5' + discipline[0].toUpperCase() + 'P PROJECTO';
+
+                  var xproj5Years = [];
+
+                  // xproj5Years // -1 para a lista ter número de anos igual a numberOfYearsToRead
+                  for (var i = numberOfYearsToRead - 1; i >= 0; i--) {
+                    xproj5Years.push(yearY4 - i);
+                  }
+
+                  // Ano
+                  for (var i = 0; i < xproj5Years.length; i++) {
+                    var xproj5Year = 'P' + disciplineUpperCase[0] + xproj5Years[i];
+
+                    try {
+                      var xproj5Provinces = seApp.folders.byName(xproj5PathStr + '/' + xproj5Year).folders.name();
+
+                      // Província
+                      for (var j = 0; j < xproj5Provinces.length; j++) {
+                        var xproj5Province = xproj5Provinces[j];
+
+                        // Projectos
+                        var xproj5Folders = seApp.folders.byName(xproj5PathStr + '/' + xproj5Year + '/' + xproj5Province).folders;
+
+                        for (var k = 0; k < xproj5Folders.length; k++) {
+                          var folderName = xproj5Folders[k].name();
+                          var folderNameItems = folderName.split(` ${ND} `);
+                          var folderNameItemsL = folderNameItems.length;
+
+                          if (folderNameItems[0] == 'Y' && folderNameItemsL == 6) {
+                            var customer4Folders = folderName.split(` ${ND} `)[2];
+
+                            var csAndCustomerAndObjItems = global5WhatReturnCsAndCustomerAndObj(
+                              folderName,
+                              folderNameItems,
+                              whatReturn
+                            ).split(' | ');
+
+                            var cs = csAndCustomerAndObjItems[0];
+
+                            if (action == 'ReadInvoiceInfoAndUpdateJSON') {
+                              var xproj5ProjectFolders = seApp.folders.byName(
+                                xproj5PathStr + '/' + xproj5Year + '/' + xproj5Province + '/' + folderName
+                              ).folders;
+
+                              if (cs[3] == 'C') {
+                                for (var m = 0; m < xproj5ProjectFolders.length; m++) {
+                                  var xproj5ProjectXd5Folder = xproj5ProjectFolders[m].name();
+
+                                  if (xproj5ProjectXd5Folder.includes('P&C')) {
+                                    var folderPAndCItems = xproj5ProjectXd5Folder.split(' | ');
+                                    var dateInfo = folderPAndCItems[1];
+                                    var invoicingInfo = folderPAndCItems[2];
+
+                                    contractsInfo.push(`${cs} | ${customer4Folders} | ${invoicingInfo} | ${dateInfo}`);
+                                  }
+                                }
+                              } else if (cs[3] == 'F') {
+                                for (var l = 0; l < xproj5ProjectFolders.length; l++) {
+                                  var xproj5ProjectFolder = xproj5ProjectFolders[l].name();
+
+                                  if (xproj5ProjectFolder.includes('XD5')) {
+                                    var xproj5ProjectXd5Folders = seApp.folders.byName(
+                                      xproj5PathStr +
+                                        '/' +
+                                        xproj5Year +
+                                        '/' +
+                                        xproj5Province +
+                                        '/' +
+                                        folderName +
+                                        '/' +
+                                        xproj5ProjectFolder
+                                    ).folders;
+
+                                    for (var m = 0; m < xproj5ProjectXd5Folders.length; m++) {
+                                      var xproj5ProjectXd5Folder = xproj5ProjectXd5Folders[m].name();
+
+                                      if (xproj5ProjectXd5Folder.includes('P&C')) {
+                                        var folderPAndCItems = xproj5ProjectXd5Folder.split(' | ');
+                                        var dateInfo = folderPAndCItems[1];
+                                        var invoicingInfo = folderPAndCItems[2];
+
+                                        contractsInfo.push(`${cs} | ${customer4Folders} | ${invoicingInfo} | ${dateInfo}`);
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            } else if (action == 'ReadFolderName') {
+                              var csAndCustomerAndObj = csAndCustomerAndObjItems[1];
+
+                              if (global5IsCs(cs)) {
+                                xproj5xbuild5FoldersNames.push(csAndCustomerAndObj);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    } catch (e) {
+                      // Desactivado para não Alertar se não apanhar o Ano
+                      //dAlert(`${e.message}❗️`, `Talvez não apanhou o ano ""${xproj5Year}""`)
+                    }
+                  }
+                } catch (e) {
+                  // Desactivado para não Alertar se não apanhar o Ano
+                  //dAlert(`${e.message}❗️`, `Processando Projecto - Processando "${folderName}"`)
+                }
+              } else if (
+                consultancyCateg == 'Construção' ||
+                consultancyCateg == 'Empreitada' ||
+                consultancyCateg == 'Fiscalização' ||
+                consultancyCateg == 'Técnica'
+              ) {
+                try {
+                  //var xo5PathStr = p5PathStrWithSuffixP5 + "/P5" + discipline[0].toUpperCase() + consultancyCateg[0] + " " + consultancyCateg.toUpperCase()
+
+                  var xo5PathStr =
+                    p5PathStrWithSuffixP5InCateg +
+                    '/P5' +
+                    discipline[0].toUpperCase() +
+                    consultancyCateg[0] +
+                    ' ' +
+                    consultancyCateg.toUpperCase();
+
+                  // Obras
+                  var xo5Folders = seApp.folders.byName(xo5PathStr).folders;
+
+                  for (var k = 0; k < xo5Folders.length; k++) {
+                    var folderName = xo5Folders[k].name();
+                    var folderNameItems = folderName.split(` ${ND} `);
+                    var folderNameItemsL = folderNameItems.length;
+
+                    if (folderNameItems[0] == 'Y' && folderNameItemsL == 6) {
+                      var customer4Folders = folderName.split(` ${ND} `)[2];
+
+                      var csAndCustomerAndObjItems = global5WhatReturnCsAndCustomerAndObj(
+                        folderName,
+                        folderNameItems,
+                        whatReturn
+                      ).split(' | ');
+
+                      var cs = csAndCustomerAndObjItems[0];
+
+                      if (action == 'ReadInvoiceInfoAndUpdateJSON') {
+                        var xobras5ProjectFolders = seApp.folders.byName(xo5PathStr + '/' + folderName).folders;
+
+                        if (cs[3] == 'C') {
+                          for (var m = 0; m < xobras5ProjectFolders.length; m++) {
+                            var xobras5ProjectXd5Folder = xobras5ProjectFolders[m].name();
+
+                            if (xobras5ProjectXd5Folder.includes('P&C')) {
+                              var folderPAndCItems = xobras5ProjectXd5Folder.split(' | ');
+                              var dateInfo = folderPAndCItems[1];
+                              var invoicingInfo = folderPAndCItems[2];
+
+                              contractsInfo.push(`${cs} | ${customer4Folders} | ${invoicingInfo} | ${dateInfo}`);
+                            }
+                          }
+                        } else if (cs[3] == 'F') {
+                          for (var l = 0; l < xobras5ProjectFolders.length; l++) {
+                            var xobras5ProjectFolder = xobras5ProjectFolders[l].name();
+
+                            if (xobras5ProjectFolder.includes('XD5')) {
+                              var xobras5ProjectXd5Folders = seApp.folders.byName(
+                                xo5PathStr + '/' + folderName + '/' + xobras5ProjectFolder
+                              ).folders;
+
+                              for (var m = 0; m < xobras5ProjectXd5Folders.length; m++) {
+                                var xobras5ProjectXd5Folder = xobras5ProjectXd5Folders[m].name();
+
+                                if (xobras5ProjectXd5Folder.includes('P&C')) {
+                                  var folderPAndCItems = xobras5ProjectXd5Folder.split(' | ');
+                                  var dateInfo = folderPAndCItems[1];
+                                  var invoicingInfo = folderPAndCItems[2];
+
+                                  contractsInfo.push(`${cs} | ${customer4Folders} | ${invoicingInfo} | ${dateInfo}`);
+                                }
+                              }
+                            }
+                          }
+                        }
+                      } else if (action == 'ReadFolderName') {
+                        var csAndCustomerAndObj = csAndCustomerAndObjItems[1];
+
+                        if (global5IsCs(cs)) {
+                          xproj5xbuild5FoldersNames.push(csAndCustomerAndObj);
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // Desactivado para não Alertar se não apanhar o Ano
+                  //dAlert(`${e.message}❗️`, `Processando Obras - Processando "${folderName}"`)
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Desactivado para não Alertar se não apanhar o Ano
+          //dAlert(`${e.message}!`)
+        }
+
+        if (action == 'ReadFolderName') {
+          var filters = global5EnsureSpaceAfterCommaInStr(filterStrs).split(', ');
+
+          var xproj5xbuild5FoldersNamesFiltered = [];
+          for (var i = 0; i < filters.length; i++) {
+            var filter = filters[i];
+
+            for (var j = 0; j < xproj5xbuild5FoldersNames.length; j++) {
+              var xproj5xbuild5FoldersName = xproj5xbuild5FoldersNames[j];
+
+              var xproj5xbuild5FoldersNamesFilteredStr = xproj5xbuild5FoldersNamesFiltered.toString();
+
+              if (
+                xproj5xbuild5FoldersName.toLowerCase().includes(filter.toLowerCase()) &&
+                !xproj5xbuild5FoldersNamesFilteredStr.includes(xproj5xbuild5FoldersName)
+              ) {
+                xproj5xbuild5FoldersNamesFiltered.push(xproj5xbuild5FoldersName);
+              }
+            }
+          }
+
+          // FILTERS BY XDIMW & XDIMX & BY INVOICING TYPE CHARECTER 1 (C - Cotação ou F - Factura)
+
+          // 🔴 typOfInvoicingC1 se for "" inclui Cotações e Facturas
+          //if (typeOfInvoicingC1 != "") {
+
+          /*
+					if (typeOfInvoicingC1 == "C" || typeOfInvoicingC1 == "F") {
+
+						var xproj5xbuild5FoldersNames = xproj5xbuild5FoldersNames.filter(
+
+							function(name) {
+								var cs = name.split(" ").slice(-1).toString()
+
+								if (company == "") {
+
+									return cs[3] == typeOfInvoicingC1
+
+								} else if (company == "X-DIM W") {
+
+									return cs.slice(1,3).includes("DW") && cs[3] == typeOfInvoicingC1
+
+								} else if (company == "X-DIM X") {
+
+									return !cs.slice(1,3).includes("DW") && cs[3] == typeOfInvoicingC1
+								}
+							}
+						)
+					}
+					*/
+
+          var xproj5xbuild5FoldersNames = xproj5xbuild5FoldersNames.filter(function (name) {
+            var cs = name.split(' ').slice(-1).toString();
+
+            if (company == '') {
+              if (typeOfInvoicingC1 == '') {
+                return cs;
+              } else if (typeOfInvoicingC1 == 'C' || typeOfInvoicingC1 == 'F') {
+                return cs[3] == typeOfInvoicingC1;
+              }
+            } else if (company == 'X-DIM W') {
+              if (typeOfInvoicingC1 == '') {
+                return cs.slice(1, 3).includes('DW');
+              } else if (typeOfInvoicingC1 == 'C' || typeOfInvoicingC1 == 'F') {
+                return cs.slice(1, 3).includes('DW') && cs[3] == typeOfInvoicingC1;
+              }
+            } else if (company == 'X-DIM X') {
+              if (typeOfInvoicingC1 == '') {
+                return !cs.slice(1, 3).includes('DW');
+              } else if (typeOfInvoicingC1 == 'C' || typeOfInvoicingC1 == 'F') {
+                return !cs.slice(1, 3).includes('DW') && cs[3] == typeOfInvoicingC1;
+              }
+            }
+          });
+
+          var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+          xproj5xbuild5FoldersNames.sort(collator.compare);
+          xproj5xbuild5FoldersNamesFiltered.sort(collator.compare);
+
+          if (xproj5xbuild5FoldersNamesFiltered.length == 0 || filterStrs == '') {
+            if (xproj5xbuild5FoldersNamesFiltered.length == 0) {
+              var filterInfo = 'Filtros não encontrados ' + '(' + filterStrs + ')';
+            }
+            if (filterStrs == '') {
+              var filterInfo = 'Filtro vazio';
+            }
+
+            var xproj5xbuild5FoldersNameselected = cfl2Str(
+              xproj5xbuild5FoldersNames,
+              'Lista de CSs Cliente | Lista completa | ' + xproj5xbuild5FoldersNames.length + '\n—\n' + filterInfo + '\n',
+              xproj5xbuild5FoldersNames[xproj5xbuild5FoldersNames.length - 1],
+              'm'
+            );
+          } else {
+            var xproj5xbuild5FoldersNameselected = cfl2Str(
+              xproj5xbuild5FoldersNamesFiltered,
+              'Lista de CSs Cliente | Filtros (' + filterStrs + ') | ' + xproj5xbuild5FoldersNamesFiltered.length,
+              xproj5xbuild5FoldersNamesFiltered[xproj5xbuild5FoldersNamesFiltered.length - 1],
+              'm'
+            );
+          }
+
+          return xproj5xbuild5FoldersNameselected.replace(/,/g, ', ');
+        }
+
+        // ----------------------
+
+        try {
+          var text = [];
+
+          for (var i = 0; i < contractsInfo.length; i++) {
+            var contractInfo = contractsInfo[i];
+            var contractInfoItems = contractInfo.split(' | ');
+
+            var id = i + 1;
+            var cs = contractInfoItems[0];
+            var customer = contractInfoItems[1];
+
+            var invoicingInfo = contractInfoItems[2];
+
+            var percentage = invoicingInfo.match(/[A-Z0-9.]*%/)[0];
+
+            var dateInfoItems = contractInfoItems[3].split('-');
+            var date = dateInfoItems[0].slice(0, 4) + '.' + dateInfoItems[0].slice(4, 6) + '.' + dateInfoItems[0].slice(-2);
+            var dueDate = dateInfoItems[1].slice(0, 4) + '.' + dateInfoItems[1].slice(4, 6) + '.' + dateInfoItems[1].slice(-2);
+
+            if (cs[3] == 'C') {
+              var amount = invoicingInfo.match(/C([0-9,.]*)/)[1];
+
+              text.push(
+                `{"id":${id}, "cs":"${cs}", "customer":"${customer}", "amount":"${amount}", "percentage":"${percentage}", "date":"${date}", "dueDate":"${dueDate}"}`
+              );
+            } else if (cs[3] == 'F') {
+              var amount = invoicingInfo.match(/F([0-9,.]*)/)[1];
+              var dueAmount = invoicingInfo.match(/R([0-9,.]*)/)[1];
+
+              text.push(
+                `{"id":${id}, "cs":"${cs}", "customer":"${customer}", "amount":"${amount}", "dueAmount":"${dueAmount}", "percentage":"${percentage}", "date":"${date}", "dueDate":"${dueDate}"}`
+              );
+            }
+          }
+        } catch (e) {
+          dAlert(
+            `${e.message}❗️\n\nPreparando contractsInfo para gravar em JSON!`,
+            `Talvez seja o item "${cs} ${customer} ${invoicingInfo}"`
+          );
+        }
+
+        try {
+          // 🔴 NAOTAR
+          // Precisa de JSON.Stringfy para situação de text2
+          //var text = JSON.stringify(text2)
+
+          // Text já vem com aspas devidamente por não precisa de JSON.Stringfy
+          var text = `[` + text.join(',\n') + `]`;
+
+          /*
+					var desktopString = currentApp.pathTo("desktop").toString()
+					var file = `${desktopString}/MY JSON FILE.json`
+					*/
+
+          var file = '/Users/xd5-wmac/Dropbox/SWIFTUITEMPORAY/JSONInfoA5.json';
+
+          // Converting to UTF8 to accept accents
+          var outputStr = $.NSString.alloc.initWithUTF8String(text);
+          // WRITING TO FILE
+          outputStr.writeToFileAtomically(file, true);
+        } catch (e) {
+          dAlert(`${e.message}❗️`, `Gravando no ficheiro JSON!`);
+        }
+      }
+    } else if (action == 'UpdateP&CFolderName') {
+      var cs = invoiceNumberEdition;
+
+      // if (cs[5] == "A") {
+      if (cs[4] == 'A') {
+        var xproj5PathStr = p5PathStrWithSuffixP5 + '/P5AA ARQUITECTURA';
+
+        var xproj5Year = cs.slice(5, 7);
+
+        var xproj5folderPathsObjByYear = seApp.folders.byName(xproj5PathStr).folders;
+        var xproj5folderPathsObjByYearL = xproj5folderPathsObjByYear.length;
+
+        for (var i = 0; i < xproj5folderPathsObjByYearL; i++) {
+          // XFER01
+
+          var folderNameYear = xproj5folderPathsObjByYear[i].name();
+
+          if (folderNameYear.includes(xproj5Year)) {
+            var folderNameYearFound = folderNameYear;
+            break;
+          }
+        }
+
+        var xproj5Province = cs.slice(7, 9);
+
+        var xproj5folderPathsObjByProvince = seApp.folders.byName(xproj5PathStr + '/' + folderNameYearFound).folders;
+        var xproj5folderPathsObjByProvinceL = xproj5folderPathsObjByProvince.length;
+
+        for (var i = 0; i < xproj5folderPathsObjByProvinceL; i++) {
+          // XFER01
+
+          var folderNameProvince = xproj5folderPathsObjByProvince[i].name();
+
+          if (folderNameProvince.includes(xproj5Province)) {
+            var folderNameProvinceFound = folderNameProvince;
+            break;
+          }
+        }
+      } else if (cs[5] == 'A' || cs[5] == 'C' || cs[5] == 'E' || cs[5] == 'F') {
+        if (cs[5] == 'A') {
+          var xproj5PathStr = p5PathStrWithSuffixP5 + '/P5AA ASSISTÊNCIA';
+        } else if (cs[5] == 'C') {
+          var xproj5PathStr = p5PathStrWithSuffixP5 + '/P5AC CONSTRUÇÃO';
+        } else if (cs[5] == 'E') {
+          var xproj5PathStr = p5PathStrWithSuffixP5 + '/P5AE EMPREITADA';
+
+          /* 🔴🔴🔴 DESACTIVADO PORQUE É DIRECTO NAS PROPOSTAS
+
+				} else if (cs[5] == "F") {
+
+					var xproj5PathStr = p5PathStrWithSuffixP5 + "/P5AF FISCALIZAÇÃO"
+					*/
+        }
+      }
+
+      // if (cs[5] == "A") {
+      if (cs[4] == 'A') {
+        var folderPathProjectStr = xproj5PathStr + '/' + folderNameYearFound + '/' + folderNameProvinceFound;
+      } else {
+        var folderPathProjectStr = xproj5PathStr;
+      }
+
+      var folderPathsObjByProject = seApp.folders.byName(folderPathProjectStr).folders;
+      var folderPathsObjByProjectL = folderPathsObjByProject.length;
+
+      for (var i = 0; i < folderPathsObjByProjectL; i++) {
+        // XFER01
+
+        var projectFolder = folderPathsObjByProject[i].name();
+
+        if (projectFolder.includes(cs)) {
+          var projectFolderFound = projectFolder;
+          break;
+        }
+      }
+
+      var folderPathStr = folderPathProjectStr + '/' + projectFolderFound;
+      var foldersInProject = seApp.folders.byName(folderPathStr).folders;
+
+      if (cs[3] == 'C') {
+        // Cotação
+
+        for (var i = 0; i < foldersInProject.length; i++) {
+          // XFER01
+
+          var folderInProject = foldersInProject[i].name();
+
+          if (folderInProject.includes('P&C')) {
+            var folderPAndC = folderInProject;
+            break;
+          }
+        }
+
+        var folderAlias = seApp.aliases.byName(folderPathStr + '/' + folderPAndC);
+
+        var folderNameNew = folderPAndC.replace(/C\d[0-9,.]*\s[0-9.]*/, 'C' + quoteTotal + ' ' + chargedPercentage);
+      } else if (cs[3] == 'F') {
+        // Factura
+
+        for (var i = 0; i < foldersInProject.length; i++) {
+          // XFER01
+
+          var folderInProject = foldersInProject[i].name();
+
+          if (folderInProject.includes('XD5')) {
+            var folderXd5 = folderInProject;
+
+            var projectFolderXd5Folders = seApp.folders.byName(folderPathStr + '/' + folderInProject).folders;
+
+            for (var j = 0; j < projectFolderXd5Folders.length; j++) {
+              var folderInXD5 = projectFolderXd5Folders[j].name();
+
+              if (folderInXD5.includes('P&C')) {
+                var folderPAndC = folderInXD5;
+                break;
+              }
+            }
+          }
+        }
+
+        var folderAlias = seApp.aliases.byName(folderPathStr + '/' + folderXd5 + '/' + folderPAndC);
+
+        var folderNameNew = folderPAndC
+          .replace(/\d{8}-\d{8}/, dateAndDueDate)
+          .replace(/R[0-9,.]*-F[0-9,.]*/, dueAmountAndTotalWithPrefix);
+      }
+
+      folderAlias.name = folderNameNew;
+    }
+  } catch (e) {
+    dAlert(`${e.message}❗️`, ``);
+  }
+}
+
+function global5WhatReturnCsAndCustomerAndObj(folderName, folderNameItems, whatReturn) {
+  var cs = folderNameItems[1];
+  var customerItems = folderNameItems[2].split(' ');
+  var obj = folderNameItems[3];
+
+  var customerFName = customerItems[0];
+  var customerLName = customerItems[customerItems.length - 1];
+
+  if (customerFName == customerLName) {
+    if (whatReturn == 'csAndCustomerAndObj') {
+      // Not Used
+      var csAndCustomerAndObj = `${cs} ${customerFName} ${ND} ${obj}`;
+    } else if (whatReturn == 'csAndCustomer') {
+      // For Event
+
+      var csAndCustomerAndObj = cs + ' ' + customerFName;
+    } else if (whatReturn == 'customerAndCsNoBullet') {
+      // For Subscrições
+      var csAndCustomerAndObj = customerFName + ' ' + cs;
+    }
+  } else {
+    //
+    if (whatReturn == 'csAndCustomerAndObj') {
+      // Not Used
+      var csAndCustomerAndObj = cs + ' ' + customerFName + ' ' + customerLName + ` ${ND} ` + obj;
+    } else if (whatReturn == 'csAndCustomer') {
+      // For Event
+
+      var csAndCustomerAndObj = cs + ' ' + customerFName + ' ' + customerLName;
+    } else if (whatReturn == 'customerAndCsNoBullet') {
+      var csAndCustomerAndObj = customerFName + ' ' + customerLName + ' ' + cs;
+    }
+  }
+
+  return cs + ' | ' + csAndCustomerAndObj;
+}
+
+function global5IsCs(csToTest) {
+  alert(`Use projectLib for global5ContractDetailsForEventAndFolderAndSubscricoes`, ``);
+
+  // XDWFPA200902: String "XDWFPA", Number "200902"
+  var csStringPart = csToTest.slice(0, 6);
+  var csNumberPart = csToTest.slice(6, 12);
+
+  if (isNaN(csStringPart) && csStringPart.length == 6 && !isNaN(csNumberPart) && csNumberPart.length == 6) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// ---------------
+
+function processSelectedObjectsStr(selectedObjectsStr) {
+  return `${selectedObjectsStr ? ` - ${selectedObjectsStr}` : ''}`;
+}
+
+function fillWorkSchedule(docPages, workPhasesNameAndWeeks, scheduleDurationUnit) {
+  var workScheduleTableName = 'projectPlanInPages'; //"workScheduleTable"
+  var workScheduleTable = docPages.tables[workScheduleTableName];
+
+  workScheduleTable.cells['B1'].value = scheduleDurationUnit;
+
+  // Long dash "—"
+  var workPhaseNames = workPhasesNameAndWeeks.map(workInfo => workInfo.split(' — ')[0]);
+  var workPhaseWeekNumbers = workPhasesNameAndWeeks.map(workInfo => Number(workInfo.split(' — ')[1]));
+
+  var workScheduleTableWeeks = sumAllByReduce(workPhaseWeekNumbers);
+
+  var columnWidthCoeficient = 1 + 1 / workScheduleTableWeeks;
+
+  var workPhasesWithEmptyWeekNumbers = [];
+  var workWeekNumbers = [];
+  for (var i = 0; i < workPhaseNames.length; i++) {
+    var workPhase = workPhaseNames[i];
+    var workPhaseAndEmptyWeek = [workPhase];
+    var workWeekNumbersByPhase = [];
+
+    for (var j = 0; j < workScheduleTableWeeks; j++) {
+      if (i == 0) {
+        workWeekNumbersByPhase.push((j + 1).toString());
+      } else {
+        workWeekNumbersByPhase.push('');
+      }
+      workPhaseAndEmptyWeek.push('');
+    }
+
+    workPhasesWithEmptyWeekNumbers.push(workPhaseAndEmptyWeek);
+    workWeekNumbers.push(workWeekNumbersByPhase);
+  }
+
+  pagesApp.activate(); // 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴 TEMPORAY
+
+  selectionRange(workScheduleTable, 'A3:A3');
+  menuLib.copyPaste(workPhasesWithEmptyWeekNumbers.join('\n'));
+
+  selectionRange(workScheduleTable, 'B2:B2');
+  menuLib.copyPaste(workWeekNumbers.join('\n'));
+  delay(d0p3);
+
+  var workScheduleTableUpdated = docPages.tables[workScheduleTableName];
+
+  var workScheduleTableColumnsL = workScheduleTableUpdated.columnCount();
+  var workScheduleTableColumnsLastLetter = appLib.letterFromLetterAndNumberPairs(workScheduleTableColumnsL);
+
+  if (workScheduleTableColumnsL - 1 != 1) {
+    // If is not one week, merge
+    mergeCells(workScheduleTableUpdated, 'B1:' + workScheduleTableColumnsLastLetter + 1);
+  }
+
+  // 🔴🔴🔴 ------------------------------------------ FORMAT TABLE
+
+  // -------------- COLUMNS
+
+  for (var i = 0; i < workScheduleTableUpdated.columnCount(); i++) {
+    if (i == 0) {
+      workScheduleTableUpdated.columns[i].width = 200 * columnWidthCoeficient;
+    } else {
+      workScheduleTableUpdated.columns[i].width = 20 * columnWidthCoeficient;
+    }
+  }
+
+  // -------------- TEXT
+
+  var rangeName4Horizontal =
+    'B3:' + appLib.letterFromLetterAndNumberPairs(workScheduleTableWeeks + 1) + (workPhaseNames.length + 2);
+
+  alignHorizontal(workScheduleTableUpdated, rangeName4Horizontal, 'center');
+
+  var rangeName4Vertical =
+    'A3:' + appLib.letterFromLetterAndNumberPairs(workScheduleTableWeeks + 1) + (workPhaseNames.length + 2);
+
+  alignVertical(workScheduleTableUpdated, rangeName4Vertical, 'center');
+
+  // 🔴🔴🔴 ------------------------------------------  FILL THE WORK WEEKS
+
+  var workWeekNumberStartColumn = 1;
+
+  for (var i = 0; i < workPhaseNames.length; i++) {
+    var workPhaseWeekNumber = workPhaseWeekNumbers[i];
+
+    if (i == 0) {
+      var columnsFirstLetter = 'B';
+    } else {
+      // Para a letra a seguir
+      var columnsFirstLetter = appLib.letterFromLetterAndNumberPairs(workWeekNumberLastColumn + 1);
+    }
+
+    var workWeekNumberLastColumn = workWeekNumberStartColumn + workPhaseWeekNumber;
+
+    var columnsLastLetter = appLib.letterFromLetterAndNumberPairs(workWeekNumberLastColumn);
+
+    var startCell = columnsFirstLetter + (i + 3);
+
+    workScheduleTable.ranges[startCell + ':' + columnsLastLetter + (i + 3)].backgroundColor = 'red';
+
+    workScheduleTable.cells[startCell].value = workPhaseWeekNumber;
+
+    workWeekNumberStartColumn += workPhaseWeekNumber;
+  }
+}
+
+function moveFile(dischargePathStr, pathStrTo, dischargeInstitutionShortName) {
+  var fileNames = seApp.folders.byName(dischargePathStr).files.name();
+
+  var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  fileNames.sort(collator.compare);
+
+  var fileNameToMove = fileNames.filter(fileName => fileName.includes(dischargeInstitutionShortName))[0];
+
+  var pathStrToMove = dischargePathStr + '/' + fileNameToMove;
+
+  finderApp.move(Path(pathStrToMove), { to: Path(pathStrTo) });
+}
+
+function activityReimbursementsOrMiscellaneousExpenses(propSheetName, tableName) {
+  var propSheet = docNumXG5.sheets[propSheetName];
+  var table = propSheet.tables[tableName];
+
+  var tableRowsL = table.rowCount() - 1;
+
+  var tableInfo = [];
+
+  for (var i = 2; i < tableRowsL; i++) {
+    var iNum = i + 1;
+
+    var quantity = table.cells['C' + iNum].value();
+
+    if (quantity > 0) {
+      var activity = table.cells['A' + iNum].value();
+      var unit = table.cells['B' + iNum].value();
+      var unitAmount = table.cells['D' + iNum].value();
+      var amount = formatNumber(table.cells['E' + iNum].value());
+
+      tableInfo.push(activity + '\t' + unit + '\t' + quantity + '\t' + unitAmount + '\t' + amount);
+    }
+  }
+
+  return tableInfo;
+}
+
+function deleteEmptyRowsInPagesTable(tableToDeleteRows) {
+  // ----- Get empty ROWS
+  var tableColumnL = tableToDeleteRows.columnCount();
+
+  var rowCountToDelete = 0;
+
+  for (var i = 0; i < tableToDeleteRows.rowCount(); i++) {
+    // Coluna A
+    var cellEmptyCheck = tableToDeleteRows.rows[i].cells[0].value();
+
+    // Última coluna a direita
+    var cellTotalCheck = tableToDeleteRows.rows[i].cells[tableColumnL - 1].value();
+
+    if (cellEmptyCheck == null && cellTotalCheck == null) {
+      rowCountToDelete += 1;
+    }
+
+    if (rowCountToDelete == 1) {
+      var rowIndexToDeleteStart = i;
+    }
+  }
+
+  // ----- Delete empty ROWS
+  for (var i = 0; i < rowCountToDelete; i++) {
+    tableToDeleteRows.rows[rowIndexToDeleteStart].delete();
+  }
+}
+
+function tableTeamForWagesOrTasks(propSheetName, tableName) {
+  var propSheet = docNumXG5.sheets[propSheetName];
+  var table = propSheet.tables[tableName];
+
+  var teamTasks = [];
+  var teamWages = [];
+
+  for (var i = 0; i < table.rowCount(); i++) {
+    var iNum = i + 1;
+
+    var memberCheck = table.cells['H' + iNum].value();
+
+    if (memberCheck == 1) {
+      // Estas variáveis incluem o cabeçalho
+      var memberName = table.cells['A' + iNum].value();
+      var position = table.cells['B' + iNum].value();
+      var task = table.cells['C' + iNum].value();
+      var period = table.cells['D' + iNum].value();
+
+      var standadWages = table.cells['E' + iNum].value();
+      var wages = table.cells['F' + iNum].value();
+
+      if (i > 0) {
+        var standadWages = formatNumber(standadWages);
+        var wages = formatNumber(wages);
+      }
+
+      teamTasks.push(memberName + '\t' + position + '\t' + task);
+      teamWages.push(memberName + '\t' + position + '\t' + task + '\t' + period + '\t' + standadWages + '\t' + wages);
+    }
+  }
+
+  return {
+    teamTasks: teamTasks,
+    teamWages: teamWages,
+  };
+}
+
+function copyAndPasteTables(tableNamesToCopyAndOPaste) {
+  var paragraphs = docPagesInProposta.bodyText.paragraphs; // Whole document
+  pagesApp.activate();
+
+  var tableNamesToCopyAndOPasteL = tableNamesToCopyAndOPaste.length;
+
+  for (var h = 0; h < tableNamesToCopyAndOPasteL; h++) {
+    var tableNameToCopyAndOPaste = tableNamesToCopyAndOPaste[h];
+
+    delay(d0p1);
+    menuLib.selectAll();
+    delay(d0p1);
+    seApp.keyCode(124);
+    delay(d0p1);
+    seApp.keyCode(126, { using: 'shift down' }); // Selection one line / table
+    delay(d0p1);
+    seApp.keyCode(126, { using: 'shift down' }); // Selection one line / table
+    delay(d0p1);
+    seApp.keystroke('x', { using: 'command down' });
+
+    for (var i = 0; i < paragraphs.length; i++) {
+      var paragraph = paragraphs()[i];
+
+      if (paragraph == tableNameToCopyAndOPaste) {
+        delay(d0p1);
+        paragraphs[i].set(tableNameToCopyAndOPaste);
+        delay(d0p1);
+        seApp.keyCode([76, 76]); // Press Enter
+        delay(d0p1);
+        seApp.keystroke('v', { using: 'command down' });
+
+        break;
+      }
+    }
+
+    // Se for última tabela apagar a última página de tabelas feita com com Page Break
+
+    if (h == tableNamesToCopyAndOPasteL - 1) {
+      delay(d3);
+      menuLib.selectAll();
+      delay(d3);
+      seApp.keyCode(124);
+      seApp.keyCode(51); // Delete
+    }
+  }
+}
+
+function ptOptionsLists(tableName, rowStart) {
+  var table = propSheet.tables[tableName];
+  var tableRowsL = table.rowCount();
+  var specsOptions = [];
+
+  for (var i = rowStart; i < tableRowsL; i++) {
+    var infoColumnD = table.cells['D' + (i + 1)].value();
+
+    if (infoColumnD != undefined) {
+      specsOptions.push(infoColumnD);
+    }
+  }
+
+  return specsOptions;
+}
+
+function pageBreaking() {
+  var paragraphs = docPagesInProposta.bodyText.paragraphs; // Whole document
+  pagesApp.activate();
+
+  for (var i = 0; i < paragraphs.length; i++) {
+    var paragraph = paragraphs()[i];
+
+    if (paragraph == 'pageBreak') {
+      delay(d0p1);
+      paragraphs[i].set('');
+      delay(d0p1);
+
+      menuLib.doMenu('Pages', 'Insert', 'Page Break');
+      delay(d0p1);
+
+      seApp.keyCode(124);
+      delay(d0p1);
+      seApp.keyCode(51); // Delete
+    }
+  }
+}
+
+function ptInfoLists(tableName, optionsSel, scheduleDurationUnit) {
+  numbersApp.activate();
+  var table = propSheet.tables[tableName];
+  var tableRowsL = table.rowCount();
+
+  selectionRange(table, 'E1:E' + tableRowsL);
+  delay(d0p3);
+  seApp.keyCode(51); // Delete
+  delay(d0p3);
+
+  var infoLines = [];
+  var heading1List = [];
+  var heading2List = [];
+  var heading3List = [];
+
+  var workPhasesNameAndWeeks = [];
+
+  for (var i = 0; i < tableRowsL; i++) {
+    var iNum = i + 1;
+    var trackIdInfoLine = table.cells['B' + iNum].value();
+
+    for (var j = 0; j < optionsSel.length; j++) {
+      var trackIdCurrent = optionsSel[j].split(' - ')[0];
+
+      if (trackIdInfoLine == trackIdCurrent) {
+        var workScheduleTrack = table.cells['A' + iNum].value();
+
+        var infoLine = table.cells['D' + iNum].value();
+
+        table.cells['E' + iNum].value = '•';
+
+        var workPhaseWeekNumber = table.cells['A' + iNum].value();
+
+        if (workPhaseWeekNumber > 0) {
+          // null é zero
+
+          // Long dash "—"
+          var workPhaseWeekNumberWithPrefix = ' — ' + workPhaseWeekNumber;
+
+          var infoLine4WorkSchedule = infoLine.split(' / ')[0];
+
+          workPhasesNameAndWeeks.push(infoLine4WorkSchedule + workPhaseWeekNumberWithPrefix);
+        }
+
+        // PARA IMPEDIR 2 pageBreaks seguidos
+        if (infoLine == 'pageBreak') {
+          if (infoLines[infoLines.length - 1] != 'pageBreak') {
+            infoLines.push(infoLine);
+          }
+        } else {
+          if (workPhaseWeekNumber > 0) {
+            // workPhaseWeekNumber == 1 ? weekUnit = "Semana" : weekUnit = "Semanas"
+
+            // D Dias, S Semanas
+            if (scheduleDurationUnit[0] === 'd') {
+              workPhaseWeekNumber == 1 ? (weekUnit = 'dia') : (weekUnit = 'dias');
+            } else if (scheduleDurationUnit[0] === 'm') {
+              workPhaseWeekNumber == 1 ? (weekUnit = 'mês') : (weekUnit = 'meses');
+            } else if (scheduleDurationUnit[0] === 's') {
+              workPhaseWeekNumber == 1 ? (weekUnit = 'semana') : (weekUnit = 'semanas');
+            }
+
+            var infoLineWithWeekNumber = infoLine.replace(' / ', workPhaseWeekNumberWithPrefix + ` ${weekUnit} / `);
+
+            infoLines.push(infoLineWithWeekNumber);
+          } else {
+            infoLines.push(infoLine);
+          }
+        }
+
+        var trackIdHeading = table.cells['C' + iNum].value();
+
+        try {
+          // Por que tem empty "null" para trackIdHeading onde não tem numeração
+          var trackIdHeadingItems = trackIdHeading.split('.');
+          var trackIdHeadingItemsL = trackIdHeadingItems.length;
+
+          if (trackIdHeadingItemsL == 1) {
+            heading1List.push(infoLine);
+          } else if (trackIdHeadingItemsL == 2) {
+            heading2List.push(infoLine);
+          } else if (trackIdHeadingItemsL == 3) {
+            if (workPhaseWeekNumber > 0) {
+              heading3List.push(infoLineWithWeekNumber);
+            } else {
+              heading3List.push(infoLine);
+            }
+          }
+        } catch {
+          //
+        }
+      }
+    }
+  }
+  return [infoLines, heading1List, heading2List, heading3List, workPhasesNameAndWeeks];
+}
+
+function numberingHeadings(headingList, headingNumber) {
+  var paragraphs = docPagesInProposta.bodyText.paragraphs; // Whole document
+  pagesApp.activate();
+
+  for (var i = 0; i < paragraphs.length; i++) {
+    var paragraph = paragraphs()[i];
+    var paragraphSixCharacters = paragraph.slice(0, 6);
+
+    for (var h = 0; h < headingList.length; h++) {
+      var heading = headingList[h];
+
+      if (paragraph.includes(heading)) {
+        if (heading.includes(' / IDENTIFIER')) {
+          paragraphs[i].set(paragraph.replace(' / IDENTIFIER', ''));
+        } else {
+          paragraphs[i].set(heading);
+        }
+        delay(d0p1);
+
+        // Selecionar um caracter é suficiente para aplicar Paragrapgh Styles
+        seApp.keyCode(123, { using: 'shift down' });
+
+        delay(d0p1);
+
+        if (headingNumber == 'H1') {
+          seApp.keyCode(122); // F1
+        } else if (headingNumber == 'H2') {
+          //seApp.keyCode(120) // F2
+
+          if (!xd5DocumentsStr.includes(paragraphSixCharacters)) {
+            seApp.keyCode(120); // F2
+          }
+        } else if (headingNumber == 'H3') {
+          seApp.keyCode(99); // F3
+        }
+        delay(d0p1);
+
+        seApp.keyCode(96); // F5 Numbered
+        delay(d1); // Era d0p3
+
+        // delay(3)
+
+        systemLib.arrowRight(1); // 20230713 Added to activate button which was not availbel in this version at this stage.
+        delay(d0p3);
+
+        //pagesAppControllerP.windows[0].splitterGroups[0].scrollAreas[1].groups.at(3).radioGroups[0].radioButtons.byName("Continue from previous")
+
+        pagesAppControllerP.windows[0].splitterGroups[0].scrollAreas[1].groups[3].radioGroups[0].radioButtons
+          .byName('Continue from previous')
+          .click();
+
+        delay(d0p1);
+
+        if (headingNumber == 'H2') {
+          seApp.keyCode(48); // Tab
+          delay(d0p1);
+        } else if (headingNumber == 'H3') {
+          seApp.keyCode(48); // Tab
+          delay(d0p1);
+          seApp.keyCode(48); // Tab
+          delay(d0p1);
+        }
+
+        // PASTE TABLES IN MEMORY
+        if (heading.toLowerCase().includes('programa de necessidades')) {
+          seApp.keyCode(124);
+          delay(d0p1);
+          seApp.keyCode(76);
+          delay(d0p1);
+          seApp.keystroke('v', { using: 'command down' });
+        }
+
+        break;
+      }
+    }
+  }
+}
+
+function pdfText(pathStr) {
+  var pdfURL = $.NSURL.fileURLWithPath(pathStr);
+  var pdfDoc = $.PDFDocument.alloc.initWithURL(pdfURL);
+  var pdfPage1 = pdfDoc.pageAtIndex(0);
+  return $(pdfPage1.string).js; // Returns " " is scanned PDF
+}
+
+function previousTabPathStr() {
+  finderApp.activate();
+  delay(d1);
+
+  seApp.keyCode(48, { using: ['shift down', 'control down'] });
+  delay(d1);
+
+  var itemListSelection = finderApp.selection();
+
+  try {
+    if (itemListSelection[0].kind() == 'Folder') {
+      return decodeURI(itemListSelection[0].url()).slice(7).replace(/\/$/, '');
+    } else {
+      return decodeURI(itemListSelection[0].container().url()).slice(7).replace(/\/$/, '');
+    }
+  } catch (error) {
+    dAlert(`${error.name}`, `${error.message}\n\n—\nTalvez não selecionou nenhuma pasta ou ficheiro!`);
+
+    //currentApp.displayAlert("Seleciona uma pasta ou ficheiro!", {buttons: "Cancel", cancelButton: 1})
+  }
+}
+
+function dAlert(theTitle, message, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    currentApp.displayAlert(theTitle, { message: message });
+  } else {
+    currentApp.displayAlert(theTitle, {
+      message: message,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    });
+  }
+}
+
+function dDialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer }).textReturned;
+  } else {
+    return currentApp.displayDialog(theTitle, {
+      defaultAnswer: theDefaultAnswer,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    }).textReturned;
+  }
+}
+
+function cfl(theList, thePrompt, theDefaultItems, multipleStatus) {
+  if (multipleStatus == undefined) {
+    return currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems });
+  } else if (multipleStatus == 'm') {
+    return currentApp.chooseFromList(theList, {
+      withPrompt: thePrompt,
+      defaultItems: theDefaultItems,
+      multipleSelectionsAllowed: true,
+    });
+  }
+}
+
+function cfl2Str(theList, thePrompt, theDefaultItems, multipleStatus) {
+  if (multipleStatus == undefined) {
+    return currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems }).toString();
+  } else if (multipleStatus == 'm') {
+    return currentApp
+      .chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems, multipleSelectionsAllowed: true })
+      .toString();
+  }
+}
+
+function processSave(docPages, destinyFolderStr, fileName) {
+  const filePath = appLib.saveDoc(docPages, destinyFolderStr, `${dateY4M2D2__H2M2S2}-V1`, fileName, `pages`, true, 'dateAtStart');
+
+  return filePath;
+}
+
+function getURL() {
+  return safariApp.windows[0].currentTab.url();
+}
+
+function openURL(urlInput) {
+  const firstWindow = safariApp.windows[0];
+  const tab = safariApp.Tab({ url: urlInput });
+  firstWindow.tabs.push(tab);
+  firstWindow.currentTab = tab;
+  delay(d1);
+
+  var urlSubscriptionCurrentTab = getURL();
+
+  // "favorites://" is link of blank page
+  if (urlSubscriptionCurrentTab == 'favorites://') {
+    delay(d0p3);
+
+    // Open Location - garantir que que barra de endereço esteja activa (Spend activa imediatamente mas Create Invoice não)
+    seApp.keystroke('l', { using: 'command down' });
+    delay(d0p3);
+
+    saApp.setTheClipboardTo(urlInput);
+    delay(d1);
+
+    seApp.keystroke('v', { using: 'command down' });
+    delay(d1);
+
+    seApp.keyCode(76); // Press Enter
+    delay(d1);
+  }
+}
+
+// --------------------- MENSAGEM
+
+// GET GROUPS / MENSAGEM
+function messageGroupsArraysNames() {
+  var theGroups = contactsApp.groups.whose({ name: { _contains: arrayGroupIdentifier } });
+
+  var theGroupsLength = theGroups.length;
+
+  var accounts = [];
+  for (var i = 0; i <= theGroupsLength - 1; ++i) {
+    // -1 para coincidir a indexação <= condiciona
+
+    accounts[i] = i + 1 + '. ' + theGroups[i].name(); // Numeração e nome
+  }
+  return accounts;
+}
+
+// GET PEOPLE & PHONE NUMBERS / MENSAGEM
+function peopleAndPhonesArraysValues() {
+  var peopleArrayLength = filteredGroup.people().length;
+  var accounts = [];
+  for (var i = 0; i <= peopleArrayLength - 1; ++i) {
+    // -1 para coincidir a indexação <= condiciona
+
+    accounts[i] = filteredGroup.people()[i].name();
+
+    try {
+      accounts[i] = filteredGroup.people()[i].phones()[1].value() + ' • ' + accounts[i];
+    } catch {
+      accounts[i] = filteredGroup.people()[i].phones()[0].value() + ' • ' + accounts[i];
+    }
+  }
+  return accounts;
+}
+
+// ------- NEW DATE
+
+function createListFromLoop(listInput, subItem) {
+  var theItems = []; // Edited accounts to theItems
+
+  for (var i = 0; i < listInput.length; ++i) {
+    //theItems[i] = (i + 1) + ". " + listInput[i][subItem]; // Adicionamos mais 1 para numeração correcta na listagem e depois vamos subtrair 1 acima para indexação corrrecta;
+    theItems[i] = listInput[i][subItem];
+  }
+
+  return theItems;
+}

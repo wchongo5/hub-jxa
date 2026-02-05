@@ -1,0 +1,45 @@
+// v1.0
+// var imageLib = Library("imageLib")
+
+ObjC.import('Quartz')
+
+var finderApp = Application("Finder")
+
+
+// --------------------------------------- DELAYS
+
+var d7 = 7
+
+// ---------------------------------------
+
+function extractConsultancyPDFImagesByPaperFormat(pdfOldPathStr) {
+
+	var imagesFormatName = ["IMAGENS 1A4", "IMAGENS 2A3"]
+
+	for (var i = 0; i < imagesFormatName.length; i++) {
+		var imageFormatName = imagesFormatName[i]
+
+		// var pdfNewPathStr = pdfOldPathStr.replace(/(IMAGENS)( [A-Z]{6}\d{6})/, imageFormatName + `$2`)
+		var pdfNewPathStr = pdfOldPathStr.replace(/(IMAGENS)( [A-Z]{6}\d{6}(?:(?:[A-Z]\d)*[A-Z]?\b))/, imageFormatName + `$2`)
+
+		var pdfNewDoc = $.PDFDocument.alloc.init // new empty PDF Doc;
+		var pdfNewNumPages = pdfNewDoc.pageCount
+
+		var pdfOldDoc = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(pdfOldPathStr))
+		var pdfOldNumPages = pdfOldDoc.pageCount
+
+		var page = pdfOldDoc.pageAtIndex(i)
+		pdfNewDoc.insertPageAtIndex(page, 0)
+
+		pdfNewDoc.writeToURL($.NSURL.fileURLWithPath(pdfNewPathStr))
+
+		finderApp.reveal(Path(pdfNewPathStr)).extensionHidden = true
+		delay(d7) // Era d3
+
+		//currentApp.displayAlert(pdfNewPathStr)
+
+		finderApp.open(Path(pdfNewPathStr))
+	}
+
+	finderApp.delete(Path(pdfOldPathStr))
+}

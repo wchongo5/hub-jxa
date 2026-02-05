@@ -1,0 +1,27 @@
+// v1.0
+// var renameLib = Library("renameLib")
+
+const { alert, dialog } = Library('displayLib');
+
+const { getND, getItemPropertiesByPathStr, renameItem } = Library('finderLib');
+const { formatDateV3 } = Library('datetimeLib');
+
+const ND = getND();
+
+function invoiceOrQuoteXeroPdf(customer4Folders, invoicePathStr) {
+  const { displayedName: invoiceName, modificationDate } = getItemPropertiesByPathStr(invoicePathStr);
+  const invoiceCsFromInvoiceName = invoiceName.split(' ')[1];
+
+  const { dateY4M2D2__H2M2S2 } = formatDateV3(modificationDate).formats;
+
+  // C or F
+  // XDWFAP231103
+  // PFA5P
+  const invoicingInvoiceName = invoiceCsFromInvoiceName[3] == 'C' ? 'COTAÇÃO' : 'FACTURA';
+  // const newName = `${dateY4M2D2__H2M2S2}-V1 PF${invoiceCsFromInvoiceName[4]}5${invoiceCsFromInvoiceName[5]} ${ND} ${invoicingInvoiceName} ${invoiceCsFromInvoiceName} ${ND} ${customer4Folders}`
+  const newName = `${dateY4M2D2__H2M2S2}-V1 ${ND} ${invoicingInvoiceName} ${invoiceCsFromInvoiceName} ${ND} ${customer4Folders}`;
+
+  renameItem(invoicePathStr, newName, 'noReveal');
+
+  return newName;
+}

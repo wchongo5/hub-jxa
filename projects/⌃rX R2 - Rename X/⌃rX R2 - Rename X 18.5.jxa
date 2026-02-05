@@ -1,0 +1,168 @@
+// v18.5
+
+// 🔴🔴🔴 BRING ALL LIBRARIES
+// ObjC.import("Quartz")
+
+const {
+  alert,
+  // dialog,
+} = Library('displayLib');
+
+const { getContratFolderInfo, getFinderFilePathSr, getFinderFolderPathSr, getND } = Library('finderLib');
+
+const { formatDateV3 } = Library('datetimeLib');
+const documentLib = Library('documentLib');
+const renameLib = Library('renameLib');
+const projectLib = Library('projectLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+const finderApp = Application('Finder');
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+let { dateY4M2D2, dateY4M2D2__H2M2, dateY4M2D2__H2M2S2 } = nowFormatted.formats;
+
+const finderFile1Name = finderApp.selection()[0].name();
+
+const ND = getND();
+
+const isInvoiceOrQuoteXeroPdfName = projectLib.getIsInvoiceOrQuoteXeroPdfName(finderFile1Name);
+
+if (isInvoiceOrQuoteXeroPdfName) {
+  var containerPathStr = getFinderFolderPathSr();
+  var contratFolderInfo = getContratFolderInfo(containerPathStr);
+  // var invoiceCs = contratFolderInfo.contractNumber
+  var customer4Folders = contratFolderInfo.entity4Folders;
+  // var customerFolderName = contratFolderInfo.contractFolderName
+  // var contractFolderPathStr = contratFolderInfo.contractFolderPathStr
+
+  var invoicePathStr = getFinderFilePathSr();
+  renameLib.invoiceOrQuoteXeroPdf(customer4Folders, invoicePathStr);
+} else {
+  var renameOption = currentApp
+    .chooseFromList(
+      [
+        '1. …aY',
+        '2. …aZ',
+        '3. aD…',
+        '4. …aD',
+        '5. aDV…',
+        '6. rDN',
+        '7. rGERAL',
+        'Q. aYYYYMMDD-HHMMcreation…',
+        'A. aYYYYMMDD-HHMMSScreation…',
+        'Z. aYYYYMMDDSVcreation…',
+        'W. …aYYYYMMDDSVcreation',
+        'S. aYYYYMMDD-HHMMmodification…',
+        'X. aYYYYMMDD-HHMMSSmodification…',
+        'E. aYYYYMMDDSVmodification…',
+        'D. …aYYYYMMDDSVmodification',
+        '`. Update Date',
+      ],
+      { withPrompt: 'Opção', defaultItems: '1. …aY' }
+    )
+    .toString();
+
+  var renameOption = renameOption.split('. ')[1];
+
+  var finderSelectionList = finderApp.selection();
+
+  for (var i = 0; i < finderSelectionList.length; i++) {
+    finderSelectionList[i].extensionHidden = true;
+
+    var fileSelectedCurrent = finderSelectionList[i];
+
+    //  var fileName = fileSelectedCurrent.name();
+    //  var extensionName = fileSelectedCurrent.nameExtension();
+
+    var { fileName, extensionName } = documentLib.getFileInfo(fileSelectedCurrent);
+
+    // --- ADD X
+    if (renameOption == '…aY' || renameOption == '…aZ') {
+      var aliasNameWithOutExtension = fileName.split('.' + extensionName)[0];
+
+      var docNameAndExtension = aliasNameWithOutExtension + renameOption[2] + '.' + extensionName;
+
+      // --- ADD DATE / DATEVERSION
+    } else if (renameOption == 'aD…' || renameOption == '…aD' || renameOption == 'aDV…' || renameOption.includes('aYYYYMMDD')) {
+      if (renameOption == 'aD…' || renameOption == '…aD' || renameOption.includes('aYYYYMMDD-HHMM')) {
+        var docVersion = '';
+      } else if (renameOption == 'aDV…' || renameOption.includes('aYYYYMMDDSV')) {
+        var docVersion = 'A1';
+      }
+
+      // if (renameOption.includes('aYYYYMMDD-HHMM')) {
+      if (renameOption.includes('aYYYYMMDD')) {
+        const { dateCreation, dateModification } = documentLib.getFileInfo(fileSelectedCurrent);
+
+        if (renameOption.includes('creation')) {
+          //  var date = fileSelectedCurrent.creationDate();
+          var date = dateCreation;
+        } else if (renameOption.includes('modification')) {
+          //  var date = fileSelectedCurrent.modificationDate();
+          var date = dateModification;
+        }
+
+        var dateFormatted = formatDateV3(date);
+
+        if (!dateFormatted) {
+          throw new Error(`"Data" inválida`);
+        }
+
+        ({ dateY4M2D2, dateY4M2D2__H2M2, dateY4M2D2__H2M2S2 } = dateFormatted.formats);
+
+        if (renameOption == 'aYYYYMMDD-HHMMcreation…' || renameOption == 'aYYYYMMDD-HHMMmodification…') {
+          var time_stamp = dateY4M2D2__H2M2;
+        } else if (renameOption == 'aYYYYMMDD-HHMMSScreation…' || renameOption == 'aYYYYMMDD-HHMMSSmodification…') {
+          var time_stamp = dateY4M2D2__H2M2S2;
+        } else if (renameOption == 'aYYYYMMDDSVcreation…' || renameOption == 'aYYYYMMDDSVmodification…') {
+          var time_stamp = dateY4M2D2;
+        } else if (renameOption == '…aYYYYMMDDSVcreation' || renameOption == '…aYYYYMMDDSVmodification') {
+          var time_stamp = `${ND} ${dateY4M2D2}`;
+        }
+      } else {
+        var time_stamp = dateY4M2D2;
+      }
+
+      var aliasNameWithOutExtension = fileName.split('.' + extensionName)[0];
+
+      if (renameOption == '…aD' || renameOption == '…aYYYYMMDDSVcreation' || renameOption == '…aYYYYMMDDSVmodification') {
+        var docNameAndExtension = aliasNameWithOutExtension + ' ' + time_stamp + docVersion + '.' + extensionName;
+      } else {
+        var docNameAndExtension = time_stamp + docVersion + ' ' + aliasNameWithOutExtension + '.' + extensionName;
+      }
+
+      // --- UPDATE DATE
+    } else if (renameOption == 'Update Date') {
+      var docNameAndExtension = fileName.replace(/(\d{8})/, dateY4M2D2);
+
+      // --- RENAME DATE&NAME
+    } else if (renameOption == 'rDN') {
+      var nameInput = currentApp.displayDialog('Nome do documento', { defaultAnswer: '' }).textReturned;
+
+      var docNameAndExtension = dateY4M2D2 + ' ' + nameInput + ' ' + '.' + extensionName;
+
+      // --- RENAME GERAL
+    } else if (renameOption.includes('rGERAL')) {
+      var codeSpeciality = 'XG5';
+      //var recipientAndSubject = finderApp.selection()[0].name()
+
+      var theRecipient = currentApp.displayDialog('Destinatário', { defaultAnswer: '' }).textReturned;
+
+      var theSubject = currentApp.displayDialog('Assunto', { defaultAnswer: '' }).textReturned;
+
+      var docNameAndExtension = `${codeSpeciality} ${ND} ${theRecipient} ${ND} ${theSubject} ${ND} ${dateY4M2D2__H2M2S2}-V1.${extensionName}`;
+    }
+
+    alert(`It uses to freezes applying "fileSelectedCurrent.name "`, ``);
+
+    // New Name
+    fileSelectedCurrent.name = docNameAndExtension;
+  }
+}

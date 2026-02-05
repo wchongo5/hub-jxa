@@ -1,0 +1,36 @@
+
+
+// v5.0
+
+var pathLib = Library("pathLib")
+
+
+
+var currentApp = Application.currentApplication()
+var saApp = (currentApp.includeStandardAdditions = true, currentApp);
+
+var finderApp = Application("Finder");
+
+var dateMain = new Date();
+
+var yyyy = (dateMain.getFullYear().toString());
+var mm = dateMain.toLocaleString("en", {month: "2-digit"});
+var dd = dateMain.toLocaleString("en", {day: "2-digit"});
+var time = (dateMain.toLocaleString("en", {hourCycle: "h24", hour: "2-digit", minute: "2-digit", second: "2-digit"})).replace(/:/g, "");
+
+var textInput = currentApp.displayDialog("Nota", { defaultAnswer: ""}).textReturned;
+
+var text = yyyy + mm + dd + "-" + time + "," + textInput //+ "\n\n" Descnecessário usando ObjC
+
+var file = `${pathLib.getPlataformsPathStr()}/INBOX/_ NOTAS ${yyyy}${mm}.csv`
+
+if (finderApp.exists(Path(file))) {
+	var previousContent = $.NSString.alloc.initWithContentsOfFileUsedEncodingError(file, null, null)
+
+	var outputStr = previousContent.stringByAppendingFormat("\n" + text);
+	outputStr.writeToFileAtomically(file, true);
+
+} else {
+	var outputStr = $.NSString.alloc.initWithUTF8String(text);
+	outputStr.writeToFileAtomically(file, true);
+}

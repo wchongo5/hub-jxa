@@ -1,0 +1,73 @@
+// v1.0
+// const {
+// 	alert,
+// 	dialog,
+// } = Library("displayLib")
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+/* function alert(theTitle, theMessage = '', theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    currentApp.displayAlert(theTitle, { message: theMessage, as: 'critical' });
+  } else {
+    currentApp.displayAlert(theTitle, {
+      message: theMessage,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+      as: 'critical',
+    });
+  }
+}
+ */
+
+// 🔴🔴🔴🔴🔴 ADVANCED FUNCTION
+
+// Return Value: Added a return statement to pass back the result of currentApp.displayAlert, which might be useful depending on how you handle the response.
+
+function alert(theTitle, theMessage = '', theButtons = [], theDefaultButton = null, theCancelButton = null) {
+  const options = {
+    message: theMessage,
+    as: 'critical',
+  };
+
+  if (theButtons.length > 0) {
+    options.buttons = theButtons;
+    if (theDefaultButton) options.defaultButton = theDefaultButton;
+    if (theCancelButton) options.cancelButton = theCancelButton;
+  }
+
+  return currentApp.displayAlert(theTitle, options);
+}
+
+function dialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+  if (theButtons == undefined) {
+    return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer }).textReturned;
+  } else {
+    return currentApp.displayDialog(theTitle, {
+      defaultAnswer: theDefaultAnswer,
+      buttons: theButtons,
+      defaultButton: theDefaultButton,
+      cancelButton: theCancelButton,
+    }).textReturned;
+  }
+}
+
+/* 
+
+// 🔴🔴🔴🔴🔴 ADVANCED FUNCTION
+
+function dialog(theTitle, theDefaultAnswer = '', theButtons = [], theDefaultButton = null, theCancelButton = null) {
+  const options = {
+    defaultAnswer: theDefaultAnswer,
+  };
+
+  if (theButtons.length > 0) {
+    options.buttons = theButtons;
+    if (theDefaultButton) options.defaultButton = theDefaultButton;
+    if (theCancelButton) options.cancelButton = theCancelButton;
+  }
+
+  return currentApp.displayDialog(theTitle, options).textReturned;
+} */

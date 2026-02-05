@@ -1,0 +1,33 @@
+
+// --- DOES NOT HAVE VERSIONING
+
+// 🔴🔴🔴🔴 O OBJECTIVO É TRAZER AQUI TOTODS WF (WATCHED FOLDERS) QUE PODEM FICAR NA LIBRARY <xWFAutoLib> & USAR OS NOMES DOS FICHEIROS PARA IDENTIFICAR O APP xWFAutoLib.XXXX a PROCESSAR
+
+var xWFAutoLib = Library("xWFAutoLib")
+var cflLib = Library("cflLib")
+
+
+
+function run(input, parameters) {
+
+   var filePathStr = (input[0]).toString()
+	var filePathStrItems	= filePathStr.split("/")
+  	var inputFileName	= filePathStrItems.pop() //.split(".")[0];
+
+   if (inputFileName.includes("Messages - eMola") || inputFileName.includes("Messages - M-Pesa")) {
+
+      // const groupBy = "otherPerson"
+      // const groupBy = "transactionType"
+
+		var groupBy = cflLib.cfl2Str(["otherPerson", "transactionType"], "🔴🔴🔴\n\Função local (needsTextFormatter()), no Library (projectLib.needsTextFormatter() - testar no futuro ou novo MacBook) congela em muitas mensagens\n-------------\nAgrupar por:", "transactionType")
+
+
+      if (inputFileName.includes("Messages - eMola")) {
+         xWFAutoLib.messagesEmolaProcess(filePathStr, groupBy)
+         
+      } else if (inputFileName.includes("Messages - M-Pesa")) {
+         xWFAutoLib.messagesMpesaProcess(filePathStr, groupBy)
+      }
+   }
+}
+

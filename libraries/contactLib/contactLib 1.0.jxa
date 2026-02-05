@@ -1,0 +1,731 @@
+// v1.0
+// var contactLib = Library("contactLib")
+
+// ObjC.import('Contacts');
+// ObjC.import('Foundation');
+
+const { readFile, writeToFile } = Library('objCLib');
+
+const cflLib = Library('cflLib');
+const documentLib = Library('documentLib');
+const { alert } = Library('displayLib');
+const contactsApp = Application('Contacts');
+
+const {
+  // getContactsNotesPathStr,
+  getContactsPathStr,
+} = Library('pathLib');
+
+// const { timeElapsed } = Library('datetimeLib');
+
+const contactsPtahStr = getContactsPathStr();
+// const contactsNotesPathStr = getContactsNotesPathStr();
+
+// function contactAndBankInfoFinder(contactFilter1Auto, contactFilter2Input, contactDescrip, returnPersonInfo) {
+//
+// 	if (contactFilter2Input == "") {
+// 		var contacts = contactsApp.people.whose({name: { _contains: contactFilter1Auto}})()
+//
+// 	} else {
+// 		var contacts = contactsApp.people.whose({_and: [{name: { _contains: contactFilter1Auto}}, {name: { _contains: contactFilter2Input}}]})()
+// 	}
+//
+// 	var contactsNames = []
+// 	for (var i=0; i < contacts.length ; i++) {
+//
+// 		var lastName_ = contacts[i].lastName()
+// 		var firstName_ = contacts[i].firstName()
+//
+// 		if (returnPersonInfo == "Name") {
+// 			contactsNames.push(lastName_ + " | " + firstName_)
+//
+// 		} else if (returnPersonInfo == "NameAndBankInfo" || returnPersonInfo == "JobTitleAndNameAndBankInfo") {
+//
+// 			var contactNote = contacts[i].note()
+//
+// 			try {
+// 				var bankAndNumberTypeAndNumberAndAmountD = contactNote.match(/\w*\s\/\s\w*\s\/\s\d*\s\/\s[0-9,.]*/)[0]
+//
+// 			} catch {
+// 				var bankAndNumberTypeAndNumberAndAmountD = "NoBankInfo"
+// 			}
+// 			contactsNames.push(lastName_ + " | " + firstName_ + " | " + bankAndNumberTypeAndNumberAndAmountD)
+// 		}
+// 	}
+//
+// 	contactsNames.sort()
+//
+// 	var contact = cflLib.cfl2Str(contactsNames, contactDescrip, contactsNames[0])
+//
+// 	if (returnPersonInfo == "Name") {
+//
+// 		if (contact.includes("Central")) {
+//
+// 			var contact = contact.split(" | ")[0].replace(/P\d[0-9A-Z-]*\s/,"")
+// 			var contact = documentLib.capitalizeTextIfNotInAbbreviation(contact)
+// 			var contact = contact.replace("Xai-xai", "Xai-Xai")
+//
+// 		} else {
+//
+// 			var contact = contact.split(" | ")[1].replace(" ^", "")
+// 		}
+//
+// 		//return contact
+//
+// 	} else if (returnPersonInfo == "NameAndBankInfo") {
+//
+// 		if (contact.includes("Central")) {
+//
+// 			var contactItems = contact.split(" | ")
+// 			var contactSplice = contactItems.splice(1,1)
+// 			var contact = contactItems.join(" | ").replace(/P\d[0-9A-Z-]*\s/,"")
+//
+// 			var contact = documentLib.capitalizeTextIfNotInAbbreviation(contact)
+//
+// 		} else {
+//
+// 			var contact = contact.replace(" ^", "").split(" | ").slice(1).join(" | ")
+// 		}
+//
+// 		//return contact
+//
+// 	} else if (returnPersonInfo == "JobTitleAndNameAndBankInfo") {
+// 		//return contact.replace(/P\d\w+\s/,"").replace(" ^", "").replace(/,/g, "")
+//
+// 		var contact = contact.replace(/P\d\w+\s/,"").replace(" ^", "").replace(/,/g, "")
+//
+// 	}
+//
+// 	return contact.replace("Forma Fixa", "Forma Fixa _ Leoterio")
+// }
+
+// contactLib
+
+// 🔴🔴🔴 --------------------------------- INBOX
+
+function getContacts() {
+  return JSON.parse(readFile(contactsPtahStr));
+}
+
+// 🔴🔴🔴 getAndSaveContacts, fetchContacts and updateContactsNotes - moved to "xAutoLib 1.0"
+
+// function getAndSaveContacts() {
+//   var startTime = new Date();
+//   console.log('Start Time:', startTime);
+
+//   const contactsNotes = JSON.parse(readFile(contactsNotesPathStr));
+
+//   // Create a Map for faster lookup
+//   const contactsNotesMap = new Map();
+//   contactsNotes.forEach(note => contactsNotesMap.set(note.id, note));
+
+//   var contactStore = $.CNContactStore.alloc.init;
+//   console.log('CNContactStore initialized:', contactStore);
+
+//   var authStatus = $.CNContactStore.authorizationStatusForEntityType($.CNEntityTypeContacts);
+//   console.log('Authorization status:', authStatus);
+
+//   if (authStatus === $.CNAuthorizationStatusNotDetermined) {
+//     contactStore.requestAccessForEntityTypeCompletionHandler($.CNEntityTypeContacts, (granted, error) => {
+//       if (granted) {
+//         fetchContacts(contactStore, contactsNotesMap, startTime);
+//       } else {
+//         console.log('Error requesting contact access:', error ? ObjC.unwrap(error.localizedDescription) : 'Authorization denied');
+//       }
+//     });
+//   } else if (authStatus === $.CNAuthorizationStatusAuthorized) {
+//     fetchContacts(contactStore, contactsNotesMap, startTime);
+//   } else if (authStatus === $.CNAuthorizationStatusDenied) {
+//     console.log('Access denied');
+//   } else if (authStatus === $.CNAuthorizationStatusRestricted) {
+//     console.log('Access restricted');
+//   }
+// }
+
+// function fetchContacts(contactStore, contactsNotesMap, startTime) {
+//   var keys = [
+//     $.CNContactGivenNameKey,
+//     $.CNContactFamilyNameKey,
+//     $.CNContactPhoneNumbersKey,
+//     $.CNContactBirthdayKey,
+//     $.CNContactEmailAddressesKey,
+//     $.CNContactUrlAddressesKey,
+//     $.CNContactNoteKey,
+//     $.CNContactPostalAddressesKey,
+//   ];
+
+//   var nsArray = $.NSMutableArray.alloc.init;
+//   keys.forEach(function (item) {
+//     nsArray.addObject(item);
+//   });
+//   var keysToFetch = nsArray;
+//   console.log('Keys to fetch:', keysToFetch);
+
+//   var contactsArray = [];
+//   var contactCount = 0;
+
+//   try {
+//     console.log('Creating fetch request...');
+//     var fetchRequest = $.CNContactFetchRequest.alloc.initWithKeysToFetch(keysToFetch);
+//     console.log('Fetch request created:', fetchRequest);
+
+//     console.log('Starting contact enumeration...');
+//     var result = contactStore.enumerateContactsWithFetchRequestErrorUsingBlock(fetchRequest, null, function (contact, stop) {
+//       // if (contactCount < 20) {
+//       if (contactCount < 20000) {
+//         // 1841 Contacts 2024.07.12
+//         var phoneNumbers = ObjC.unwrap(contact.phoneNumbers).map(phone => {
+//           if (phone.value && phone.value.stringValue) {
+//             return {
+//               label: ObjC.unwrap(phone.label),
+//               number: ObjC.unwrap(phone.value.stringValue),
+//             };
+//           } else {
+//             console.log('Phone object:', phone);
+//             return { label: 'No label', number: 'No number' };
+//           }
+//         });
+
+//         var emailAddresses = ObjC.unwrap(contact.emailAddresses).map(email => ({
+//           label: ObjC.unwrap(email.label),
+//           email: ObjC.unwrap(email.value),
+//         }));
+
+//         var urlAddresses = ObjC.unwrap(contact.urlAddresses).map(url => ({
+//           label: ObjC.unwrap(url.label),
+//           url: ObjC.unwrap(url.value),
+//         }));
+
+//         var addresses = ObjC.unwrap(contact.postalAddresses).map(address => ({
+//           label: ObjC.unwrap(address.label),
+//           street: ObjC.unwrap(address.value.street),
+//           city: ObjC.unwrap(address.value.city),
+//           state: ObjC.unwrap(address.value.state),
+//           postalCode: ObjC.unwrap(address.value.postalCode),
+//           country: ObjC.unwrap(address.value.country),
+//         }));
+
+//         var contactNoteObj = contactsNotesMap.get(ObjC.unwrap(contact.identifier));
+
+//         //   console.log(JSON.stringify(contactNoteObj));
+
+//         var note = contactNoteObj && contactNoteObj.note ? contactNoteObj.note : null;
+
+//         var birthday = contact.birthday
+//           ? {
+//               year: contact.birthday.year,
+//               month: contact.birthday.month,
+//               day: contact.birthday.day,
+//             }
+//           : null;
+
+//         var firstName = ObjC.unwrap(contact.givenName);
+//         var lastName = ObjC.unwrap(contact.familyName);
+//         var name = `${firstName} ${lastName}`;
+
+//         var contactObj = {
+//           id: ObjC.unwrap(contact.identifier),
+//           firstName: firstName,
+//           lastName: lastName,
+//           name: name,
+//           phones: phoneNumbers,
+//           emails: emailAddresses,
+//           urls: urlAddresses,
+//           addresses: addresses,
+//           note: note,
+//           birthday: birthday,
+//         };
+//         contactsArray.push(contactObj);
+//         contactCount++;
+//         console.log(`Fetched contact ${contactCount}: ${contactObj.name}`);
+//       } else {
+//         stop[0] = true;
+//       }
+//     });
+
+//     console.log('Finished contact enumeration.');
+//     console.log('Result:', result);
+
+//     if (contactCount === 0) {
+//       console.log('No contacts found.');
+//     } else {
+//       console.log('Number of contacts:', contactCount);
+//       var jsonData = JSON.stringify(contactsArray, null, 2); // Format JSON with 2 spaces for indentation
+//       var nsString = $.NSString.alloc.initWithUTF8String(jsonData);
+//       var filePath = contactsPtahStr; // Use path from pathLib
+//       var success = nsString.writeToFileAtomicallyEncodingError(filePath, true, $.NSUTF8StringEncoding, null);
+//       if (success) {
+//         console.log('Contacts saved to', filePath);
+//       } else {
+//         console.log('Failed to save contacts');
+//       }
+//     }
+//   } catch (e) {
+//     console.log('Exception during contact enumeration:', e);
+//   }
+
+//   var endTime = new Date();
+//   console.log('End Time:', endTime);
+//   console.log('Total Execution Time:', (endTime - startTime) / 1000, 'seconds');
+// }
+
+// function updateContactsNotes() {
+//   /*
+//   Notas
+//   • First run of 1841 contacts 15 min;
+//   • Runs subsequentes de actualização de notas são 8 min;
+//   */
+
+//   const startTime = new Date();
+//   console.log('For Loop Start Time:', startTime);
+
+//   const contacts = contactsApp.people();
+
+//   let contactsNotes = JSON.parse(readFile(contactsNotesPathStr));
+
+//   for (let i = 0; i < contacts.slice(0, 20).length; i++) {
+//     // for (let i = 0; i < contacts.length; i++) {
+//     const contact = contacts[i];
+//     const id = contact.id();
+//     const note = contact.note();
+//     const modificationDate = contact.modificationDate().getTime().toString(); // Convert to string
+
+//     const existingContactIndex = contactsNotes.findIndex(c => c.id === id);
+
+//     if (existingContactIndex !== -1) {
+//       if (parseInt(contactsNotes[existingContactIndex].modificationDate) < parseInt(modificationDate)) {
+//         contactsNotes[existingContactIndex] = {
+//           id,
+//           modificationDate,
+//           note,
+//         };
+//       }
+//     } else {
+//       contactsNotes.push({
+//         id,
+//         modificationDate,
+//         note,
+//       });
+//     }
+//   }
+
+//   const contactsNotesStr = JSON.stringify(contactsNotes, null, 2);
+
+//   writeToFile(contactsNotesPathStr, contactsNotesStr);
+
+//   const endTime = new Date();
+//   console.log('For Loop End Time:', endTime);
+//   console.log('timeElapsed:', timeElapsed(startTime, endTime));
+
+//   return contactsNotes;
+// }
+
+// Call the function
+// updateContactsNotes();
+
+// 🔴🔴🔴 ---------------------------------
+
+function getGroupsInfo() {
+  return [
+    ['KK-P1M1105 - Inscrição •', ['KK-P1M1105 INSCRIÇÃO'], ''],
+    ['P1F - Banco •', ['P1F', 'SB'], 'and'],
+    ['P1F - Fornecedor •', ['P1F'], ''],
+    ['P1F - Graphisoft', ['P1F10BTS GRAPHISOFT'], ''],
+    ['P1F - Graphisoft - ACBuy & Support', ['Note', ['GraphisoftSupportXD5', 'ArchicadBuyXD5']], ''],
+    ['P1F - Interiores', ['P1F', 'BI'], 'and'],
+    ['P1F - Material', ['P1F', 'BM'], 'and'],
+    ['P1FSL - Instalações', ['P1F', 'SLI'], 'and'],
+    ['P1M - Ministérios •', ['P1M'], ''],
+    ['P3 - PUP Alvará', ['Note', ['PUPAlvaráXD5']], ''],
+    ['P3C - Consultor •', ['P3C'], ''],
+    ['P3C - Strut & Tie', ['STRUT & TIE'], ''],
+    ['P3E - CJCLDS ConcXDXFA210501', ['Note', ['ConcXDXFA210501']], ''],
+    ['P3E - CJCLDS ConcXDXFF201001', ['Note', ['ConcXDXFF201001']], ''],
+    ['P3E - Empreiteiro •', ['P3E'], ''],
+    ['P3T - Técnicos', ['P3T'], ''],
+    ['P3X - Freelancer •', ['Note', ['FreelancerXD5']], ''],
+    ['P3X - XD5', ['P3X'], ''],
+    ['P3X - XD5 Recrutamento', ['R20'], ''],
+    ['P5 - Concurso', ['Note', ['ConcXCL', 'ConcXCP']], ''],
+    ['P5A - #Empresa', ['P5A', 'E'], 'and'],
+    ['P5A - #Individual', ['P5A', 'I'], 'and'],
+    ['P5D - #Design', ['P5D01E', 'P5D01I'], 'or'],
+    ['P5S - #Simplitask', ['P5S01E', 'P5S01I'], 'or'],
+    ['P5A - BCX XCLFE211001', ['Note', ['ObraXCLFE211001']]],
+    ['P5A - BM', ['P5A10E BANCO MOÇ'], ''],
+    ['P5A - BM - Contrato', ['Note', ['BMContratoXD5']], ''],
+    ['P5A - CJCLDS', ['P5A10E CJCLDS'], ''],
+    ['P5A - CJCLDS XDXFA210501', ['Note', ['ObraXDXFA210501']], ''],
+    ['P5A - CJCLDS XDXFF201001-01', ['Note', ['ObraXDXFF201001-01']], ''],
+    ['P5A - CJCLDS XDXFF201001-02', ['Note', ['ObraXDXFF201001-02']], ''],
+    ['P5I - #Imobiliária', ['P5I'], 'and'],
+    ['PZP3Msg - oneAzaldo', ['Note', ['oneAzaldo']], ''],
+    ['ZP3Msg - Dia da Mulher Moçambicana', ['Note', ['DiaDaMulherMoçambicana']], ''],
+    ['ZP3Msg - Dia da X-DIM', ['Note', ['DiaDaXDIM']], ''],
+    ['ZP3Msg - Dia Inter dos Trabalhadores', ['Note', ['DiaInterDosTrabalhadores']], ''],
+    ['ZP3Msg - oneMelindo', ['Note', ['oneMelindo']], ''],
+    ['ZP3Msg - oneRKA', ['Note', ['oneRKA']], ''],
+    ['ZP3Msg - oneTancya', ['Note', ['oneTancya']], ''],
+  ];
+}
+
+function getGroupsInfoExtras() {
+  // 🔴🔴🔴 NÃO CONSSGUI FORMA DE FAZER SMART MAIL BOX PARA EMAILS QUE EU NÃO TENHA NOS MEUS CONTACTOS
+  // For contacts not in Contacts Lists created using getGroupsInfo for Fornecedores I propose delete their emails
+  // Fornecedores para apagar os emails:
+  /*
+
+	// Extract names from Smart Mail Folder of "Fornecedores"
+	DROPBOX
+	GRAPHISOFT
+	BOBROW
+	SKETCHFAB
+
+	// Delete emails of testnf from "xdimag@gmail.com"
+
+	// No saved contacts but have receiceived emails
+	- Os emails vindo de bancos, vodacom, gravar?
+
+	// Para contactos que incluem emails referentes a pagamentos, separar para evitar apagar o que será necessário amanhã: exemplo: Goople tem 1 ou 2 emisl referentes a Googloe Cloud pagamentos referente a API — Ou desenvolver um App que faz SAVE em HTML de emails com base num endereço electrónico - para apagar a vontade
+
+
+
+
+	security@mail.instagram.com
+	postcon@postman.com
+	newsletter@postman.com
+	news@macpaw.com
+	info@globeplants.com
+	newsletter@esri.com
+	oleg@daisydiskapp.com
+	hello@socratica.com
+	cmhula@millenniumbim.co.mz
+	Elsa.Juvane@BCI.CO.MZ
+	Elsa.Juvane@BCI.CO.MZf
+	Amandio.Ndloze@vm.co.mz
+	Silvia.Remtula@vm.co.mz
+	Amandio.Ndloze@vm.co.mz
+	dionisio.chelengo@fnb.co.mz
+	contact@osxdaily.com - Tem muitos emails
+	no-reply@youtube.com
+	*/
+}
+
+function getGroupsInfoForMail() {
+  return [
+    ['Message is in mailbox', 'Drafts', false, false],
+    ['Message was not replied to', undefined, false, false],
+    ['Message was replied to', undefined, false, false],
+    ['Date received', 'is today', false, false],
+    ['Message is unread', undefined, false, false],
+  ];
+}
+
+function getGroupsInfoSelected(groupsInfo) {
+  const groupNames = groupsInfo.map(item => item[0]);
+  const groupNamesD = groupNames.filter(name => name.includes('P5') && name.includes('#Empresa'));
+
+  var groupNamesSelected = cflLib.cfl(groupNames, 'Seleciona operadora', groupNamesD, 'm');
+
+  // const groupsInfoSelected = groupsInfo.filter(group => groupNamesSelected.includes(group[0]));
+  return groupsInfo.filter(group => groupNamesSelected.includes(group[0]));
+}
+
+function getContactInfo(filtersStr, searchDescrip, JoiningType, xd5AppName, matchFilter, what2return) {
+  // xd5AppName "Event" and "Folder"
+
+  if (filtersStr == 'z') return 'withoutContact';
+
+  const contactsData = getContacts();
+
+  var filters = documentLib.ensureSpaceAfterCommaInStr(filtersStr).split(', ');
+
+  if (matchFilter == 'All') {
+    const filteredContacts = contactsData.filter(contact => {
+      if (!contact.name) return false;
+      var lowerName = contact.name.toLowerCase();
+      return filters.every(term => {
+        return lowerName.indexOf(term.toLowerCase()) !== -1;
+      });
+    });
+
+    var contactsNames = [];
+    for (var i = 0; i < filteredContacts.length; i++) {
+      var lastName_ = filteredContacts[i].lastName;
+      var firstName_ = filteredContacts[i].firstName;
+      var contactNote = filteredContacts[i].note;
+
+      try {
+        var bankAndNumberTypeAndNumberAndAmountD = contactNote.match(/\w*\s\/\s\w*\s\/\s\d*\s\/\s[0-9,.]*/)[0];
+      } catch {
+        // 🔴🔴🔴🔴 MAXIMUM TWO FILTERS
+        var bankAndNumberTypeAndNumberAndAmountD = 'NoBankInfo';
+      }
+      contactsNames.push(lastName_ + ' | ' + firstName_ + ' | ' + bankAndNumberTypeAndNumberAndAmountD);
+    }
+  } else if (matchFilter == 'One') {
+    var contactsNames = [];
+
+    const filteredContacts = contactsData.filter(
+      contact => contact.name && filters.some(term => contact.name.toLowerCase().includes(term.toLowerCase()))
+    );
+
+    for (var j = 0; j < filteredContacts.length; j++) {
+      var lastName_ = filteredContacts[j].lastName;
+      var firstName_ = filteredContacts[j].firstName;
+      var contactNote = filteredContacts[j].note;
+
+      try {
+        var bankAndNumberTypeAndNumberAndAmountD = contactNote.match(/\w*\s\/\s\w*\s\/\s\d*\s\/\s[0-9,.]*/)[0];
+      } catch {
+        var bankAndNumberTypeAndNumberAndAmountD = 'NoBankInfo';
+      }
+
+      var contactNameInfo = lastName_ + ' | ' + firstName_ + ' | ' + bankAndNumberTypeAndNumberAndAmountD;
+
+      if (!contactsNames.includes(contactNameInfo)) {
+        contactsNames.push(contactNameInfo);
+      }
+    }
+  }
+
+  if (what2return == 'Name' || what2return == 'Names') {
+    //contactsNames.push(lastName_ + " | " + firstName_)
+
+    var contactsNames = contactsNames.map(name => name.split(' | ').slice(0, 2).join(' | '));
+  } // 🔴🔴🔴 esle is for "NameAndBankInfo" and "JobTitleAndNameAndBankInfo"
+
+  // else if (what2return == "NameAndBankInfo" || what2return == "JobTitleAndNameAndBankInfo") {
+  //
+  // }
+
+  contactsNames.sort();
+
+  var contactsNamesL = contactsNames.length;
+
+  if (contactsNamesL == 0) {
+    alert(`Nenhum contacto para filtros "${filters.join(', ')}"`, ``);
+  }
+
+  if (what2return == 'Name' || what2return == 'NameAndBankInfo' || what2return == 'JobTitleAndNameAndBankInfo') {
+    // var contact = cflLib.cfl(contactsNames, searchDescrip + " | " + contactsNamesL + "\n", contactsNames[0])[0];
+
+    if (contactsNamesL === 1) {
+      var contact = contactsNames[0];
+    } else {
+      var contact = cflLib.cfl2Str(contactsNames, searchDescrip + ' | ' + contactsNamesL + '\n', contactsNames[0]);
+    }
+
+    if (what2return == 'Name') {
+      if (contact.includes('Central')) {
+        var contact = contact.split(' | ')[0].replace(/P\d[0-9A-Z-]*\s/, '');
+        //var contact = documentLib.capitalizeTextIfNotInAbbreviation(contact)
+
+        var contact = documentLib.capitalizeText(contact, 'WithExclusions');
+        var contact = contact.replace('Xai-xai', 'Xai-Xai');
+      } else {
+        var contact = contact.split(' | ')[1].replace(' ^', '');
+      }
+
+      //return contact
+    } else if (what2return == 'NameAndBankInfo') {
+      if (contact.includes('Central')) {
+        var contactItems = contact.split(' | ');
+        var contactSplice = contactItems.splice(1, 1);
+        var contact = contactItems.join(' | ').replace(/P\d[0-9A-Z-]*\s/, '');
+
+        var contact = documentLib.capitalizeText(contact, 'WithExclusions');
+      } else {
+        var contact = contact.replace(' ^', '').split(' | ').slice(1).join(' | ');
+      }
+
+      //return contact
+    } else if (what2return == 'JobTitleAndNameAndBankInfo') {
+      //return contact.replace(/P\d\w+\s/,"").replace(" ^", "").replace(/,/g, "")
+
+      var contact = contact
+        .replace(/P\d\w+\s/, '')
+        .replace(' ^', '')
+        .replace(/,/g, '');
+    }
+
+    return contact.replace('Forma Fixa', 'Forma Fixa _ Leoterio');
+  } else if (what2return == 'Names') {
+    if (contactsNamesL === 1) {
+      var contactsNamesSelection = contactsNames;
+    } else {
+      var contactsNamesSelection = cflLib.cfl(
+        contactsNames,
+        searchDescrip + ' | ' + contactsNamesL + '\n',
+        contactsNames[0],
+        'm'
+      );
+    }
+
+    var contactsNamesSelected = [];
+
+    for (var i = 0; i < contactsNamesSelection.length; i++) {
+      //  Identificadores de contactos: " ^" de Intermediário e " #" Notas Extras para Vizinhos
+
+      var contactNameSelection = contactsNamesSelection[i];
+
+      if (contactNameSelection.includes('Central')) {
+        // P5A10A BANCO DE MOÇAMBIQUE / contactCodeWithSpace2Replace (P5A10A )
+        //var contactCodeWithSpace2Replace = contactNameSelection.match(/P\d\w*\s/)[0]
+
+        var contactNameToPushItems = contactNameSelection.split(' | ')[0].split(' ');
+
+        //var contactNameToPush = contactNameToPush.replace(contactCodeWithSpace2Replace, "")
+
+        var contactNameToPush = contactNameToPushItems.slice(1, contactNameToPushItems.length).join(' ');
+
+        if (xd5AppName == 'Event') {
+          contactNameToPush += ' RETURNFULLINNEW';
+        }
+      } else {
+        var contactNameToPush = contactNameSelection.split(' | ')[1];
+      }
+
+      contactsNamesSelected.push(contactNameToPush.replace(/ \^| #/, ''));
+    }
+
+    return contactsNamesSelected.join(JoiningType);
+  }
+  // }
+}
+
+function contactFinderToCreate(contactFilter1Auto, contactFilter2Input, contactDescrip, newContactDescrip, withOrNoFilters) {
+  if (contactFilter1Auto == 'protectionEmployerCat') {
+    // Para P1F10SP
+
+    var employerCat = contactFilter2Input.split(' | ')[0];
+    var contactFilter2Input = contactFilter2Input.split(' | ')[1];
+
+    var contacts = contactsApp.people.whose({ name: { _contains: contactFilter2Input } })();
+  } else if (contactFilter1Auto == 'personIntermediary') {
+    var contacts = contactsApp.people.whose({ name: { _contains: contactFilter2Input } })();
+  } else {
+    if (contactFilter2Input == '') {
+      var contacts = contactsApp.people.whose({ name: { _contains: contactFilter1Auto } })();
+    } else {
+      var contacts = contactsApp.people.whose({
+        _and: [{ name: { _contains: contactFilter1Auto } }, { name: { _contains: contactFilter2Input } }],
+      })();
+    }
+  }
+
+  var contactsNames = [];
+  for (var i = 0; i < contacts.length; i++) {
+    var lastName_ = contacts[i].lastName();
+    var firstName_ = contacts[i].firstName();
+
+    var contactName = lastName_ + ' | ' + firstName_;
+
+    // lastName_.length > 4 para isolar "P5AA" que é LastName para singulares de Arquitectura
+    // !contactName.includes("M-") exclui membros de um mestre
+
+    /*
+		if (!contactName.includes("INDIVIDUAL") && !contactName.includes("M-") && lastName_.length > 4) {
+			contactsNames.push(contactName)
+		}
+		*/
+
+    if (withOrNoFilters == 'NoFilters') {
+      contactsNames.push(contactName);
+    } else if (withOrNoFilters == 'WithFilters') {
+      if (!contactName.includes('INDIVIDUAL') && !contactName.includes('M-') && lastName_.length > 4) {
+        contactsNames.push(contactName);
+      }
+    }
+  }
+
+  contactsNames.sort();
+
+  if (contactFilter1Auto == 'protectionEmployerCat') {
+    // Para P1F10SP
+    var contact = cflLib.cfl2Str(contactsNames, contactDescrip + ' | ' + contactsNames.length, contactsNames[0]);
+
+    if (employerCat.includes('Empresa')) {
+      var contact = contact.split(' | ')[0].replace(/P[\d]\w+\s/, '');
+
+      return contact;
+    } else if (employerCat.includes('Individual')) {
+      return contact.split(' | ')[1];
+    }
+  } else if (contactFilter1Auto == 'personIntermediary') {
+    var contact = cflLib.cfl2Str(contactsNames, contactDescrip + ' | ' + contactsNames.length, contactsNames[0]);
+
+    if (contact.includes('Central')) {
+      var match = contact.match(/P\d\w*\s/)[0];
+      var contactInfo = contact.split(' | ')[0].replace(match, '');
+    } else {
+      var technicianTitles =
+        'Contabilista, Executiva, ---------------, Canalizador, Carpinteiro, Electricista, Gesso Paredes, Impermeabilizador, Jardineiro, Ladrilhador, Pedreiro, Pintor, Serralheiro, Vidro & Aluminio, ---------------, Ambiental, Arquitecto, Biólogo, Civil, Contabilista, Electrotécnico, Electrotécnico & Som, Geólogo, Geotécnico, Hidráulico, Médico, Mecânico, Paisagista, Topógrafo, ---------------, Medidor, Projectista';
+
+      var technicianTitles = technicianTitles.toLowerCase();
+
+      var contactItems = contact.split(' | ');
+
+      if (contact.includes('-')) {
+        // Empreiteiro
+
+        var match = contact.match(/P[1-5]\w+\-C(\d|x)\s/)[0];
+      } else {
+        var match = contact.match(/P\d\w*\s/)[0];
+      }
+
+      var lastNameTrack = contactItems[0].replace(match, '').toLowerCase();
+      var technicianTitle = lastNameTrack;
+
+      var lastNameTrackLastC = lastNameTrack[lastNameTrack.length - 1]; // Get last character
+
+      // Para remoção de 01, 02, 03 em situações tais Civil01, Medidor03, …
+      if (Number(lastNameTrackLastC)) {
+        var lastNameTrack = lastNameTrack.slice(0, lastNameTrack.length - 2);
+      }
+
+      if (technicianTitles.includes(lastNameTrack)) {
+        // For technicianTitles
+
+        var contactInfo = documentLib.capitalizeText(technicianTitle, 'NoExclusions') + ' _ ' + contact.split(' | ')[1];
+      } else {
+        var contactInfo = contact.split(' | ')[1];
+      }
+    }
+
+    return contactInfo.replace(' ^', '');
+  } else {
+    if (contactFilter1Auto.includes('P3O')) {
+      // masterName for Membro
+      var contact = cflLib.cfl2Str(contactsNames, contactDescrip + ' | ' + contactsNames.length, contactsNames[0]);
+      return contact.split(' | ')[1].split(' ')[0];
+    } else {
+      var contact = cflLib.cfl2Str(
+        [contactFilter1Auto + ' ' + newContactDescrip + ' | Criar', '---------------'].concat(contactsNames),
+        contactDescrip + ' | ' + contactsNames.length,
+        contactFilter1Auto + ' ' + newContactDescrip + ' | Criar'
+      );
+      //return contact.split(" | ")[0].split(/P[1-5]\w+?\s/)[1]
+
+      // No futuro no futuro. se falhar alguma coisa é por tirei "?" em P[1-5]\w+?\s
+      // P[1-5]\w+?\-C\d\s para empreiteiro
+      //return contact.split(" | ")[0].split(/P[1-5]\w+\s|P[1-5]\w+\-C\d\s/)[1]
+
+      //return contact.split(" | ")[0].split(/P[1-5]\w+\s|P[1-5]\w+\-/)[1]
+
+      // 🔴 TAKE OUT OF FUNCTION
+
+      /*
+			// Empreiteiros
+			if (contact.includes("-C")) {
+				return "-" + contact.split(" | ")[0].split(/P[1-5]\w+\-/)[1]
+
+			} else {
+				return contact.split(" | ")[0].split(/P[1-5]\w+\s/)[1]
+			}
+			*/
+
+      return contact.split(' | ')[0];
+    }
+  }
+}

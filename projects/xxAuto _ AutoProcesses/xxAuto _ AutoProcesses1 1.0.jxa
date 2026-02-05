@@ -1,0 +1,50 @@
+// xxAuto _ AutoProcesses2 - ScriptEditor4System.scpt
+
+/* 
+- LaunchAgents Path
+   - "/Users/xd5-wmac/Library/LaunchAgents"
+
+// All run ever 5 horas
+• Intervalo 5 horas são 18000s (3600*5 => 3600s (1h), 5 horas)
+• Intervalo 3 dias são 259200s (3600*24*3 => 3600s (1h), 24 horas, 3 dias)
+*/
+
+// 🔴 "/Users/xd5-wmac/Library/LaunchAgents/xxAuto _ AutoProcesses3 - Xcode4System.plist" moved TEMPORARILY (TO TEST PERFORMANCE) to "Projects/xxAuto _ AutoProcesses/+Library-LaunchAgents-File-MovedHere-Temporarily"
+
+// 🔴🔴🔴 TESTAR PERFORMANCE ABRINDO O PROJECTO ARENA DESPORTIVA, CORTES E ALÇADOS QUE LEVAM MUITO TEMPO
+
+// Version check in Library xxxAutoLib
+var xxAutoLib = Library('xxAutoLib');
+
+const { alert } = Library('displayLib');
+const { getDelays } = Library('datetimeLib');
+const {
+  //   d0p3,
+  //   d1,
+  //   d2,
+  d3,
+  // d5,
+  // d7,
+} = getDelays();
+
+/*
+// DESACTIVADO VISTO QUE CONGELA
+delay(d3);
+xxAutoLib.autoUpdateContactsNotes('Auto');
+
+
+// DESACTIVADO VISTO QUE CONGELA
+delay(d3);
+xxAutoLib.autoGetAndSaveContacts('Auto');
+
+
+delay(d3);
+// alert('Started "autoBackup"');
+xxAutoLib.autoBackup('AUTO');
+
+delay(d3);
+// alert('Started "autoDisplay"');
+xxAutoLib.autoDisplay();
+*/
+
+// xxAutoLib.launchAgentsGroup(); // DESACTIVADO PARA NAO SUFOCAR O SISTEMA

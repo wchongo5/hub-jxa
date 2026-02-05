@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Program</key>
+	<string>/usr/bin/osascript</string>
+	<key>StartInterval</key>
+	<!-- // Intervalo 5 horas são 18000s (3600*5 => 3600s (1h), 5 horas) -->
+	<integer>18000</integer>
+	<key>Disabled</key>
+	<false/>
+	<key>ProgramArguments</key>
+	<array>
+		<string>osascript</string>
+		<string>/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/GITHUB/JavascriptJXA/Projects/xxAuto _ AutoProcesses/xxAuto _ AutoProcesses2 - ScriptEditor4System.scpt</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>xxAuto _ AutoProcesses2 - ScriptEditor4System</string>
+</dict>
+</plist>

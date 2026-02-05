@@ -1,0 +1,4557 @@
+const { readFile, writeToFile, writeToFileWithAppend } = Library('objCLib');
+const { numbersProjectInProcessInfoPopulate, numbersSheetDuplicateAndUpdatePrefixNumber, numbersSheetsUpdatePrefixNumbers } =
+  Library('iWorkLib');
+
+const {
+  getFilesToDuplicateInFolder,
+  getXa5XProdutionPathStr,
+  getNumXG5PathStr,
+  getNumXA5PathStr,
+  getPlataformsPathStr,
+  getInboxPathStr,
+  getP4SP5AQGISPathStr,
+  getP5PathStrWithSuffixP5,
+} = Library('pathLib');
+
+const {
+  getND,
+  getPathStrsFromPathObjs,
+  getPathStrsFromPathStr,
+  makeAlias,
+  makeFolder,
+  moveItems,
+  provAndNumberAndSiteAndFolders,
+} = Library('finderLib');
+const safariLib = Library('safariLib');
+const { getContactInfo } = Library('contactLib');
+const { xeroCompanyWebpage, headerInvoice, new_lineSpendReceiveInvoiceBillQuote } = Library('xeroLib');
+
+const {
+  convertDeadlineToDaysWithUnits,
+  ddEntryWithPreviousAndOrNext30DaysDisplay,
+  formatDateV3,
+  // getDelays,
+  offsetDateByComponents,
+  offsetDateByInput,
+  getDurationUnit,
+  getDurationInputWithUnit,
+  getWorkDurationNumbersWithUnit,
+  mmEnglishToPortuguese,
+} = Library('datetimeLib');
+
+const {
+  contractsDetails,
+  getBuildingTypes,
+  getCsInfo,
+  getDisciplineAndServiceFromPath,
+  getCompanyFromCs,
+  getCustomerAndObject,
+  getCustomerAndCsOptions,
+  getDiscipline,
+  getIntervention,
+  getMinistries,
+  getObject,
+  getOriginType,
+  getService,
+  getServiceByC1,
+  getSiteDimensions,
+  getSpecialities,
+  isCs,
+  needsZero,
+  objectSlicer,
+  writeCustomerAndObject,
+  writeWorkWeekNumbers,
+} = Library('projectLib');
+
+const { addContract, capitalizeText, ensureSpaceAfterCommaInStr, generateExpedients, listTasks } = Library('documentLib');
+// const spaceLib = Library('spaceLib');
+// const menuLib = Library('menuLib');
+const { alert, dialog } = Library('displayLib');
+const { cfl, cfl2Str } = Library('cflLib');
+const { addZero, formatNumber, generateUUID, getNextNumberOrLetter } = Library('numberLib');
+
+const { revealItem } = Library('xxNodejsJXALib');
+
+const { createServiceNote } = Library('notesLib');
+
+const textEditApp = Application('TextEdit');
+
+// Library name: xdim.core.errors
+
+function withGuard(fn) {
+  try {
+    fn();
+  } catch (e) {
+    alert('Erro', String(e && e.message ? e.message : e));
+    throw e;
+  }
+}
+
+/*
+const logger = Library('xdim-core-logger');
+const errors = Library('xdim-core-errors');
+const ctxLib = Library('xdim-core-ctx');
+const options = Library('xdim-core-options');
+*/
+
+// Your existing libs
+const pathLib = Library('pathLib');
+const finderLib = Library('finderLib');
+const projectLib = Library('projectLib');
+const iWorkLib = Library('iWorkLib');
+const datetimeLib = Library('datetimeLib');
+const xeroLib = Library('xeroLib');
+const spaceLib = Library('spaceLib');
+const menuLib = Library('menuLib');
+const displayLib = Library('displayLib');
+
+// Commands
+/* const quotation = Library('xdim-commands-quotation');
+const project = Library('xdim-commands-project');
+const work = Library('xdim-commands-work'); */
+
+// errors.withGuard(function () {
+withGuard(function () {
+  // const ctx = ctxLib.AppCtx_bootstrap({
+  const ctx = AppCtx_bootstrap({
+    pathLib,
+    finderLib,
+    projectLib,
+    iWorkLib,
+    datetimeLib,
+    xeroLib,
+    spaceLib,
+    menuLib,
+    displayLib,
+  });
+  // const flow = options.chooseMainFlow(ctx);
+  const { flow, updatedCtx } = chooseMainFlow(ctx);
+  // logger.log(`Flow: ${flow.kind.en} / ${flow.partner}`);
+  log(`Flow: ${flow.kind.en} / ${flow.partnerId}`);
+
+  switch (flow.kind.en) {
+    case 'QUOTATION':
+      // quotation.run(ctx, flow);
+      runQuotation({ ctx: updatedCtx, flow });
+      break;
+    case 'PROJECT':
+      runProject({ ctx: updatedCtx, flow });
+      break;
+    case 'BUILDING':
+      runBuilding({ ctx: updatedCtx, flow });
+      break;
+    default:
+      Library('displayLib').alert('WIP', 'Esta opção será migrada na Fase 2.');
+  }
+});
+
+// ------------
+
+// xdim-core-logger.scpt (JXA Script Library)
+
+function log(msg) {
+  try {
+    $.NSLog(`ℹ️ ${msg}`);
+  } catch (e) {}
+}
+function warn(msg) {
+  try {
+    $.NSLog(`⚠️ ${msg}`);
+  } catch (e) {}
+}
+function fail(msg) {
+  throw new Error(msg);
+}
+
+// xdim-core-errors.scpt (JXA Script Library)
+function withGuard(fn) {
+  try {
+    fn();
+  } catch (e) {
+    try {
+      Library('displayLib').alert('Erro', String(e && e.message ? e.message : e));
+    } catch (_) {}
+    throw e;
+  }
+}
+
+// xdim-core-ctx.scptd (JXA Script Library)
+
+function AppCtx_bootstrap(deps) {
+  const currentApp = Application.currentApplication();
+  // currentApp.includeStandardAdditions = true;
+
+  const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+  const seApp = Application('System Events');
+  const finderApp = Application('Finder');
+  const numbersApp = Application('Numbers');
+  const numbersAppControllerP = seApp.processes['Numbers'];
+  const safariApp = Application('Safari');
+  const safariAppControllerP = seApp.processes['Safari'];
+  const archicadApp = Application('ARCHICAD 25');
+
+  const delays = deps.datetimeLib.getDelays();
+
+  const sel = finderApp.selection();
+  if (!sel || sel.length === 0) throw new Error('Nenhuma seleção no Finder');
+  const it = sel[0];
+  const destFolder = it.kind() === 'Folder' || it.kind() === 'Alias' ? it : it.container();
+
+  const ND = deps.finderLib.getND();
+  const destPathStr = deps.finderLib.getPathStrsFromPathObjs([destFolder])[0];
+  const provinceInfo = deps.spaceLib.getProvinceInfoByPathObj(destFolder);
+
+  const nowFmt = deps.datetimeLib.formatDateV3(new Date());
+  if (!nowFmt) throw new Error('Data inválida');
+
+  // ADDDED AFTER
+
+  const { isDisciplineAndServicePath, discipline, service } = getDisciplineAndServiceFromPath(destPathStr);
+
+  const {
+    year: { Y4: yearY4 },
+    month: { M2: monthM2, long: monthLong },
+    day: { D2: dayD2 },
+  } = nowFmt.components;
+
+  return {
+    ...deps,
+    apps: {
+      currentApp,
+      saApp,
+      seApp,
+      finderApp,
+      numbersApp,
+      numbersAppControllerP,
+      safariApp,
+      safariAppControllerP,
+      archicadApp,
+    },
+    mission: { isDisciplineAndServicePath, discipline, service },
+    ND,
+    delays,
+    selection: { destFolder, destPathStr, provinceInfo },
+    dates: {
+      now: {
+        all: nowFmt,
+        yearY4,
+        monthM2,
+        monthLong,
+        dayD2,
+      },
+      generated: {},
+    },
+
+    names: buildNamesAndPaths(deps, ND).names,
+    paths: buildNamesAndPaths(deps, ND).paths,
+    content: {
+      centralInfo02Qgis: deps.spaceLib.getCentralInfo02Qgis(),
+      sellingAnimalReazon: `Razões da venda: Necessidade de dinheiro ou Problema do animal (problema)\n • Divisão de dinheiro\n\n—\nIncluir na Factura Xero`, //
+    },
+  };
+}
+
+function buildNamesAndPaths(deps, ND) {
+  // ------------ Names
+  const helpCustomerFolderName = `AAP`;
+  const qgisPackackageP5TemplateNameWtihExt = 'P5TEMPLATE_TERRAIN.gpkg';
+  const controlSchedulesFileNameWithExt = `YYYYDDMM-HHMMSS-V1 _ MAPAS DE CONTROLO XDXXXXXXXXXX - XDXXXXXXXXXX.numbers`;
+  const estimateFileName = `00X00E ${ND} CLIENTE ${ND} ESTIMATIVA DE CUSTO E DURAÇÃO XDXXXXXXXXXX ${ND} 20XXXXXX-XXXXXX-V1.numbers`;
+  const materialFileName = `00X00EM ${ND} CLIENTE ${ND} MATERIAL XDXXXXXXXXXX ${ND} 20XXXXXX-XXXXXX-V1.numbers`;
+  const xa5VideoName = `00X00V ${ND} CLIENTE ${ND} VÍDEO PROJECTO_OR_PLANO XDXXXXXXXXXX ${ND} 20XXXXXX-XXXXXX-V1.motn`;
+
+  // ------------ Paths
+
+  const pathLib = deps.pathLib;
+  const plataformsPathStr = pathLib.getPlataformsPathStr();
+  const p4SP5AQGISPathStr = pathLib.getP4SP5AQGISPathStr();
+  const inboxPathStr = pathLib.getInboxPathStr();
+
+  return {
+    names: {
+      helpCustomerFolderName,
+      qgisPackackageP5TemplateNameWtihExt,
+      controlSchedulesFileNameWithExt,
+      estimateFileName,
+      materialFileName,
+      xa5VideoName,
+      // ---------- Resultants
+      helpCustomerFolderNameS1Q: `S1Q ${helpCustomerFolderName}`,
+      helpCustomerFolderNameS1Q0: `S1Q0 ${helpCustomerFolderName}`,
+    },
+
+    paths: {
+      // ----------- QUOTATIONS
+      // ----------- PROJECTS
+
+      numXA5PathObj: Path(pathLib.getNumXA5PathStr()),
+      numXG5PathObj: Path(pathLib.getNumXG5PathStr()),
+      xa5XProdutionPathObj: Path(pathLib.getXa5XProdutionPathStr() + '/PROJECTOS'),
+      p5PathStrWithSuffixP5: Path(pathLib.getP5PathStrWithSuffixP5()),
+      plataformsPathStr,
+      inboxPathStr,
+      p4SP5AQGISPathStr,
+      x5AliasQuotesPathStr: inboxPathStr + '/X5-QUOTES-ALIAS',
+      qgisPackageTemplateTerrainPathStr: `${p4SP5AQGISPathStr}/SPACEXD5DB/${qgisPackackageP5TemplateNameWtihExt}`,
+      controlSchedulesFilePathStr: `/Users/xd5-wmac/Library/Mobile Documents/com~apple~CloudDocs/Plataformas/P1/P1T TEMPLATES/P1T5P XO5 _ GCPUP/+ MAPAS DE CONTROLO/${controlSchedulesFileNameWithExt}`,
+      estimatesPathObj: Path(
+        `${plataformsPathStr}/P1/P1T TEMPLATES/P1T5P XA5 ${ND} GCPUP/A555 ${ND} ORÇAMENTOS & DERIVADOS/${estimateFileName}`
+      ),
+      materialFileNamePathObj: Path(
+        `${plataformsPathStr}/P1/P1T TEMPLATES/P1T5P XA5 ${ND} GCPUP/A555 ${ND} ORÇAMENTOS & DERIVADOS/${materialFileName}`
+      ),
+      temporayPathObj: Path(`${inboxPathStr}/XA5-TEMPORARY5`),
+      xa5TemporayOfflinePathObj: Path(`/Users/xd5-wmac/P51A XA5-TEMPORARY5 OFFLINE`),
+      xa5VideoPathObj: Path(`${plataformsPathStr}/P5/P5M MULTIMÉDIA/P552 VÍDEO/VIDEO PROJECTO/${xa5VideoName}`),
+      xa5XmlProjInfoTemplatePathStr: Path(
+        `${plataformsPathStr}/P1/P1T TEMPLATES/P1T5P XA5 ${ND} GCPUP/X5 - PROJECT INFO TEMPLATE.xml`
+      ),
+
+      // ----------- BUILDINGS
+      xo5AliasObrasPathObj: Path(`${inboxPathStr}/XO5-ALIAS`),
+    },
+  };
+}
+
+function AppCtx_delay(ms) {
+  $.NSThread.sleepForTimeInterval(ms / 1000);
+}
+
+// xdim-core-options.scpt (JXA Script Library)
+
+function chooseMainFlow(ctx) {
+  // const { cfl } = Library('cflLib');
+  // const { alert } = Library('displayLib');
+
+  alert('/////// CREATE TF01Q FOLDER, and RENAME TF to TF02I - FREEZES AFTER TRIGER-2');
+
+  const { yearY4, monthM2 } = ctx.dates.now;
+
+  const opts = cfl(
+    [
+      '1. Cotação',
+      '2. Projecto',
+      '3. Obra',
+      '-----',
+      '• JointVenture (J5)*',
+      '• Negociação (N5)*',
+      '---------------',
+      '4. Projecto - Subpastas',
+      '5. Projecto - Extrapastas',
+      '6. Obra - Subpastas',
+      '---------------',
+      'Q. Anual Projectos',
+      'A. Província',
+    ],
+    'Seleciona o tipo da pasta\n\n—\n* J5 ou N5 deve ser selecionado com: Cotação ou Projecto ou Obra',
+    '1. Cotação',
+    'm'
+  );
+
+  if (!opts || opts.length === 0) throw new Error('Nenhuma opção selecionada');
+
+  const normalized = _normalizeCombo(opts);
+  if (!normalized) {
+    alert('Erro nas opções', 'Selecione no máximo 2 opções e combine-as corretamente.');
+    throw new Error('Opção inválida');
+  }
+
+  alert('TRIGER-1');
+
+  const generated = generateDateFoldersAndDocuments(yearY4, monthM2, normalized);
+
+  alert('TRIGER-2');
+
+  var originType = getOriginType([''], 'Ajuste Directo (DW)');
+
+  alert('TRIGER-3');
+
+  let discipline = ctx.mission.discipline;
+  let service = ctx.mission.service;
+
+  if (!ctx.mission.isDisciplineAndServicePath) {
+    discipline = getDiscipline([''], 'Arquitectura');
+
+    alert('TRIGER-4');
+
+    if (normalized.kind.en === 'QUOTATION') {
+      // if (discipline == 'Rebanho') {
+      //   service = 'Projecto';
+      // } else {
+
+      alert('TRIGER-5');
+
+      if (originType == 'Ajuste Directo (DW)') {
+        // "4. Fiscalização" para Negociação e Jointventure
+
+        alert('TRIGER-6');
+
+        service = getService([''], 'Projecto');
+        alert('TRIGER-7');
+      } else if (originType == 'Ajuste Directo (DX)') {
+        service = getService(['Assistência'], 'Projecto');
+      } else if (originType.includes('Concurso')) {
+        service = getService(['Assistência', 'Construção'], 'Projecto');
+      }
+      // }
+    } else if (normalized.kind.en === 'PROJECT') {
+      service = 'Projecto';
+    } else if (normalized.kind.en === 'BUILDING') {
+      if (originType == 'Ajuste Directo (DW)') {
+        // "4. Fiscalização" para Negociação e Jointventure
+        service = getService(['Projecto'], 'Assistência');
+      } else {
+        service = getService(['Assistência', 'Construção', 'Projecto'], 'Fiscalização');
+      }
+    }
+  }
+
+  alert('TRIGER-8');
+
+  const isHerd = discipline === 'Rebanho';
+  const disciplineC1 = discipline[0];
+  const serviceC1 = isHerd
+    ? 'A' // Rebanho WRA, WRB, WRC, WRD
+    : service[0];
+
+  return {
+    flow: normalized,
+    updatedCtx: {
+      ...ctx,
+      mission: {
+        ...ctx.mission, //
+        originType,
+        discipline,
+        service,
+        isHerd,
+        disciplineC1,
+        serviceC1,
+      },
+      dates: { ...ctx.dates, generated },
+    },
+  };
+}
+
+function _normalizeCombo(opts) {
+  const main = opts.find(o => /^\d\./.test(o));
+  const partner = opts.find(o => /^•\s/.test(o));
+  const partnerId = !partner ? 'X' : partner.includes('JointVenture') ? 'J' : 'N';
+
+  let managerId = 'X5X'; // Gestão X-DIM
+
+  if (partnerId == 'J') {
+    managerId = cfl2Str(['J5C', 'J5X'], 'Gestão de JointVenture no Parceiro (J5C) ou X-DIM (J5X)?\n', 'J5X');
+  }
+
+  const collected = {};
+
+  switch (main) {
+    case '1. Cotação':
+      // return { kind: 'COTACAO', partner: partnerId };
+      // return { kind: 'QUOTATION', partner: partnerId };
+      return { kind: { en: 'QUOTATION', pt: 'COTAÇÃO' }, managerId, partnerId, collected };
+    case '2. Projecto':
+      return { kind: { en: 'PROJECT', pt: 'PROJECTO' }, managerId, partnerId, collected };
+    case '3. Obra':
+      return { kind: { en: 'BUILDING', pt: 'OBRA' }, managerId, partnerId, collected };
+
+    // -------- UPDATE LATER
+    /*  case '4. Projecto - Subpastas':
+      return { kind: 'PROJECTO_SUBPASTAS', managerId, partnerId, collected };
+    case '5. Projecto - Extrapastas':
+      return { kind: 'PROJECTO_EXTRAPASTAS', managerId, partnerId, collected };
+    case '6. Obra - Subpastas':
+      return { kind: 'OBRA_SUBPASTAS', managerId, partnerId, collected };
+    case 'Q. Anual Projectos':
+      return { kind: 'ANUAL_PROJECTOS', managerId, partnerId, collected };
+    case 'A. Província':
+      return { kind: 'PROVINCIA', managerId, partnerId, collected }; */
+    default:
+      return null;
+  }
+}
+
+// xdim-core-codes.scpt (JXA Script Library)
+
+function serviceCodeForQuotation(partner, originShort, disciplineC1, serviceC1) {
+  return partner + originShort + 'C' + disciplineC1 + serviceC1; // e.g., X + DW + C + A + P
+}
+
+function serviceCodeForProject(partner, originShort, disciplineC1, serviceC1) {
+  return partner + originShort + 'F' + disciplineC1 + serviceC1; // e.g., X + DW + F + A + P
+}
+
+function provinceCodeFrom(provinceInfo) {
+  const numberPart = provinceInfo.includes(' | ') ? provinceInfo.split(' | ')[0] : provinceInfo;
+  const n = Number(numberPart.split('. ')[0]);
+  return Library('numberLib').addZero(n);
+}
+
+// xdim-core-dates.scpt (JXA Script Library)
+
+function generateDateFoldersAndDocuments(yearY4, monthM2, flow) {
+  if (flow.kind.en === 'QUOTATION') {
+    var descriptionInvoicingStage = 'Data Cotação';
+  } else if (flow.kind.en === 'PROJECT' || flow.kind.en === 'BUILDING') {
+    var descriptionInvoicingStage = 'Data Contrato ou Data Cotação Aprovada (Factura)';
+  }
+
+  alert('TRIGER-1.1');
+
+  const { ddEntryPadded } = ddEntryWithPreviousAndOrNext30DaysDisplay(`Anteriores`, 'Dia');
+
+  alert('TRIGER-1.2');
+
+  // Get the current date and time
+  const currentDate = new Date();
+  // const currentYear = currentDate.getFullYear();
+  // const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+  // const currentDay = String(currentDate.getDate()).padStart(2, '0');
+  const currentHours = String(currentDate.getHours()).padStart(2, '0');
+  const currentMinutes = String(currentDate.getMinutes()).padStart(2, '0');
+  const currentSeconds = String(currentDate.getSeconds()).padStart(2, '0');
+
+  // Combine yearY4, monthM2, ddEntryPadded with the current date and time
+  // const combinedDate = `${yearY4}${monthM2}${ddEntryPadded}${currentYear}${currentMonth}${currentDay}T${currentHours}${currentMinutes}${currentSeconds}`;
+  const combinedDate = `${yearY4}${monthM2}${ddEntryPadded}T${currentHours}:${currentMinutes}:${currentSeconds}`;
+
+  alert('TRIGER-1.3');
+
+  const dateFoldersAndDocumentsWithTime = dialog(`Data (Pastas & Documentos)\n\n—\n• ${descriptionInvoicingStage}`, combinedDate);
+
+  // 2024 07 09 2024 07 09 T181006
+
+  const [dateFoldersAndDocuments, time] = dateFoldersAndDocumentsWithTime.split('T');
+
+  const ddDateFoldersAndDocuments = dateFoldersAndDocuments.slice(-2);
+  const mmDateFoldersAndDocuments = dateFoldersAndDocuments.slice(4, 6);
+  const yyyyDateFoldersAndDocuments = dateFoldersAndDocuments.slice(0, 4);
+  const yyDateFoldersAndDocuments = yyyyDateFoldersAndDocuments.slice(2, 4);
+
+  const dateFoldersAndDocumentsISO8601 = `${yyyyDateFoldersAndDocuments}-${mmDateFoldersAndDocuments}-${ddDateFoldersAndDocuments}T${time}`;
+
+  const dateFoldersAndDocumentsBasicDatetime = dateFoldersAndDocumentsISO8601
+    .replace(/-/g, '')
+    .replace('T', '-')
+    .replace(/:/g, '');
+
+  return {
+    dateFoldersAndDocumentsBasicDatetime,
+    dateFoldersAndDocumentsISO8601,
+    dateFoldersAndDocuments,
+    ddDateFoldersAndDocuments,
+    mmDateFoldersAndDocuments,
+    yyyyDateFoldersAndDocuments,
+    yyDateFoldersAndDocuments,
+  };
+}
+
+// xdim-core-folderSpec.scpt (JXA Script Library)
+
+function buildTree(finderLib, rootPathObj, specNodes, ctx) {
+  const created = [];
+  for (var i = 0; i < specNodes.length; i++) {
+    var node = specNodes[i];
+    if (node.when && !node.when(ctx)) continue;
+    const name = _render(node.name, ctx);
+    const mk = finderLib.makeFolder(rootPathObj, name);
+    created.push({ name, folderPathObj: mk.folderPathObj, folderPathStr: mk.folderPathStr });
+    if (node.children && node.children.length) {
+      buildTree(finderLib, mk.folderPathObj, node.children, ctx);
+    }
+  }
+  return created;
+}
+
+function _render(tpl, ctx) {
+  return tpl.replace(/\$\{([^}]+)\}/g, function (_, k) {
+    return '' + _get(ctx, k.trim());
+  });
+}
+function _get(o, path) {
+  return path.split('.').reduce(function (a, k) {
+    return a && a[k] !== undefined ? a[k] : '';
+  }, o);
+}
+
+// xdim-commands-quotation.scptd (JXA Script Library)
+// Phase 1: Cotação flow — creates folders, duplicates Numbers sheet, fills key cells.
+
+function runQuotation({ ctx, flow }) {
+  const { datetimeLib, spaceLib } = ctx;
+
+  const { originType, discipline, service, isHerd, disciplineC1, serviceC1 } = ctx.mission;
+  const { yearY4, monthM2, monthLong, dayD2 } = ctx.dates.now;
+
+  const { sellingAnimalReazon } = ctx.content;
+
+  const provinceInfo = ctx.selection.provinceInfo;
+  const provinceInfoItems = provinceInfo.split(' | ');
+
+  const {
+    dateFoldersAndDocumentsBasicDatetime,
+    dateFoldersAndDocumentsISO8601,
+    dateFoldersAndDocuments,
+    ddDateFoldersAndDocuments,
+    mmDateFoldersAndDocuments,
+    yyyyDateFoldersAndDocuments,
+    yyDateFoldersAndDocuments,
+  } = ctx.dates.generated;
+
+  const { numXG5PathObj, x5AliasQuotesPathStr } = ctx.paths;
+
+  const { helpCustomerFolderName: _helpCustomerFolderName, helpCustomerFolderNameS1Q, helpCustomerFolderNameS1Q0 } = ctx.names;
+
+  let helpCustomerFolderName = _helpCustomerFolderName;
+
+  var vatCodeType = flow.partnerId + originType.match(/\((\w*)\)/)[1];
+
+  // ------------- Table - ProposalInfo
+
+  if (originType == 'Ajuste Directo (DW)') {
+    var wagesFormD = 'V1-Por especialidade';
+    var serviceMethodologyD = 'Sem — Metodologia';
+  } else {
+    var wagesFormD = 'V2-Por profissional';
+    var serviceMethodologyD = 'Com — Metodologia';
+  }
+
+  var serviceC1AndDisciplineC1And5 = disciplineC1 + '5' + serviceC1;
+
+  let managerId = flow.managerId;
+
+  if (vatCodeType == 'XCP') {
+    var proposalRequestTypeD = 'do Anúncio Jornal Notícias datado';
+  } else {
+    var proposalRequestTypeD = 'da solicitação de proposta';
+  }
+
+  var propOptions1 = ['V1-Por especialidade', 'V2-Por profissional'];
+  var propOptions2 = [
+    '---------------',
+    'Manifestação de Interesse',
+    'Proposta Técnica',
+    '---------------',
+    'da solicitação de proposta',
+    'da Carta de solicitação de proposta datada',
+    'do Anúncio Jornal Notícias datado',
+    '---------------',
+    'Com — Comentários & Sugestões',
+    'Sem — Comentários & Sugestões',
+    '---------------',
+    'Com — Metodologia',
+    'Sem — Metodologia',
+    '---------------',
+    'Com — Não Abrir Antes …',
+    'Sem — Não Abrir Antes …',
+    '---------------',
+    'Com — Lote',
+    'Sem — Lote',
+  ];
+
+  if (isHerd) {
+    var propOptions = ['—', '—', '—', '—', '—', '—', 'Sem — Lote'];
+  } else {
+    var propOptions = cfl(
+      propOptions1.concat(propOptions2),
+      'Selecione uma opção em cada secção — ' + serviceC1AndDisciplineC1And5,
+      [
+        serviceC1 + '5',
+        'Construção',
+        wagesFormD,
+        'Manifestação de Interesse',
+        proposalRequestTypeD,
+        'Sem — Comentários & Sugestões',
+        serviceMethodologyD,
+        'Sem — Não Abrir Antes …',
+        'Sem — Lote',
+      ],
+      'm'
+    );
+  }
+
+  var lotStatus = propOptions[6];
+
+  if (lotStatus == 'Com — Lote') {
+    var lot = 'Lote ' + cfl2Str(['1', 'I', '2', 'II', '3', 'III', '4', 'IV', '5', 'V'], 'Lote', '3');
+  } else if (lotStatus == 'Sem — Lote') {
+    var lot = '—';
+  }
+
+  var propOptionsStr = propOptions.toString();
+
+  if (
+    propOptionsStr.includes('da Carta de solicitação de proposta datada') ||
+    propOptionsStr.includes('do Anúncio Jornal Notícias datado')
+  ) {
+    var requestDateWithPreposition = dialog(
+      'Data de solicitação de Propostas (no Jornal Notícias ou Outro Meio).',
+      ' de ' + dayD2 + '/' + monthM2 + '/' + yearY4
+    );
+  } else {
+    var requestDateWithPreposition = '';
+  }
+
+  var propDateStr = dayD2 + '/' + capitalizeText(mmEnglishToPortuguese(monthLong), 'NoExclusions') + '/' + yearY4 + '/15:30';
+
+  if (originType == 'Ajuste Directo (DW)') {
+    var propDateItems = propDateStr.split('/');
+  } else {
+    var propDateItems = dialog('Data de submissão de Propostas.', propDateStr).split('/');
+  }
+
+  // "XDXFAF" NEW 20221001
+
+  /*   if (isHerd) {
+    var serviceC1 = 'A'; // serviceC1 fica WRA, WRB, WRC, …
+  } */
+
+  // XDWCR1220903 // Rebanho (R1 Rebanho 1)
+  // XDWCAP220901
+  var serviceCode = vatCodeType + 'C' + discipline[0] + serviceC1;
+
+  // var provinceInfoItems = provinceInfo.split(' | ');
+
+  /* if (provinceInfoItems.length > 1) {
+    var provinceNumbered = provinceInfo.split(' | ')[0];
+  } else {
+    var provinceNumbered = provinceInfo;
+  } */
+
+  const provinceNumbered = provinceInfoItems[0];
+
+  // var provCode = addZero(Number(provinceNumbered.split('. ')[0]));
+
+  const provCode = provinceCodeFrom(ctx.selection.provinceInfo);
+
+  var provAndNumberAndSiteAndFoldersItems = provAndNumberAndSiteAndFolders(
+    ctx.selection.destPathStr,
+    serviceCode,
+    provCode,
+    'Cotação',
+    yyDateFoldersAndDocuments
+  ).split(' / ');
+
+  var quoteCs = provAndNumberAndSiteAndFoldersItems[0];
+  var folderListInfo = provAndNumberAndSiteAndFoldersItems[1]; // ANTES 2
+  var folderListInfoItems = folderListInfo.split(' | ');
+
+  var quoteCsL = quoteCs.length;
+
+  // "A" Adenda e "T" trabalhos adicionais
+  if (quoteCs[quoteCsL - 2] == 'A' || quoteCs[quoteCsL - 2] == 'T') {
+    var mainFolderName4ExtraWorkCs = folderListInfoItems[1];
+    var selectedFolderStr = folderListInfoItems[2];
+    var mainFolderStr = selectedFolderStr + '/' + mainFolderName4ExtraWorkCs;
+  }
+
+  // var { isValidUseThisSiteForProjectStr, projectSite, propLocal, siteInfoForMinistries } = getProjectSite(provinceInfoItems);
+
+  const {
+    isValidUseThisSiteForProjectStr,
+    projectSite: _projectSite,
+    propLocal,
+    siteInfoForMinistries,
+  } = spaceLib.getProjectSite(provinceInfoItems, originType);
+
+  let projectSite = _projectSite;
+
+  var siteID = getSiteID(projectSite, flow);
+
+  var intervention = getIntervention(quoteCs);
+
+  var { serviceGroup, durationC1, workPhasesNumbers: workDurationNumbers } = getWorkDurationNumbersWithUnit(quoteCs);
+
+  const animals = null;
+
+  const customerAndObjectInfo = customerAndObject(serviceCode, siteInfoForMinistries, isHerd, intervention, animals);
+
+  var {
+    customerType,
+    ministryOrProvinceAndOrPrivateCustomer,
+    provDirOrNatServiceOrEmpty4PrivateCustomer,
+    customer4Documents,
+    objectOptions: {
+      object4Documents,
+      object4ImagesAndVideoAndDrawings,
+      object4FoldersAndExtras,
+      object4FoldersAndExtrasUpper,
+      object4DocumentsAndImagesAndFolderAndExtras,
+    },
+    customer4Folders,
+    customer4SheetOrBimCloudOrNote,
+  } = customerAndObjectInfo;
+
+  var buildingObjectsStr = getBuildingObjectsStr(quoteCs, flow, object4Documents);
+
+  // var customerType = customerAndObjectItems[0]
+
+  if (customerType == 'Estado') {
+    // var ministryOrProvince = customerAndObjectItems[1]
+    // var provincialDirectorateOrNationalService = customerAndObjectItems[2]
+    var ministryOrProvince = ministryOrProvinceAndOrPrivateCustomer;
+    var provincialDirectorateOrNationalService = provDirOrNatServiceOrEmpty4PrivateCustomer;
+  } else if (customerType == 'Empresa Privada' || customerType == 'Individual') {
+    // var privateCustomer = customerAndObjectItems[1]
+    var privateCustomer = ministryOrProvinceAndOrPrivateCustomer;
+  }
+
+  if (originType.includes('Concurso')) {
+    var biddingNum = dialog('Número do concurso.\n\n—\nSe não tiver número, ignore.', '');
+    if (biddingNum == '') {
+      var biddingNum = 'CONCURSO SEM NÚMERO';
+    }
+  } else {
+    // "Ajuste Directo (DW)"
+    var biddingNum = '';
+  }
+
+  if (service == 'Projecto' && discipline == 'Arquitectura') {
+    if (customerType == 'Individual') {
+      var customerGroup = 'Individual';
+    } else {
+      // "Estado" or "Empresa Privada"
+      var customerGroup = 'Empresa';
+    }
+  } else {
+    var customerGroup = '—';
+  }
+
+  // 🔴🔴🔴🔴 KEEP THIS IS USED TO GET Folder INFO to Use in HyperXD5
+
+  // var customer4Documents = customerAndObjectItems[3]
+  // var object4DocumentsAndImagesAndFolderAndExtras = customerAndObjectItems[4]
+
+  // var object4DocumentsAndImagesAndNoteItems = object4DocumentsAndImagesAndFolderAndExtras.split(" / ")
+  // var object4Documents = object4DocumentsAndImagesAndNoteItems[0]
+  // var object4FoldersAndExtras = object4DocumentsAndImagesAndNoteItems[2]
+
+  // var customer4Folders = customerAndObjectItems[5]
+  // var customer4SheetOrBimCloudOrNote = customerAndObjectItems[6]
+  // var object4FoldersAndExtrasUpper = customerAndObjectItems[7]
+
+  // alert(`object4Documents: ${object4Documents}`, ``)
+  // alert(`object4FoldersAndExtras: ${object4FoldersAndExtras}`, ``)
+  // alert(`object4DocumentsAndImagesAndFolderAndExtras: ${object4DocumentsAndImagesAndFolderAndExtras}`, ``);
+
+  /*     if (customer4Folders.includes('&')) {
+      var customer4Xero = capitalizeText(customer4Folders, 'WithExclusions'); // Era NoExclusions
+    } else {
+      var customer4Xero = capitalizeText(customer4Documents, 'WithExclusions'); // Era NoExclusions
+    } */
+
+  var customer4Xero = generateCustomerForXero(customer4Folders, customer4Documents);
+
+  var otherInfo4Folders = workInfo(object4FoldersAndExtrasUpper, isValidUseThisSiteForProjectStr, projectSite, quoteCs, ctx);
+
+  if (customerType == 'Estado') {
+    var contractManager = contractManagerFunc(ministryOrProvince, customer4Documents);
+  } else if (customerType == 'Empresa Privada' || customerType == 'Individual') {
+    var contractManager = '—';
+  }
+
+  if (originType == 'Concurso Limitado (CL)') {
+    var manage3QuotesStatus = getManage3QuotesStatus();
+
+    if (manage3QuotesStatus == 'Sim') {
+      var otherInfo4Folders = otherInfo4Folders + ' (3Q)';
+    }
+  }
+
+  if (isHerd) {
+    var needsHMTLStr = `${sellingAnimalReazon} ***NewLine/ MZN0.00/${otherInfo4Folders}`;
+  } else {
+    var needsHMTLStr = 'null'; // Was "—" before 20230302
+  }
+
+  if (originType == 'Concurso Limitado (CL)' || originType == 'Concurso Público (CP)') {
+    var helpCustomerStatus = getHelpCustomerStatus();
+  }
+
+  jointVentureDwJ5XAlert(quoteCs, 'Cotação', flow);
+
+  // GENDER OPTIONS
+  var genderOptionsStr = getGenderOptions(
+    service,
+    discipline,
+    customer4Folders,
+    object4Documents,
+    projectSite,
+    customerType,
+    customer4Documents
+  );
+
+  if (isHerd) {
+    var chargedPercentageWithSymbol = 'X%';
+    var chargedPercentageWithSymbolAndSpace = ' X%';
+    var isAppliedAmount = true;
+  } else {
+    var {
+      chargedPercentage,
+      percentageWithSymbol: chargedPercentageWithSymbol,
+      chargedPercentageWithSymbolAndSpace,
+      isAppliedAmount,
+    } = chargePercentage(quoteCs, flow);
+  }
+
+  ctx.apps.numbersApp.activate();
+  var docNumXG5 = ctx.apps.numbersApp.open(numXG5PathObj);
+
+  numbersSheetsUpdatePrefixNumbers(docNumXG5);
+
+  const propSheetName = numbersSheetDuplicateAndUpdatePrefixNumber(
+    ctx.apps.numbersAppControllerP,
+    docNumXG5,
+    `${customer4Folders} ${quoteCs}`
+  );
+
+  // var serviceTypeFolder = dateFoldersAndDocuments + ' S1Q P&C';
+  var serviceTypeFolder = dateFoldersAndDocumentsBasicDatetime + ' S1Q P&C';
+
+  // START DATE
+  var startDate = new Date(mmDateFoldersAndDocuments + '/' + ddDateFoldersAndDocuments + '/' + yyyyDateFoldersAndDocuments);
+
+  const durationD = customerType === 'Estado' ? '90d' : '7d';
+
+  // END DATE
+  /*     var endDateNumItems = offsetDateByInput(quoteCs, startDate, 'Duração', durationD, 'No').split(' | ');
+    var endDateNum = Number(endDateNumItems[0]);
+    var duration = endDateNumItems[1];
+    var durationUnit = endDateNumItems[2]; */
+
+  var {
+    newDateNumStr,
+    offset: duration,
+    offsetUnit: durationUnit,
+  } = offsetDateByInput(quoteCs, startDate, 'Duração', durationD, 'No');
+
+  var endDateNum = Number(newDateNumStr);
+
+  var durationInputWithUnit = duration + ' ' + durationUnit;
+  var endDate = new Date(endDateNum);
+
+  var endMm = endDate.toLocaleString('en', { month: '2-digit' });
+  var endDd = addZero(endDate.getDate());
+  var endYyyy = endDate.getFullYear();
+
+  var issueDateAndDueDate = dateFoldersAndDocuments + '-' + endYyyy + endMm + endDd;
+
+  if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+    var quoteAmountApproved = ''; // Empty because does not exist yet
+
+    var partnershipItems = partnership('Cotação', quoteAmountApproved).split(' | ');
+    var partner = partnershipItems[0];
+    var partnerPrice = partnershipItems[1];
+    var xdimPrice = partnershipItems[2];
+    var percentageStr = partnershipItems[3];
+
+    const managerIdString = flow.partnerId == 'J' ? ' ' + managerId : '';
+
+    var partnerSubNameList = [
+      serviceTypeFolder +
+        managerIdString +
+        ' | ' +
+        issueDateAndDueDate +
+        ' | C' +
+        xdimPrice +
+        chargedPercentageWithSymbolAndSpace,
+      dateFoldersAndDocuments + ' S1Q ' + partner + ' ' + percentageStr + ' | C' + partnerPrice,
+    ];
+
+    var subNameList = partnerSubNameList;
+  } else if (originType == 'Concurso Público (CP)') {
+    // "99*" it's placeholder for Day. * shows that 99 it's not normal
+    // var dateY4M2D2__H2M2S2_20daysAfterAsterisk = dateFoldersAndDocuments.slice(0, 6) + '99*';
+
+    var offsetDate20DaysAfter = formatDateV3(
+      new Date(
+        offsetDateByComponents(new Date(dateFoldersAndDocumentsISO8601), {
+          days: 20,
+        }).newDateNumStr
+      )
+    );
+
+    var dateY4M2D2__H2M2S2_20daysAfterAsterisk = offsetDate20DaysAfter.formats.dateY4M2D2__H2M2S2 + '*';
+
+    var subNameList = [
+      `${dateFoldersAndDocuments}-HHMMSS S1Q1 JORNAL + CADERNO DE ENCARGOS + TdR`,
+      `${dateFoldersAndDocuments}-HHMMSS S1Q2 M-INTERESSE`,
+      `${dateY4M2D2__H2M2S2_20daysAfterAsterisk} S1Q3.1 P&C | ${issueDateAndDueDate} | C0,000.00 ${chargedPercentageWithSymbol}`,
+      `${dateY4M2D2__H2M2S2_20daysAfterAsterisk} S1Q3.2 GARANTIA PROVISÓRIA | 0,000.00 / ALIAS2BANK`,
+      `${dateY4M2D2__H2M2S2_20daysAfterAsterisk} S1Q4 AVALIAÇÃO`,
+    ];
+  } else {
+    var quoteAmountPlaceholder = ' | ' + issueDateAndDueDate + ' | C0,000.00' + chargedPercentageWithSymbolAndSpace;
+
+    var subNameList = [
+      serviceTypeFolder + quoteAmountPlaceholder,
+      dateFoldersAndDocuments.slice(0, 6) + 'XX-HHMMSS S1Q R1 LEVANTAMENTO',
+    ];
+  }
+
+  // Create base folder and structure (declarative)
+  const baseName = `Y ${ctx.ND} ${quoteCs} ${ctx.ND} ${customer4Folders} ${ctx.ND} ${otherInfo4Folders}`;
+
+  const base = makeFolder(Path(ctx.selection.destPathStr), baseName);
+
+  if (helpCustomerStatus == 'Sim') {
+    if (originType == 'Concurso Limitado (CL)') {
+      helpCustomerFolderName = helpCustomerFolderNameS1Q;
+    } else if (originType == 'Concurso Público (CP)') {
+      helpCustomerFolderName = helpCustomerFolderNameS1Q0;
+    }
+
+    var subNameList = subNameList.concat(`${dateFoldersAndDocuments} ${helpCustomerFolderName}`);
+  }
+
+  for (var i = 0; i < subNameList.length; i++) {
+    var forlderNameLev1 = subNameList[i];
+    var { folderPathObj: thisFolderPathObj } = makeFolder(base.folderPathObj, forlderNameLev1);
+
+    if (manage3QuotesStatus == 'Sim' && forlderNameLev1.includes('P&C')) {
+      makeFolder(thisFolderPathObj, serviceC1AndDisciplineC1And5 + 'Q1');
+      makeFolder(thisFolderPathObj, serviceC1AndDisciplineC1And5 + 'Q2');
+    }
+
+    if (forlderNameLev1.includes('P&C') && (service == 'Construção' || service == 'Empreitada')) {
+      makeFolder(thisFolderPathObj, 'MESTRES');
+    }
+
+    if (forlderNameLev1.includes('M-INTERESSE')) {
+      makeFolder(thisFolderPathObj, `${dateY4M2D2__H2M2S2_20daysAfterAsterisk} AVALIAÇÃO MI`);
+    }
+  }
+
+  // -------------- EXTRA WORK FOLDER (TRABALHOS A MAIS)
+
+  // "A" Adenda e "T" trabalhos adicionais
+  if (quoteCs[quoteCsL - 2] == 'A' || quoteCs[quoteCsL - 2] == 'T') {
+    makeAlias(base.folderPathObj, Path(mainFolderStr), '# ' + base.folder.name());
+  }
+
+  makeAlias(base.folderPathObj, Path(x5AliasQuotesPathStr), base.folder.name());
+  ctx.apps.numbersApp.activate();
+
+  docNumXG5.activeSheet.set(docNumXG5.sheets[propSheetName]);
+
+  var propSheet = docNumXG5.sheets[propSheetName];
+
+  var tableInputs1 = propSheet.tables['Inputs1'];
+
+  if (isAppliedAmount) {
+    tableInputs1.cells['C15'].value = chargedPercentageWithSymbol;
+    tableInputs1.cells['F15'].value = 1;
+  } else {
+    tableInputs1.cells['C12'].value = chargedPercentageWithSymbol;
+    tableInputs1.cells['F15'].value = 0;
+  }
+
+  var tableHeaderInfo = propSheet.tables['HeaderInfo'];
+  tableHeaderInfo.cells['A1'].value = quoteCs;
+  tableHeaderInfo.cells['B2'].value = object4FoldersAndExtrasUpper;
+  tableHeaderInfo.cells['B4'].value = customer4Folders;
+  tableHeaderInfo.cells['C3'].value = customer4Xero;
+  tableHeaderInfo.cells['C5'].value = getDurationUnit(durationC1);
+  // Desactivar manualNeedsStatus
+  tableHeaderInfo.cells['B10'].value = 0;
+
+  tableHeaderInfo.cells['C1'].value = projectSite;
+
+  var tableProposalInfo = propSheet.tables['Table - ProposalInfo'];
+  tableProposalInfo.cells['A2'].value = intervention;
+  tableProposalInfo.cells['A3'].value = propOptions[0];
+  tableProposalInfo.cells['A4'].value = propOptions[1];
+  tableProposalInfo.cells['A5'].value = propOptions[2];
+  tableProposalInfo.cells['A6'].value = propOptions[3];
+  tableProposalInfo.cells['A7'].value = propOptions[4];
+  tableProposalInfo.cells['A8'].value = propOptions[5];
+  tableProposalInfo.cells['A9'].value = lot;
+
+  tableProposalInfo.cells['B5'].value = requestDateWithPreposition;
+
+  tableProposalInfo.cells['C1'].value = propLocal;
+  tableProposalInfo.cells['C2'].value = propDateItems[0];
+  tableProposalInfo.cells['C3'].value = propDateItems[1];
+  tableProposalInfo.cells['C4'].value = propDateItems[2];
+  tableProposalInfo.cells['C5'].value = propDateItems[3];
+
+  var tableCustomerAndObjectInfo = propSheet.tables['Table - CustomerAndObjectInfo'];
+
+  tableCustomerAndObjectInfo.cells['A11'].value = customer4Folders;
+  tableCustomerAndObjectInfo.cells['B2'].value = biddingNum;
+
+  if (biddingNum != '' && biddingNum != 'CONCURSO SEM NÚMERO') {
+    tableCustomerAndObjectInfo.cells['C2'].value = 1;
+  } else {
+    tableCustomerAndObjectInfo.cells['C2'].value = 0;
+  }
+
+  tableCustomerAndObjectInfo.cells['B3'].value = object4Documents.toUpperCase();
+
+  if (customerType == 'Estado') {
+    tableCustomerAndObjectInfo.cells['B14'].value = ministryOrProvince;
+    tableCustomerAndObjectInfo.cells['A15'].value = provincialDirectorateOrNationalService;
+
+    if (provincialDirectorateOrNationalService == 'BANCO DE MOÇAMBIQUE') {
+      tableCustomerAndObjectInfo.cells['C14'].value = 0;
+    } else {
+      tableCustomerAndObjectInfo.cells['C14'].value = 1;
+    }
+
+    tableCustomerAndObjectInfo.cells['C9'].value = 1; // Checkbox Estado
+
+    tableCustomerAndObjectInfo.cells['A16'].value = contractManager;
+  } else if (customerType == 'Empresa Privada' || customerType == 'Individual') {
+    // privateCustomer UPPERCASE for Documents
+    tableCustomerAndObjectInfo.cells['A18'].value = privateCustomer;
+
+    // privateCustomer CAPITALIZE for Xero Create Quote Name
+    tableCustomerAndObjectInfo.cells['A19'].value = capitalizeText(privateCustomer, 'WithExclusions');
+
+    // Uncheckbox Estado to Particular
+    tableCustomerAndObjectInfo.cells['C9'].value = 0;
+  }
+
+  // --------------- WRITE WORK WEEK NUMBERS
+
+  if (serviceGroup === 'SG_PROJECTO') {
+    writeWorkWeekNumbers(propSheet, quoteCs, workDurationNumbers);
+  }
+
+  var deadlineWithUnit = tableHeaderInfo.cells['C4'].value();
+
+  // --------------- WRITE QUOTE INFO FOR INVOICES
+
+  if ((flow.partnerId == 'J' && managerId == 'J5C') || flow.partnerId == 'N') {
+    var customer4Documents = '— JustToSeeHere > ' + partner + ' + ' + customer4Documents;
+    var object4DocumentsAndImagesAndFolderAndExtras = '— JustToSeeHere > ' + object4DocumentsAndImagesAndFolderAndExtras;
+    projectSite = '— JustToSeeHere > ' + projectSite;
+    var genderOptionsStr = '—';
+  }
+
+  var tableQuotes = docNumXG5.sheets['FACTURAÇÃO'].tables['Table - Quotes'];
+
+  writeCustomerAndObject(
+    tableQuotes,
+    customerType,
+    dateFoldersAndDocumentsBasicDatetime,
+    quoteCs,
+    customer4Documents,
+    customer4SheetOrBimCloudOrNote,
+    object4DocumentsAndImagesAndFolderAndExtras,
+    projectSite,
+    siteID,
+    genderOptionsStr,
+    intervention,
+    customerGroup,
+    contractManager,
+    propLocal,
+    needsHMTLStr,
+    buildingObjectsStr,
+    deadlineWithUnit,
+    customer4Xero
+    // object4FoldersAndExtrasUpper
+  );
+
+  docNumXG5.save();
+  delay(ctx.delays.d1p5);
+
+  docNumXG5.activeSheet.set(docNumXG5.sheets[propSheetName]);
+
+  const updatedFlow = {
+    ...flow,
+    collected: {
+      // discipline,
+      // service,
+      // isHerd,
+
+      //----------
+      customerAndObjectInfo,
+      //---
+      // customer4Documents,
+      // customer4SheetOrBimCloudOrNote,
+      // object4DocumentsAndImagesAndFolderAndExtras,
+      // object4FoldersAndExtras,
+      // object4Documents,
+      // object4FoldersAndExtrasUpper,
+
+      quoteCs,
+      projectSite,
+      customer4Xero,
+      deadlineWithUnit,
+      genderOptionsStr,
+      intervention,
+      customerGroup,
+      contractManager,
+      propLocal,
+      buildingObjectsStr,
+      durationInputWithUnit,
+      needsHMTLStr,
+      siteID,
+      chargedPercentage,
+      quoteAmountApproved,
+      percentageStr,
+      partner,
+      otherInfo4Folders,
+      xdimPrice,
+      partnerPrice,
+      docNumXG5,
+
+      dates: {
+        dateFoldersAndDocumentsBasicDatetime,
+        endDate: {
+          endYyyy,
+          endMm,
+          endDd,
+        },
+      },
+
+      folders: {
+        base,
+      },
+    },
+  };
+
+  runCommon({ ctx, flow: updatedFlow });
+}
+
+function runProject({ ctx, flow }) {
+  const { originType, discipline, isHerd, disciplineC1, serviceC1 } = ctx.mission;
+
+  const { centralInfo02Qgis: _centralInfo02Qgis, sellingAnimalReazon } = ctx.content;
+
+  const {
+    numXA5PathObj,
+    numXG5PathObj,
+    xa5XProdutionPathObj,
+    qgisPackageTemplateTerrainPathStr,
+    estimatesPathObj,
+    materialFileNamePathObj,
+    temporayPathObj,
+    xa5TemporayOfflinePathObj,
+    xa5VideoPathObj,
+    xa5XmlProjInfoTemplatePathStr,
+  } = ctx.paths;
+
+  const {
+    dateFoldersAndDocumentsBasicDatetime,
+    dateFoldersAndDocumentsISO8601,
+    dateFoldersAndDocuments,
+    ddDateFoldersAndDocuments,
+    mmDateFoldersAndDocuments,
+    yyyyDateFoldersAndDocuments,
+    yyDateFoldersAndDocuments,
+  } = ctx.dates.generated;
+
+  const { helpCustomerFolderName, qgisPackackageP5TemplateNameWtihExt, estimateFileName, materialFileName, xa5VideoName } =
+    ctx.names;
+
+  const provinceInfo = ctx.selection.provinceInfo;
+  const provinceInfoItems = provinceInfo.split(' | ');
+
+  let centralInfo02Qgis = _centralInfo02Qgis;
+
+  const managerId = flow.managerId;
+
+  var serviceCode = flow.partnerId + originType.match(/\((\w*)\)/)[1] + 'F' + disciplineC1 + serviceC1; //"P"
+
+  var projectServiceCodeSimple = serviceCode.slice(0, 3);
+
+  const provinceNumbered = provinceInfoItems[0];
+
+  var provCode = addZero(Number(provinceNumbered.split('. ')[0]));
+
+  var provAndNumberAndSiteAndFoldersItems = provAndNumberAndSiteAndFolders(
+    ctx.selection.destPathStr,
+    serviceCode,
+    provCode,
+    'Factura',
+    yyDateFoldersAndDocuments
+  ).split(' / ');
+
+  var invoiceCs = provAndNumberAndSiteAndFoldersItems[0];
+
+  var folderListInfo = provAndNumberAndSiteAndFoldersItems[1];
+  var folderListInfoItems = folderListInfo.split(' | ');
+
+  // Split to remove quoteFolderStr a partir da 2ª Factura, se for Factura directa
+  var folderListInfoTrackESCREVER = folderListInfoItems[1].split(' | ')[0];
+
+  // invoiceCs[invoiceCs.length - 2] == "T" // Factura de Trabalhos A Mais
+  // Aqui forçamos <folderListInfoTrackESCREVER = "ESCREVER"> pois se for Factura Trabalhos A Mais <var folderListInfoTrackESCREVER = folderListInfoItems[1].split(" | ")[0]> não vai ser "ESCREVER" pois considera o nome da pasta da Factura principal (XDXFA210303) ou factura de trabalhos A Mais anterior (XDXFA210303T1)
+
+  var invoiceCsL = invoiceCs.length;
+
+  if (invoiceCs[invoiceCsL - 2] == 'A' || invoiceCs[invoiceCsL - 2] == 'T') {
+    var folderListInfoTrackESCREVER = 'ESCREVER';
+
+    var mainFolderName4ExtraWorkCs = folderListInfoItems[1];
+    var selectedFolderStr = folderListInfoItems[2];
+
+    var mainFolderStr = selectedFolderStr + '/' + mainFolderName4ExtraWorkCs;
+  }
+
+  xeroCompanyWebpage(invoiceCs);
+
+  // var managerId = getConsultancyManagerId(flow.partnerId);
+
+  var docNumXG5 = ctx.apps.numbersApp.open(numXG5PathObj);
+
+  let customerAndObjectInfo = {};
+
+  if (folderListInfoTrackESCREVER == 'ESCREVER') {
+    ctx.apps.currentApp.activate();
+
+    var company = getCompanyFromCs(invoiceCs);
+    var intervention = getIntervention(invoiceCs);
+    var siteDimensions = getSiteDimensions(invoiceCs, intervention);
+
+    var { isValidUseThisSiteForProjectStr, projectSite, propLocal, siteInfoForMinistries } = getProjectSite(provinceInfoItems);
+
+    var siteID = getSiteID(projectSite, flow.partnerId, managerId);
+
+    var durationInputWithUnit = getDurationInputWithUnit(invoiceCs, 'Duração\n', '');
+
+    if (originType == 'Concurso Limitado (CL)') {
+      var manage3QuotesStatus = getManage3QuotesStatus();
+    }
+
+    if (originType == 'Concurso Limitado (CL)' || originType == 'Concurso Público (CP)') {
+      var helpCustomerStatus = getHelpCustomerStatus();
+    }
+
+    if (isHerd) {
+      /*   var herdKG = parseFloat(dialog(`Quilos do Animal`, ``));
+        var herdKGPrice = parseFloat(dialog(`Preço por quilo`, `185`)); */
+
+      const animalsArray = ['09B-93-190', 'V-16000', '10B-120-190', '16V-175-185', '18V-90-185'];
+
+      const animalsString = dialog('Venda por KG: Número-Inicial-KGs-Preço\nVenda vivo: Inicial-Preço', animalsArray.join('\n'));
+
+      var animals = animalsString.split('\n').map(item => {
+        const [animalInitial, kgs, priceByKG] = item.replace(/\s/g, '').split('-');
+
+        if (priceByKG) {
+          // '09B-93-190' Venda por KGs
+          const priceOfAnimal = parseFloat(kgs) * parseFloat(priceByKG);
+
+          return `${animalInitial}${kgs}x${priceByKG} (${formatNumber(priceOfAnimal)})`;
+        } else {
+          //  '00V-16000' // VENDA VIVO kgs is PRICE
+          return `${animalInitial} (${formatNumber(kgs)})`;
+        }
+      });
+
+      const total = animals.reduce((accumulator, current) => {
+        return accumulator + parseFloat(current.split(' (')[1].split(')')[0].replace(/,/g, ''));
+      }, 0);
+
+      const animalsCount = animals.length;
+      const animalsCountOxes = animals.filter(item => item.includes('B')).length;
+      const animalsCountCows = animals.filter(item => item.includes('V')).length;
+
+      var csExtraAnimalsDetails = `Q${animalsCount}B${animalsCountOxes}V${animalsCountCows}`;
+
+      var quoteAmountApproved = formatNumber(total);
+    } else {
+      var quoteAmountApproved = getQuoteAmountApproved(ctx);
+    }
+
+    if (invoiceCs[invoiceCsL - 2] == 'A' || invoiceCs[invoiceCsL - 2] == 'T') {
+      // Substituir F por C
+      var quoteCs = invoiceCs.slice(0, 3) + 'C' + invoiceCs.slice(4, invoiceCsL.length);
+    } else {
+      var quoteNumberD = folderListInfoItems[3];
+
+      // Primeira cotação, se for primeira Factura (Directa)
+      if (quoteNumberD == undefined) {
+        var quoteNumberD = '1';
+      }
+
+      var quoteCs =
+        projectServiceCodeSimple +
+        'C' +
+        disciplineC1 +
+        serviceC1 +
+        yyDateFoldersAndDocuments +
+        provCode +
+        quoteNumber(quoteNumberD);
+    }
+
+    if (isHerd) {
+      var invoiceCs = `${invoiceCs}-${csExtraAnimalsDetails}`;
+      var quoteCs = `${quoteCs}-${csExtraAnimalsDetails}`;
+    }
+
+    customerAndObjectInfo = customerAndObject(serviceCode, siteInfoForMinistries);
+
+    var {
+      customerType,
+      ministryOrProvinceAndOrPrivateCustomer,
+      provDirOrNatServiceOrEmpty4PrivateCustomer,
+      customer4Documents,
+      objectOptions: {
+        object4Documents,
+        object4ImagesAndVideoAndDrawings,
+        object4FoldersAndExtras,
+        object4FoldersAndExtrasUpper,
+        object4DocumentsAndImagesAndFolderAndExtras,
+      },
+      customer4Folders,
+      customer4SheetOrBimCloudOrNote,
+    } = customerAndObjectInfo;
+
+    var buildingObjectsStr = getBuildingObjectsStr(invoiceCs, managerId, object4Documents);
+
+    if (customerType == 'Estado') {
+      var ministryOrProvince = ministryOrProvinceAndOrPrivateCustomer;
+    }
+
+    if (customerType == 'Individual') {
+      var customerGroup = 'Individual';
+    } else {
+      // "Estado" or "Empresa Privada"
+      var customerGroup = 'Empresa';
+    }
+
+    if (customerType == 'Estado') {
+      var contractManager = capitalizeText(contractManagerFunc(ministryOrProvince, customer4Documents), 'WithExclusions');
+    } else if (customerType == 'Empresa Privada' || customerType == 'Individual') {
+      var contractManager = '—';
+    }
+
+    // GENDER OPTIONS
+    // Service é semre "Projecto"
+
+    var genderOptionsStr = getGenderOptions('Projecto', discipline, customer4Folders, object4Documents, projectSite);
+    var genderOptions = genderOptionsStr.split(' / ');
+
+    var otherInfo4Folders = workInfo(object4FoldersAndExtrasUpper, isValidUseThisSiteForProjectStr, projectSite, quoteCs);
+
+    // var docNumXG5 = ctx.apps.numbersApp.open(numXG5PathObj);
+
+    if (manage3QuotesStatus == 'Sim') {
+      var otherInfo4Folders = otherInfo4Folders + ' (3Q)';
+    }
+
+    if (isHerd) {
+      var needsHMTLStr = `${sellingAnimalReazon} ***NewLine/ MZN${quoteAmountApproved}/${otherInfo4Folders}`;
+    } else {
+      var needsHMTLStr = 'null';
+    }
+
+    if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+      var partnershipItems = partnership('Factura', quoteAmountApproved).split(' | ');
+
+      var partner = partnershipItems[0];
+      var partnerPrice = partnershipItems[1];
+      var xdimPrice = partnershipItems[2]; // Igual a quoteAmountApproved
+      var percentageStr = partnershipItems[3];
+    }
+
+    if (isHerd) {
+      var chargedPercentageWithSymbol = 'X%';
+      var chargedPercentageWithSymbolAndSpace = ' X%';
+    } else {
+      var {
+        chargedPercentage,
+        percentageWithSymbol: chargedPercentageWithSymbol,
+        chargedPercentageWithSymbolAndSpace,
+      } = chargePercentage(quoteCs, flow.partnerId, managerId);
+    }
+
+    var customer4Xero = generateCustomerForXero(customer4Folders, customer4Documents);
+
+    // var object4FoldersAndExtrasUpper = generateObjectNameForNeedsInXero(otherInfo4Folders);
+  } else {
+    var company = getCompanyFromCs(invoiceCs);
+    // --------------- GET QUOTE DATE & AMOUNT
+
+    var quoteFolderName = folderListInfoItems[1];
+    var selectedFolderStr = folderListInfoItems[2];
+
+    var quoteFolderStr = selectedFolderStr + '/' + quoteFolderName;
+
+    var xdimAndPartnerQuoteFolderNamesItems = xdimAndpartnerQuoteFolderNames(ctx, flow, originType, quoteFolderStr).split(' / ');
+
+    var xdimQuoteFolder = xdimAndPartnerQuoteFolderNamesItems[0];
+    var quoteDate = xdimQuoteFolder.match(/\d{8}/)[0];
+
+    var quoteAmountApproved = xdimQuoteFolder.match(/C(\d[,.0-9]*)/)[1];
+
+    if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+      var partnerQuoteFolder = xdimAndPartnerQuoteFolderNamesItems[1];
+      var percentageStr = partnerQuoteFolder.match(/\s(\d\d?%.*)\s\|/)[1];
+      var partner = partnerQuoteFolder.split(' ' + percentageStr)[0].split(' S1Q ')[1];
+      var partnerPrice = partnerQuoteFolder.split(percentageStr + ' | C')[1];
+
+      var xdimPrice = quoteAmountApproved;
+    }
+
+    // ---------------
+
+    var quoteFolderItems = folderListInfoItems[1].split(` ${ctx.ND} `);
+
+    var quoteCs = quoteFolderItems[1];
+
+    var customer4Folders = quoteFolderItems[2];
+    var otherInfo4Folders = quoteFolderItems.slice(3, 6).join(` ${ctx.ND} `);
+
+    customerAndObjectInfo = getCustomerAndObject(docNumXG5, quoteCs, invoiceCs, dateFoldersAndDocumentsBasicDatetime);
+
+    var {
+      customer4Documents,
+      customer4SheetOrBimCloud: customer4SheetOrBimCloudOrNote,
+      objectOptions: {
+        object4Documents,
+        object4ImagesAndVideoAndDrawings,
+        object4FoldersAndExtras,
+        object4FoldersAndExtrasUpper,
+        object4DocumentsAndImagesAndFolderAndExtras,
+      },
+      projectSite,
+      siteID,
+      genderOptionsStr,
+      genderOptions,
+      intervention,
+      customerGroup,
+      contractManager,
+      propLocal,
+      needsHMTLStr,
+      buildingObjectsStr,
+      deadlineWithUnit,
+      customer4Xero,
+      // object4FoldersAndExtrasUpper,
+    } = customerAndObjectInfo;
+
+    var durationInputWithUnit = convertDeadlineToDaysWithUnits(deadlineWithUnit);
+
+    var siteDimensions = getSiteDimensions(invoiceCs, intervention);
+  }
+
+  // XDWFPA221002
+  if (invoiceCs.slice(4, 6) == 'AP' || invoiceCs.slice(4, 6) == 'UP') {
+    var customerAndObjectAndCs4BimCloud = dialog(
+      'Nome & Objecto para BIMCloud',
+      `${customer4SheetOrBimCloudOrNote} ${ctx.ND} ${otherInfo4Folders.split(` ${ctx.ND} `)[0]} ${invoiceCs}`
+    );
+
+    if (invoiceCs.slice(4, 6) == 'AP' && (managerId == 'J5X' || managerId == 'X5X')) {
+      var specialities = getSpecialities();
+
+      var specialityD = specialities.filter(speciality => !speciality.includes('7'));
+
+      var xa5SpecialitiesSelected = cfl(specialities, 'Especialidades para pasta X-Produção', specialityD, 'm');
+      var xa5SpecialitiesSelected = xa5SpecialitiesSelected.map(speciality => '0' + speciality);
+
+      if (folderListInfoTrackESCREVER != 'ESCREVER') {
+        var buildingObjectsStr = dialog(`Objectos\n\n—\nVerificar os objectos escritos na Cotação`, buildingObjectsStr);
+      }
+
+      var buildingObjects = ensureSpaceAfterCommaInStr(buildingObjectsStr).split(', ');
+    }
+  }
+
+  // ----------------------------------
+
+  // START DATE
+  var startDate = new Date(mmDateFoldersAndDocuments + '/' + ddDateFoldersAndDocuments + '/' + yyyyDateFoldersAndDocuments);
+
+  var startMm = startDate.toLocaleString('en', {
+    month: '2-digit',
+  });
+  var startMmStr = startDate.toLocaleString('en', {
+    month: 'long',
+  });
+  var startMmStrInPT = capitalizeText(mmEnglishToPortuguese(startMmStr), 'NoExclusions');
+  var startDd = addZero(startDate.getDate());
+  var startYyyy = startDate.getFullYear();
+
+  // DELIVERY TIME // CHECK02
+  // END DATE
+
+  /*    var endDateNumItems = offsetDateByInput(invoiceCs, startDate, 'Duração', durationInputWithUnit, 'No').split(' | ');
+    var endDateNum = Number(endDateNumItems[0]);
+    var duration = endDateNumItems[1];
+    var durationUnit = endDateNumItems[2]; */
+
+  var {
+    newDateNumStr,
+    offset: duration,
+    offsetUnit: durationUnit,
+  } = offsetDateByInput(invoiceCs, startDate, 'Duração', durationInputWithUnit, 'No');
+
+  var endDateNum = Number(newDateNumStr);
+
+  var startDateTextAndDeliveryTime =
+    startDd +
+    ' ' +
+    startMmStrInPT +
+    ' ' +
+    startYyyy +
+    ' / ' +
+    duration +
+    ' ' +
+    durationUnit.replace('d', 'dias').replace('m', 'meses');
+
+  var endDate = new Date(endDateNum);
+
+  // For Xero Invoice and DeliveryTerm
+  var endMm = endDate.toLocaleString('en', { month: '2-digit' });
+
+  var endMmStr = endDate.toLocaleString('en', {
+    month: 'long',
+  });
+  var endMmStrInPT = capitalizeText(mmEnglishToPortuguese(endMmStr), 'NoExclusions');
+  var endDd = addZero(endDate.getDate());
+  var endYyyy = endDate.getFullYear();
+
+  var deliveryDateYyyyMmDd = endYyyy + endMm + endDd;
+
+  //var issueDateAndDueDate = dateFoldersAndDocuments + "-" + endYyyy + endMm + endDd
+
+  var issueDateAndDueDate = dateFoldersAndDocuments + '-' + deliveryDateYyyyMmDd;
+
+  // ----------- More date code
+
+  var { dateY4M2D2__H2M2S2: dateY4M2D2__H2M2S2_3daysAfter } = formatDateV3(
+    new Date(
+      offsetDateByComponents(new Date(dateFoldersAndDocumentsISO8601), {
+        days: 3,
+      }).newDateNumStr
+    )
+  ).formats;
+
+  // -------------------------
+
+  jointVentureDwJ5XAlert(invoiceCs, 'Factura', managerId);
+
+  const obfuscatedAmount = obfuscateAmount(' | F' + quoteAmountApproved);
+
+  if (flow.partnerId == 'J') {
+    var consultancyManagerIdToFolder = ' ' + managerId;
+  } else {
+    var consultancyManagerIdToFolder = '';
+  }
+
+  if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+    var subNameListPartnership = [
+      'FACTURA' +
+        consultancyManagerIdToFolder +
+        ' ' +
+        dateFoldersAndDocuments +
+        ' | F' +
+        xdimPrice +
+        chargedPercentageWithSymbolAndSpace,
+      partner + ' ' + percentageStr + ' | F' + partnerPrice,
+    ];
+  }
+
+  if ((flow.partnerId == 'J' && managerId == 'J5C') || flow.partnerId == 'N') {
+    var subNameList = subNameListPartnership;
+  } else {
+    var xd5Folder = 'XD5' + consultancyManagerIdToFolder + ' ' + dateFoldersAndDocumentsBasicDatetime + obfuscatedAmount;
+
+    if (discipline == 'Arquitectura' || discipline == 'Urbanismo') {
+      var originalsName = `ORIGINAIS iWORK`;
+
+      var subNameList = [originalsName, xd5Folder];
+
+      // PASTA AKERTA PARA "+ 🔴 SOLICITAR CONTRATO ASSINADO & VISADO PELO TA"
+      if (invoiceCs[2] != 'W') {
+        var subNameList = subNameList.concat('+ 🔴 SOLICITAR CONTRATO ASSINADO & VISADO PELO TA');
+      }
+    } else {
+      // Design, Simplitask
+      var subNameList = [xd5Folder];
+    }
+  }
+
+  // if (!isHerd && (flow.partnerId == 'X' || (flow.partnerId == 'J' && managerId == 'J5X'))) {
+  if (
+    !isHerd &&
+    (invoiceCs.slice(4, 6) === 'AP' || invoiceCs.slice(4, 6) === 'UP') &&
+    (flow.partnerId == 'X' || (flow.partnerId == 'J' && managerId == 'J5X'))
+  ) {
+    // XDXFDP251101
+
+    // SHEET FOR PROJECT
+    ctx.apps.numbersApp.activate();
+
+    var docNumXA5 = ctx.apps.numbersApp.open(numXA5PathObj);
+    numbersSheetsUpdatePrefixNumbers(docNumXA5);
+
+    var projSheetName = numbersSheetDuplicateAndUpdatePrefixNumber(
+      ctx.apps.numbersAppControllerP,
+      docNumXA5,
+      `${customer4Folders} ${invoiceCs}`
+    );
+  }
+
+  const base = makeFolder(
+    Path(ctx.selection.destPathStr),
+    `Y ${ctx.ND} ${invoiceCs} ${ctx.ND} ${customer4Folders} ${ctx.ND} ${otherInfo4Folders}`
+  );
+
+  for (var i = 0; i < subNameList.length; i++) {
+    const folderName = subNameList[i];
+    const {
+      folder: thisFolder,
+      folderPathObj: thisFolderPathObj,
+      folderPathStr: thisFolderPathStr,
+    } = makeFolder(base.folderPathObj, folderName);
+
+    // if (folderName.includes('XD5')) {
+    if (folderName === xd5Folder) {
+      var folder4QuoteFolder = thisFolder; // Se for Factura a partir da seleção da Cotação
+
+      var xx5DigitalProjectName = `${deliveryDateYyyyMmDd}-HHMMSS XX5 ${ctx.ND} ${
+        discipline[0] == 'A' ? 'PROJECTO' : 'PLANO'
+      } DIGITAL ${ctx.ND} ${customer4Folders} ${ctx.ND} ${object4FoldersAndExtrasUpper} ${ctx.ND} ${invoiceCs}`;
+
+      var xx5DigitalList = [xx5DigitalProjectName, '202XXXXX-HHMMSS REL1 LEVANTAMENTO', '202XXXXX-HHMMSS REL2 ANTEPROJECTO'];
+
+      for (var j = 0; j < xx5DigitalList.length; j++) {
+        const folderName1 = xx5DigitalList[j];
+
+        const { folderPathObj: thisFolder1PathObj } = makeFolder(thisFolderPathObj, folderName1);
+
+        if (folderName1.includes(xx5DigitalProjectName)) {
+          var subSubNameList = ['IMAGENS', 'PDFs', 'VÍDEO'];
+
+          if (originType.includes('DW')) {
+            var subSubNameList = [...subSubNameList, 'MATERIAL'];
+          }
+
+          if (!originType.includes('DW')) {
+            var subSubNameList = [...subSubNameList, 'DWG', 'EDITÁVEIS', 'FICHAS TÉCNICAS'];
+          }
+
+          for (var h = 0; h < subSubNameList.length; h++) {
+            var folderName2 = subSubNameList[h];
+
+            makeFolder(thisFolder1PathObj, folderName2);
+          }
+        }
+      }
+
+      if (managerId == 'J5X') {
+        // Excludes "FACTURA" because its name info is in XD5 J5X (xd5Folder)
+        var subNameListPartnershipFiltered = subNameListPartnership.filter(item => !item.includes('FACTURA'));
+
+        for (var j = 0; j < subNameListPartnershipFiltered.length; j++) {
+          makeFolder(thisFolderPathObj, subNameListPartnershipFiltered[j]);
+        }
+      }
+
+      if (folderListInfoTrackESCREVER == 'ESCREVER') {
+        const { folderPathObj: thisFolder1PathObj } = makeFolder(
+          thisFolderPathObj,
+          dateY4M2D2__H2M2S2_3daysAfter +
+            ' P&C | ' +
+            issueDateAndDueDate +
+            ' | R' +
+            quoteAmountApproved +
+            '-F' +
+            quoteAmountApproved +
+            chargedPercentageWithSymbolAndSpace
+        );
+
+        if (helpCustomerStatus == 'Sim') {
+          makeFolder(thisFolderPathObj, dateY4M2D2__H2M2S2_3daysAfter + ' ' + helpCustomerFolderName);
+        }
+
+        if (!originType.includes('DW') && manage3QuotesStatus == 'Sim') {
+          makeFolder(thisFolder1PathObj, invoiceCs.slice(4, 6) + '5Q1');
+          makeFolder(thisFolder1PathObj, invoiceCs.slice(4, 6) + '5Q2');
+        }
+      }
+
+      if (!originType.includes('DW')) {
+        makeFolder(thisFolderPathObj, dateY4M2D2__H2M2S2_3daysAfter + ' GARANTIA DEFINITIVA');
+      }
+    }
+
+    if (folderName.includes(originalsName) && (managerId == 'J5X' || managerId == 'X5X')) {
+      var originalsPathStr = thisFolderPathStr;
+
+      makeFolder(Path(originalsPathStr), '+ DEL5');
+
+      // --------------- ESTIMATIVA DE CUSTO E DURAÇÃO
+
+      if (invoiceCs[2] != 'W') {
+        ctx.apps.finderApp.duplicate(estimatesPathObj, { to: Path(originalsPathStr) });
+
+        var estimatesFileAlias = ctx.apps.seApp.aliases.byName(originalsPathStr + '/' + estimateFileName);
+
+        var estimateFileNameNew = `00X00E ${ctx.ND} ${customer4Folders} ${ctx.ND} ESTIMATIVA DE CUSTO ${invoiceCs} ${ctx.ND} ${deliveryDateYyyyMmDd}-XXXXXX-V1.numbers`;
+
+        estimatesFileAlias.name = estimateFileNameNew;
+        delay(ctx.delays.d1);
+
+        writeprojectInfoInCoverEstimate(
+          ctx,
+          originalsPathStr + '/' + estimateFileNameNew,
+          customer4Documents,
+          object4Documents,
+          contractManager,
+          `${endMmStrInPT} ${endYyyy}`
+        );
+      }
+
+      // --------------- MATERIAL
+      ctx.apps.finderApp.duplicate(materialFileNamePathObj, {
+        to: Path(originalsPathStr),
+      });
+
+      var materialFileAlias = ctx.apps.seApp.aliases.byName(`${originalsPathStr}/${materialFileName}`);
+
+      materialFileAlias.name = `00X00EM ${ctx.ND} ${customer4Folders} ${ctx.ND} MATERIAL ${invoiceCs} ${ctx.ND} ${deliveryDateYyyyMmDd}-XXXXXX-V1.numbers`;
+    }
+  }
+
+  // --------------- MOVE QUOTE INFO TO WORK FOLDER
+
+  if (folderListInfoTrackESCREVER != 'ESCREVER') {
+    if ((flow.partnerId == 'J' && managerId == 'J5C') || flow.partnerId == 'N') {
+      // Creating folder4QuoteFolder here because does not use regular folders where this folder is created inside "… GESTÃO" or similar folder
+      var folder4QuoteFolder = base;
+    }
+
+    quoteFolderProcessing(ctx, quoteDate, quoteFolderStr, folder4QuoteFolder, issueDateAndDueDate);
+  }
+
+  // -------------- EXTRA WORK FOLDER (TRABALHOS A MAIS)
+  if (invoiceCs[invoiceCsL - 2] == 'A' || invoiceCs[invoiceCsL - 2] == 'T') {
+    makeAlias(base.folderPathObj, Path(mainFolderStr), '# ' + base.name());
+  }
+
+  // -------------- FICHEIRO "00 NOTAS"
+
+  writeToFile(`${base.folderPathStr}/00 NOTAS.txt`, '1. Sem notas');
+  // -------------- XA5-TEMPORARY5
+  // TF 20230707 _ XDWFAP231103 _ TOP LOGÍSTICA
+
+  // var dateAndCsAndCustomer4Folders = dateFoldersAndDocuments + " " + customer4Folders + " " + invoiceCs
+  var dateAndCsAndCustomer4Folders = `${dateFoldersAndDocumentsBasicDatetime} ${ctx.ND} ${invoiceCs} ${ctx.ND} ${customer4Folders}`;
+
+  var temporayFolderName = 'TF ' + dateAndCsAndCustomer4Folders;
+
+  // 🔴 var to access tempFolderPathObj in <if (option == '2. Projecto' || option == '3. Obra') {>
+  // In future, try let on top of code instead of var here
+
+  const temp = makeFolder(temporayPathObj, temporayFolderName);
+
+  // "## usado como filtro em "xdim WF • Auto - Items" App
+
+  // Not for J5C and N5
+  if (!isHerd && (managerId == 'J5X' || managerId == 'X5X')) {
+    const { folder: tempOfflineFolder, folderPathObj: tempOfflineFolderPathObj } = makeFolder(
+      xa5TemporayOfflinePathObj,
+      '## ' + temporayFolderName
+    );
+
+    makeAlias(tempOfflineFolderPathObj, temp.folderPathObj, tempOfflineFolder.name());
+
+    var customer4SheetOrBimCloudOrNoteWithUnderscore = customer4SheetOrBimCloudOrNote.replace(/ /g, '_');
+
+    var geopackageFolderName = customer4SheetOrBimCloudOrNoteWithUnderscore + '_QGIS_' + invoiceCs;
+
+    alert('THANKS GoD - 1 // ERRO DE FInDER: DUPlicatEs assUMEM QUE TEM item eRRADAMEnTE');
+
+    var xa5TemporayCleanStr = '+ TEMPORARY';
+    var terrainCleanStr = `+ TERRENO ${geopackageFolderName}`;
+    var spacesStr = '+ ESPAÇOS';
+
+    var subTemporayFolderList = [
+      xa5TemporayCleanStr,
+      terrainCleanStr,
+      '++ e00IV1',
+      '++ e01I1',
+      '++ e02V1',
+      '++ MotionInfo',
+      '++ TM COLLECTED',
+    ];
+
+    // XDWFUP221001
+    if (invoiceCs.slice(4, 6) == 'UP') {
+      var subTemporayFolderList = subTemporayFolderList.concat('QGIS DWG', 'QGIS DWG GEOPACKAGE');
+    }
+
+    if (invoiceCs.slice(4, 6) == 'AP') {
+      var subTemporayFolderList = subTemporayFolderList.concat(spacesStr);
+    }
+
+    alert('THANKS GoD - 2');
+
+    for (var i = 0; i < subTemporayFolderList.length; i++) {
+      const { folderPathObj: thisFolder1PathObj, folderPathStr: thisFolder1PathStr } = makeFolder(
+        temp.folderPathObj,
+        subTemporayFolderList[i]
+      );
+
+      if (subTemporayFolderList[i].includes('TEMPORARY')) {
+        const temporaryFolders = ['BACKUPS'];
+
+        for (let index = 0; index < temporaryFolders.length; index++) {
+          makeFolder(thisFolder1PathObj, temporaryFolders[index]);
+        }
+      }
+
+      if (subTemporayFolderList[i].includes('TERRENO')) {
+        ctx.apps.finderApp.duplicate(Path(qgisPackageTemplateTerrainPathStr), { to: thisFolder1PathObj });
+
+        var qgisPackackageP5TemplateFile = ctx.apps.seApp.aliases.byName(
+          `${thisFolder1PathStr}/${qgisPackackageP5TemplateNameWtihExt}`
+        );
+
+        qgisPackackageP5TemplateFile.name = `00_GEOPACKAGE.gpkg`;
+      }
+    }
+
+    alert('THANKS GoD - 3');
+
+    ctx.apps.finderApp.activate();
+
+    if (invoiceCs.slice(4, 6) == 'AP' || invoiceCs.slice(4, 6) == 'UP') {
+      // --------------- XA5VIDEOFILE
+      alert('THANKS GoD - 4');
+      ctx.apps.finderApp.duplicate(xa5VideoPathObj, {
+        to: temp.folderPathObj,
+      });
+      alert('THANKS GoD - 5');
+
+      var xa5VideoFile = ctx.apps.seApp.aliases.byName(`${temp.folderPathStr}/${xa5VideoName}`);
+
+      // XDWFUP221001
+
+      xa5VideoFile.name = `00X00V ${ctx.ND} ${customer4Folders} ${ctx.ND} VÍDEO ${
+        discipline[0] == 'A' ? 'PROJECTO' : 'PLANO'
+      } ${invoiceCs} ${ctx.ND} ${deliveryDateYyyyMmDd}-XXXXXX-V1.motn`;
+
+      // --------------- SPECS FOLDERS IN A5 X-PRODUCTION FOLDER
+
+      // xa5FolderInXProdution
+
+      // 20220216 DIONÍSIO XDWFA221003
+      const {
+        folder: xa5FolderInXProdution,
+        folderPathObj: xa5FolderInXProdutionPathObj,
+        folderPathStr: xa5FolderInXProdutionPathStr,
+      } = makeFolder(xa5XProdutionPathObj, dateAndCsAndCustomer4Folders);
+
+      makeAlias(xa5FolderInXProdutionPathObj, temp.folderPathObj, '## ' + xa5FolderInXProdution.name());
+
+      alert('THANKS GoD - 5');
+
+      if (invoiceCs.slice(4, 6) == 'AP') {
+        if (invoiceCs[2] == 'W') {
+          var estimateOrQuantitiesName = '00 QUANTIDADES CIVIL';
+        } else {
+          var estimateOrQuantitiesName = '00 ESTIMATIVA DE CUSTO';
+        }
+
+        alert('THANKS GoD - 6');
+
+        var xa5SpecialitiesSelected = [estimateOrQuantitiesName, '00 IFC'].concat(xa5SpecialitiesSelected);
+
+        for (var i = 0; i < xa5SpecialitiesSelected.length; i++) {
+          var xa5SpecialitySelectedName = xa5SpecialitiesSelected[i].toUpperCase();
+
+          const { folder: xa5SpecialitySelected, folderPathObj: xa5SpecialitySelectedPathObj } = makeFolder(
+            xa5FolderInXProdutionPathObj,
+            xa5SpecialitySelectedName
+          );
+
+          if (xa5SpecialitySelectedName == `00 QUANTIDADES CIVIL` || xa5SpecialitySelectedName == `00 ESTIMATIVA DE CUSTO`) {
+            var estimateFolder = xa5SpecialitySelected;
+
+            var xa5SpecialitiesSelectedStr = xa5SpecialitiesSelected.toString().toUpperCase();
+
+            // 🔴 ESTIMATE CIVIL AQUI, O RESTO DAS ESPECIALIDADES ABAIXO NO LOOP
+
+            if (xa5SpecialitySelectedName == `00 QUANTIDADES CIVIL`) {
+              if (xa5SpecialitiesSelectedStr.includes('ESTRUTURA')) {
+                makeFolder(Path(getPathStrsFromPathObjs([estimateFolder])[0]), '04 QUANTIDADES CYPECAD');
+              }
+
+              if (xa5SpecialitiesSelectedStr.includes('HIDRÁULICA')) {
+                makeFolder(Path(getPathStrsFromPathObjs([estimateFolder])[0]), '03 QUANTIDADES CYPECAD');
+              }
+            }
+
+            if (xa5SpecialitySelectedName == `00 ESTIMATIVA DE CUSTO`) {
+              if (xa5SpecialitiesSelectedStr.includes('ESTRUTURA') || xa5SpecialitiesSelectedStr.includes('HIDRÁULICA')) {
+                var { folder: estimateCivilFolder, folderPathObj: estimateCivilFolderPathObj } = makeFolder(
+                  Path(getPathStrsFromPathObjs([estimateFolder])[0]),
+                  '00 CIVIL'
+                );
+              }
+
+              if (xa5SpecialitiesSelectedStr.includes('ESTRUTURA')) {
+                makeFolder(estimateCivilFolderPathObj, '04 QUANTIDADES CYPECAD');
+              }
+
+              if (xa5SpecialitiesSelectedStr.includes('HIDRÁULICA')) {
+                makeFolder(estimateCivilFolderPathObj, '03 QUANTIDADES CYPECAD');
+              }
+            }
+          }
+
+          // Se for especialidade
+          if (xa5SpecialitySelectedName.slice(0, 2) != '00') {
+            var pdfVerificationFolderName = 'PDF - VERIFICAÇÃO';
+
+            makeFolder(xa5SpecialitySelectedPathObj, '+ OBSERVAÇÕES (0)');
+
+            makeFolder(xa5SpecialitySelectedPathObj, 'MEMÓRIA');
+
+            makeFolder(xa5SpecialitySelectedPathObj, pdfVerificationFolderName);
+
+            if (xa5SpecialitySelectedName.includes('ARQUITECTURA')) {
+              makeFolder(xa5SpecialitySelectedPathObj, '+ REFERÊNCIAS');
+            }
+
+            if (
+              xa5SpecialitySelectedName.includes('HIDRÁULICA') ||
+              xa5SpecialitySelectedName.includes('ESTRUTURA') ||
+              xa5SpecialitySelectedName.includes('ELECTROTECNIA') ||
+              xa5SpecialitySelectedName.includes('CLIMATIZAÇÃO') ||
+              xa5SpecialitySelectedName.includes('GÁS')
+            ) {
+              const { folderPathObj: cypecadFolderPathObj } = makeFolder(xa5SpecialitySelectedPathObj, 'CYPECAD FINAL');
+
+              const { folderPathObj: dwgFolderPathObj } = makeFolder(xa5SpecialitySelectedPathObj, 'DWG');
+              makeFolder(dwgFolderPathObj, 'DIMENSIONADA');
+              makeFolder(dwgFolderPathObj, 'MÁSCARA');
+
+              if (
+                xa5SpecialitySelectedName.includes('ELECTROTECNIA') ||
+                xa5SpecialitySelectedName.includes('CLIMATIZAÇÃO') ||
+                xa5SpecialitySelectedName.includes('GÁS')
+              ) {
+                makeFolder(xa5SpecialitySelectedPathObj, 'ESPECIFICAÇÕES');
+              }
+
+              // MORE FOLDERS BY SPECIALITY
+
+              if (xa5SpecialitySelectedName.includes('ESTRUTURA')) {
+                for (var j = 0; j < buildingObjects.length; j++) {
+                  makeFolder(cypecadFolderPathObj, buildingObjects[j]);
+                }
+              }
+
+              // ADD MORE FOLDERS IN ESTIMATE FOLDER
+              // XDXFAP210302A1
+
+              if (invoiceCs[4] == 'A' && invoiceCs[2] != 'W') {
+                if (!xa5SpecialitySelectedName.includes('ESTRUTURA') && !xa5SpecialitySelectedName.includes('HIDRÁULICA')) {
+                  const { folderPathObj: estimateSpecialityFolderPathObj } = makeFolder(
+                    Path(getPathStrsFromPathObjs([estimateFolder])[0]),
+                    xa5SpecialitySelectedName
+                  );
+
+                  makeFolder(estimateSpecialityFolderPathObj, 'QUANTIDADES CYPECAD');
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // --------------- XML PROJECT INFO
+
+      const endMmYyyyInPT = endMmStrInPT + ' ' + endYyyy;
+
+      const object4ImagesAndVideoAndDrawingsUpper = object4ImagesAndVideoAndDrawings.toUpperCase();
+      const projectSiteUpper = projectSite.toUpperCase();
+
+      ctx.apps.finderApp.duplicate(Path(xa5XmlProjInfoTemplatePathStr), {
+        to: temp.folderPathObj,
+      });
+      var xa5XmlProjInfoTemplatePathStrNew = temp.folderPathStr + '/X5 - PROJECT INFO TEMPLATE.xml';
+
+      var projectInfoXml = readFile(xa5XmlProjInfoTemplatePathStrNew);
+
+      projectInfoXml = projectInfoXml.replace('mmStrAndYyyy', endMmYyyyInPT);
+      projectInfoXml = projectInfoXml.replace('XXXFAXXXXXX', invoiceCs);
+      projectInfoXml = projectInfoXml.replace('OBJECT_JS', object4ImagesAndVideoAndDrawingsUpper);
+      projectInfoXml = projectInfoXml.replace('20XXXXXXX', endYyyy + 'XXXXXX');
+      projectInfoXml = projectInfoXml.replace('PROJECTSITE_JS', projectSiteUpper);
+      projectInfoXml = projectInfoXml.replace('CUSTOMER_JS', customer4Documents);
+
+      writeToFile(xa5XmlProjInfoTemplatePathStrNew, projectInfoXml);
+
+      var projectInfoXmlNewName = 'X5 - PROJECT INFO UPDATED.xml';
+
+      delay(ctx.delays.d0p3); // Sem este delay Cria um XML sem preview que dá erro
+      var projectInfoXmlPathAlias = ctx.apps.seApp.aliases.byName(xa5XmlProjInfoTemplatePathStrNew);
+      projectInfoXmlPathAlias.name = projectInfoXmlNewName;
+
+      var xa5XmlProjInfoPathStrInTemporaryFolder = temp.folderPathStr + '/' + projectInfoXmlNewName;
+
+      // --------------- XML CENTRALINFO02QGIS
+
+      centralInfo02Qgis = centralInfo02Qgis.replace('END_MOTNHSTR_IN_PT', endMmYyyyInPT);
+
+      centralInfo02Qgis = centralInfo02Qgis.replace('CUSTOMER4DOCUMENTS', customer4Documents);
+
+      centralInfo02Qgis = centralInfo02Qgis.replace('OBJECT4DOCUMENTS', object4ImagesAndVideoAndDrawingsUpper);
+
+      centralInfo02Qgis = centralInfo02Qgis.replace('PROJECTSITE', projectSiteUpper);
+
+      centralInfo02Qgis = centralInfo02Qgis.replace('INVOICECS', invoiceCs);
+
+      // --------------- SAVE AND OPEN PATHSSTRS FOR PUBLISH PROJECTBYFILEANDBYPAGES
+
+      // ACHO QUE NÃO HÁ PROBLEMA 00XP é para PUBLISH E PLN NO BIMCLOUD
+      // NAO APLICA AUTOMATICAMENTE PW
+      // 🔴🔴🔴 CODE HERE NOT STARTED "161bfPutCsInBimcloudFileName"
+
+      // --------------- codeAndCustomerAndObjectAndDateSection
+      var codeAndCustomerAndObjectAndDateSection = `\n\nNOME DE PROJECTO BY FILE (BIMCLOUD*, PLN, PLA, PDF - SEM AC VERSION)\n00XP02-XXX ${ctx.ND} ${customerAndObjectAndCs4BimCloud} ${ctx.ND} ${deliveryDateYyyyMmDd}-XXXXXX-V1 ${ctx.ND} AC25`;
+
+      // --------------- urlForPublishingByFileSection
+      var urlForPublishingByFileSection =
+        '\n\nPROJECTO BY FILE (PDF) /// MAKE pdfFileFromProjectoByPages Using PDFMerger\n' + base.folderPathStr;
+
+      // --------------- urlForPublishingByPagesSection
+      var urlForPublishingByPagesSection = '\n\nPROJECTO BY PAGES (PDF)\n' + base.folderPathStr + `/${xx5DigitalProjectName}`;
+
+      // --------------- urlForPublishingSpacesSection
+
+      var urlForPublishingSpacesSection = '\n\nESPAÇOS\n' + temp.folderPathStr + '/' + spacesStr;
+
+      // --------------- urlForPublishingDWGSection
+      if (!originType.includes('DW')) {
+        var urlForPublishingDWGSection = '\n\nDWG\n' + base.folderPathStr + `/${xx5DigitalProjectName}/DWG`;
+      } else {
+        var urlForPublishingDWGSection = '';
+      }
+
+      // --------------- QGIS
+      var qgisTerrainFileNameSection = '\n\nNOME DO FICHEIRO QGIS\n' + customer4SheetOrBimCloudOrNoteWithUnderscore + '_TERRENO';
+
+      var qgisPackageFileName = '02_GEOPACKAGE';
+      var qgisPackageFileNameSection = '\n\nNOME DE GEOPACKAGE\n' + qgisPackageFileName;
+
+      var urlQGISGeopackageFolderNameSection =
+        '\n\nURL DE GEOPACKAGE\n' + temp.folderPathStr + '/' + terrainCleanStr + '/' + qgisPackageFileName + '.gpkg';
+
+      var centralInfo01ArchicadQgis =
+        '\n\n\n************** ARCHICAD' +
+        codeAndCustomerAndObjectAndDateSection +
+        urlForPublishingByFileSection +
+        urlForPublishingByPagesSection +
+        urlForPublishingDWGSection +
+        urlForPublishingSpacesSection +
+        '\n\n\n************** QGIS' +
+        qgisTerrainFileNameSection +
+        qgisPackageFileNameSection +
+        urlQGISGeopackageFolderNameSection;
+
+      var centralInfo01ArchicadQgisFileName = `X5 _ CENTRAL INFO 01 ARCHICAD + QGIS _ ${customer4SheetOrBimCloudOrNote} ${invoiceCs}.txt`;
+
+      var centralInfo02QgisFileName = `X5 _ CENTRAL INFO 02 QGIS _ ${customer4SheetOrBimCloudOrNote} ${invoiceCs}.txt`;
+
+      var centralInfo01ArchicadQgisPathStr = temp.folderPathStr + '/' + centralInfo01ArchicadQgisFileName;
+
+      var centralInfo02QgisPathStr = temp.folderPathStr + '/' + centralInfo02QgisFileName;
+
+      writeToFile(centralInfo01ArchicadQgisPathStr, centralInfo01ArchicadQgis);
+
+      writeToFile(centralInfo02QgisPathStr, centralInfo02Qgis);
+      delay(ctx.delays.d0p3);
+
+      var centralInfo01ArchicadQgisTxtOpen = textEditApp.open(Path(centralInfo01ArchicadQgisPathStr));
+
+      // 🔴 REVEAL TXT AND XML // AGRUPADOS AQUI PARA INVERTER A SEQUÊNCIA TXT AND XML
+
+      delay(ctx.delays.d0p3);
+      revealItem(temp.folderPathStr + '/' + projectInfoXmlNewName, 'reveal');
+      delay(ctx.delays.d0p3);
+
+      // --------------- SAVE BUILDINGS OBJECTS AND URLS FOR PUBLISHING BY PAGES
+
+      if (invoiceCs.slice(4, 6) == 'AP') {
+        var buildingObjectsText = '\nEDIFICAÇÕES\n' + buildingObjects.join('\n');
+        var buildingObjectsTextPathStr = xa5FolderInXProdutionPathStr + '/EDIFICAÇÕES.txt';
+
+        writeToFile(buildingObjectsTextPathStr, buildingObjectsText);
+        delay(ctx.delays.d0p3);
+        revealItem(buildingObjectsTextPathStr, 'reveal-closeTab');
+
+        moveItems([xa5XmlProjInfoPathStrInTemporaryFolder], xa5FolderInXProdutionPathStr);
+      }
+    }
+  }
+
+  const updatedFlow = {
+    ...flow,
+    collected: {
+      customerAndObjectInfo,
+
+      // customer4Documents,
+      // customer4SheetOrBimCloudOrNote,
+      // object4DocumentsAndImagesAndFolderAndExtras,
+      // object4FoldersAndExtras,
+      // object4Documents,
+      // object4FoldersAndExtrasUpper,
+      company,
+      quoteCs,
+      invoiceCs,
+      projectSite,
+      customer4Xero,
+      deadlineWithUnit,
+      genderOptionsStr,
+      intervention,
+      customerGroup,
+      contractManager,
+      propLocal,
+      buildingObjectsStr,
+      durationInputWithUnit,
+      needsHMTLStr,
+      siteID,
+      chargedPercentage,
+      quoteAmountApproved,
+      percentageStr,
+      customerAndObjectAndCs4BimCloud,
+      partner,
+      xdimPrice,
+      partnerPrice,
+      otherInfo4Folders,
+
+      dates: {
+        startDate: {
+          startDateTextAndDeliveryTime,
+          startDd,
+          startMm,
+          startMmStr,
+          startYyyy,
+        },
+        endDate: {
+          endYyyy,
+          endMm,
+          endDd,
+          endMmStrInPT,
+          endMmStr,
+        },
+        dateFoldersAndDocumentsBasicDatetime,
+      },
+
+      folderListInfoTrackESCREVER,
+
+      docNumXA5,
+      projSheetName,
+      genderOptions,
+      siteDimensions,
+      docNumXG5,
+
+      folders: {
+        base,
+        temp,
+      },
+    },
+  };
+
+  runCommon({ ctx, flow: updatedFlow });
+}
+
+function runBuilding({ ctx, flow }) {
+  const { originType, service, disciplineC1, serviceC1 } = ctx.mission;
+
+  const provinceInfo = ctx.selection.provinceInfo;
+  const provinceInfoItems = provinceInfo.split(' | ');
+
+  const { yearY4, monthM2, dayD2 } = ctx.dates.now;
+
+  const {
+    dateFoldersAndDocumentsBasicDatetime,
+    dateFoldersAndDocumentsISO8601,
+    dateFoldersAndDocuments,
+    yyDateFoldersAndDocuments,
+  } = ctx.dates.generated;
+
+  const { numXG5PathObj, controlSchedulesFilePathStr } = ctx.paths;
+
+  const { helpCustomerFolderName, controlSchedulesFileNameWithExt } = ctx.names;
+
+  const managerId = flow.managerId;
+
+  // var disciplineC1 = discipline[0];
+  var originServiceCode = flow.partnerId + originType.match(/\((\w*)\)/)[1];
+  // var serviceC1 = service[0];
+
+  var serviceC1AndDisciplineC1And5 = disciplineC1 + '5' + serviceC1;
+
+  var serviceCode = originServiceCode + 'F' + disciplineC1 + serviceC1;
+
+  var serviceCodeQuote = 'C' + disciplineC1 + serviceC1;
+
+  /* if (provinceInfoItems.length > 1) {
+    var provinceNumbered = provinceInfo.split(' | ')[0];
+  } else {
+    var provinceNumbered = provinceInfo;
+  } */
+
+  const provinceNumbered = provinceInfoItems[0];
+
+  var provCode = addZero(Number(provinceNumbered.split('. ')[0]));
+
+  var provAndNumberAndSiteAndFoldersItems = provAndNumberAndSiteAndFolders(
+    ctx.selection.destPathStr,
+    serviceCode,
+    provCode,
+    'Factura',
+    yyDateFoldersAndDocuments
+  ).split(' / ');
+
+  var invoiceCs = provAndNumberAndSiteAndFoldersItems[0]; // ANTES 1
+  var folderListInfo = provAndNumberAndSiteAndFoldersItems[1]; // ANTES 2
+  var folderListInfoItems = folderListInfo.split(' | ');
+
+  // Split to remove quoteFolderStr a partir da 2ª Factura, se for Factura directa
+  var folderListInfoTrackESCREVER = folderListInfoItems[1].split(' | ')[0];
+
+  var invoiceCsL = invoiceCs.length;
+
+  if (invoiceCs[invoiceCsL - 2] == 'A' || invoiceCs[invoiceCsL - 2] == 'T') {
+    var folderListInfoTrackESCREVER = 'ESCREVER';
+
+    var mainFolderName4ExtraWorkCs = folderListInfoItems[1];
+    var selectedFolderStr = folderListInfoItems[2];
+
+    var mainFolderStr = selectedFolderStr + '/' + mainFolderName4ExtraWorkCs;
+  }
+
+  xeroCompanyWebpage(invoiceCs);
+
+  // var managerId = getConsultancyManagerId(flow.partnerId);
+
+  var docNumXG5 = ctx.apps.numbersApp.open(numXG5PathObj);
+
+  let customerAndObjectInfo = {};
+
+  if (folderListInfoTrackESCREVER == 'ESCREVER') {
+    ctx.apps.currentApp.activate();
+
+    var company = getCompanyFromCs(invoiceCs);
+    var intervention = getIntervention(invoiceCs);
+
+    var { isValidUseThisSiteForProjectStr, projectSite, propLocal, siteInfoForMinistries } = getProjectSite(provinceInfoItems);
+
+    var siteID = getSiteID(projectSite, flow.partnerId, managerId);
+
+    var needsHMTLStr = 'null';
+    var buildingObjectsStr = '—';
+    var durationInputWithUnit = getDurationInputWithUnit(invoiceCs, 'Duração\n', '');
+
+    if (originType == 'Concurso Limitado (CL)') {
+      var manage3QuotesStatus = getManage3QuotesStatus();
+    }
+
+    if (originType == 'Concurso Limitado (CL)' || originType == 'Concurso Público (CP)') {
+      var helpCustomerStatus = getHelpCustomerStatus();
+    }
+
+    var quoteAmountApproved = getQuoteAmountApproved(ctx);
+
+    // XDXFAP221001
+    if (invoiceCs[invoiceCsL - 2] == 'A' || invoiceCs[invoiceCsL - 2] == 'T') {
+      // Substituir F por C
+      var quoteCs = invoiceCs.slice(0, 3) + 'C' + invoiceCs.slice(4, invoiceCsL.length);
+    } else {
+      var quoteNumberD = folderListInfoItems[3];
+
+      // Primeira cotação, se for primeira Factura (Directa)
+      if (quoteNumberD == undefined) {
+        var quoteNumberD = '1';
+      }
+
+      var quoteCs = originServiceCode + serviceCodeQuote + yyDateFoldersAndDocuments + provCode + quoteNumber(quoteNumberD);
+    }
+
+    customerAndObjectInfo = customerAndObject(serviceCode, siteInfoForMinistries);
+
+    var {
+      customerType,
+      ministryOrProvinceAndOrPrivateCustomer,
+      provDirOrNatServiceOrEmpty4PrivateCustomer,
+      customer4Documents,
+      objectOptions: {
+        object4Documents,
+        // object4ImagesAndVideoAndDrawings,
+        object4FoldersAndExtras,
+        object4FoldersAndExtrasUpper,
+        object4DocumentsAndImagesAndFolderAndExtras,
+      },
+      customer4Folders,
+      customer4SheetOrBimCloudOrNote,
+    } = customerAndObjectInfo;
+
+    if (customerType == 'Estado') {
+      var ministryOrProvince = ministryOrProvinceAndOrPrivateCustomer;
+
+      var contractManager = capitalizeText(contractManagerFunc(ministryOrProvince, customer4Documents), 'WithExclusions');
+    } else if (customerType == 'Empresa Privada' || customerType == 'Individual') {
+      var contractManager = '—';
+    }
+
+    var genderOptionsStr = '—';
+
+    if (customerType == 'Individual') {
+      var customerGroup = 'Individual';
+    } else {
+      // "Estado" or "Empresa Privada"
+      var customerGroup = 'Empresa';
+    }
+
+    var otherInfo4Folders = workInfo(object4FoldersAndExtrasUpper, isValidUseThisSiteForProjectStr, projectSite, quoteCs);
+
+    if (manage3QuotesStatus == 'Sim') {
+      var otherInfo4Folders = otherInfo4Folders + ' (3Q)';
+    }
+
+    if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+      var partnershipItems = partnership('Factura', quoteAmountApproved).split(' | ');
+
+      var partner = partnershipItems[0];
+      var partnerPrice = partnershipItems[1];
+      var xdimPrice = partnershipItems[2]; // Igual a quoteAmountApproved
+      var percentageStr = partnershipItems[3];
+    }
+
+    var {
+      chargedPercentage,
+      percentageWithSymbol: chargedPercentageWithSymbol,
+      chargedPercentageWithSymbolAndSpace,
+    } = chargePercentage(quoteCs, flow.partnerId, managerId);
+
+    var customer4Xero = generateCustomerForXero(customer4Folders, customer4Documents);
+
+    // var object4FoldersAndExtrasUpper = generateObjectNameForNeedsInXero(otherInfo4Folders);
+  } else {
+    var company = getCompanyFromCs(invoiceCs);
+
+    // --------------- GET QUOTE DATE & AMOUNT
+
+    var quoteFolderName = folderListInfoItems[1];
+    var selectedFolderStr = folderListInfoItems[2];
+
+    var quoteFolderStr = selectedFolderStr + '/' + quoteFolderName;
+
+    var xdimAndPartnerQuoteFolderNamesItems = xdimAndpartnerQuoteFolderNames(ctx, flow, originType, quoteFolderStr).split(' / ');
+
+    var xdimQuoteFolder = xdimAndPartnerQuoteFolderNamesItems[0];
+    var quoteDate = xdimQuoteFolder.match(/\d{8}/)[0];
+
+    var quoteAmountApproved = xdimQuoteFolder.match(/C(\d[,.0-9]*)/)[1];
+
+    if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+      var partnerQuoteFolder = xdimAndPartnerQuoteFolderNamesItems[1];
+      var percentageStr = partnerQuoteFolder.match(/\s(\d\d?%.*)\s\|/)[1];
+      var partner = partnerQuoteFolder.split(' ' + percentageStr)[0].split(' S1Q ')[1];
+      var partnerPrice = partnerQuoteFolder.split(percentageStr + ' | C')[1];
+
+      var xdimPrice = quoteAmountApproved;
+    }
+
+    // ---------------
+
+    var quoteFolderItems = folderListInfoItems[1].split(` ${ctx.ND} `);
+
+    var quoteCs = quoteFolderItems[1];
+    var customer4Folders = quoteFolderItems[2];
+    var otherInfo4Folders = quoteFolderItems.slice(3, 6).join(` ${ctx.ND} `);
+
+    // Nesta função precisamos de customer4Documents apenas para usar em "XERO DIRECT INVOICE", se for DX, CL & CP
+
+    // var docNumXG5 = ctx.apps.numbersApp.open(numXG5PathObj);
+
+    // var customerAndObjectItems = getCustomerAndObject(docNumXG5, quoteCs, invoiceCs, dateFoldersAndDocuments).split(" | ")
+
+    customerAndObjectInfo = getCustomerAndObject(docNumXG5, quoteCs, invoiceCs, dateFoldersAndDocumentsBasicDatetime);
+
+    var {
+      customer4Documents,
+      customer4SheetOrBimCloud: customer4SheetOrBimCloudOrNote,
+      objectOptions: {
+        object4Documents,
+        // object4ImagesAndVideoAndDrawings,
+        object4FoldersAndExtras,
+        object4FoldersAndExtrasUpper,
+        object4DocumentsAndImagesAndFolderAndExtras,
+      },
+      projectSite,
+      siteID,
+      genderOptions,
+      intervention,
+      customerGroup,
+      contractManager,
+      propLocal,
+      needsHMTLStr,
+      buildingObjectsStr,
+      deadlineWithUnit,
+      customer4Xero,
+      // object4FoldersAndExtrasUpper,
+    } = customerAndObjectInfo;
+
+    var durationInputWithUnit = convertDeadlineToDaysWithUnits(deadlineWithUnit);
+  }
+
+  jointVentureDwJ5XAlert(invoiceCs, 'Factura', managerId);
+
+  var invoiceCsAndCustomer = invoiceCsAndCustomer2Write(invoiceCs, customer4Folders);
+
+  // Number(dayD2).toString() / Para eliminar 0 if dayD2 < 10
+  var ddEntry = addZero(dialog('Dia (início) - Previsão', Number(dayD2).toString()));
+  var mmEntry = addZero(dialog('Mês (início) - Previsão', Number(monthM2).toString()));
+
+  var startDateStr = dialog('Data (início) - Previsão', mmEntry + '/' + ddEntry + '/' + yearY4);
+
+  var startDate = new Date(startDateStr);
+  var startDateIntact = new Date(startDateStr);
+  var startDateIntact2 = new Date(startDateStr);
+
+  /*     var endDateNumItems = offsetDateByInput(invoiceCs, startDate, 'Duração', durationInputWithUnit, 'No').split(' | ');
+
+    var endDateNum = Number(endDateNumItems[0]);
+    //var duration = endDateNumItems[1]
+    //var durationUnit = endDateNumItems[2] */
+
+  var {
+    newDateNumStr,
+    // offset: duration,
+    // offsetUnit: durationUnit,
+  } = offsetDateByInput(invoiceCs, startDate, 'Duração', durationInputWithUnit, 'No');
+
+  var endDateNum = Number(newDateNumStr);
+
+  /// Based on startDate
+  var startMm = addZero(startDateIntact.getMonth() + 1);
+  var startMmStr = startDateIntact.toLocaleString('en', { month: 'long' }); // For Xero Invoice
+  var startDd = addZero(startDateIntact.getDate());
+  var startYyyy = startDateIntact.getFullYear().toString();
+
+  /// Based on startDate plus 1 Month
+  // +2 (+1 correção de 0 start e +1 mais 1 mês)
+  var startDatePlus1MCal = startDateIntact2.setMonth(startDateIntact2.getMonth() + 2);
+  var startDatePlus1M = new Date(startDatePlus1MCal);
+
+  var startMmPlus1M = addZero(startDatePlus1M.getMonth());
+
+  var startDdPlus1M = addZero(startDatePlus1M.getDate());
+  var startYyyyPlus1M = startDatePlus1M.getFullYear().toString();
+
+  // Se coincidir Dezembro considera mês "00"
+  if (startMmPlus1M == '00') {
+    var startMmPlus1M = '12';
+    var startYyyyPlus1M = (Number(startYyyyPlus1M) - 1).toString();
+  }
+
+  /// Based on endDate
+  var endDate = new Date(endDateNum);
+
+  var endMm = addZero(endDate.getMonth() + 1);
+  var endMmStr = endDate.toLocaleString('en', {
+    month: 'long',
+  }); // For Xero Invoice
+  var endDd = addZero(endDate.getDate());
+  var endYyyy = endDate.getFullYear().toString();
+
+  var endDateStrFormatted = endYyyy + endMm + endDd;
+
+  /// Based on endDate plus 1 Year
+  //var endDatePlusPerfGuarPeriodCalItems = offsetDateByInput(invoiceCs, endDate, "Prazo de garantia de boa execução", "12m", "Yes").split(" | ")
+
+  /*  // Sendo "Yes" durationD não é útil, será usado invoiceCs para determinar
+    var endDatePlusPerfGuarPeriodCalItems = offsetDateByInput(
+      invoiceCs,
+      endDate,
+      'Prazo de garantia de boa execução',
+      '',
+      'Yes'
+    ).split(' | ');
+
+    var endDatePlusPerfGuarPeriodCal = Number(endDatePlusPerfGuarPeriodCalItems[0]); */
+
+  // Sendo "Yes" durationD não é útil, será usado invoiceCs para determinar
+  //
+
+  var {
+    newDateNumStr,
+    // offset: duration,
+    // offsetUnit: durationUnit,
+  } = offsetDateByInput(invoiceCs, endDate, 'Prazo de garantia de boa execução', '', 'Yes');
+
+  var endDatePlusPerfGuarPeriodCal = Number(newDateNumStr);
+
+  var endDatePlusPerfGuarPeriod = new Date(endDatePlusPerfGuarPeriodCal);
+
+  var endMonthPlusPerfGuarPeriod = addZero(endDatePlusPerfGuarPeriod.getMonth() + 1);
+  var endDayPlusPerfGuarPeriod = addZero(endDatePlusPerfGuarPeriod.getDate());
+  var endYearPlusPerfGuarPeriod = endDatePlusPerfGuarPeriod.getFullYear().toString();
+
+  // ----------- More date code
+
+  var { dateY4M2D2__H2M2S2: dateY4M2D2__H2M2S2_3daysAfter } = formatDateV3(
+    new Date(
+      offsetDateByComponents(new Date(dateFoldersAndDocumentsISO8601), {
+        days: 3,
+      }).newDateNumStr
+    )
+  ).formats;
+
+  var { dateY4M2D2__H2M2S2: dateY4M2D2__H2M2S2_5daysAfter } = formatDateV3(
+    new Date(
+      offsetDateByComponents(new Date(dateFoldersAndDocumentsISO8601), {
+        days: 5,
+      }).newDateNumStr
+    )
+  ).formats;
+
+  var { dateY4M2D2__H2M2S2: dateY4M2D2__H2M2S2_10daysAfter } = formatDateV3(
+    new Date(
+      offsetDateByComponents(new Date(dateFoldersAndDocumentsISO8601), {
+        days: 10,
+      }).newDateNumStr
+    )
+  ).formats;
+
+  if (originType.includes('DW')) {
+    var folderEntregaDefinDate = endDateStrFormatted;
+  } else {
+    var folderEntregaDefinDate = endYearPlusPerfGuarPeriod + endMonthPlusPerfGuarPeriod + endDayPlusPerfGuarPeriod;
+  }
+
+  var folderInicioDate = startYyyy + startMm + startDd;
+  // var folderConsignDate = startYyyyPlus1M + startMmPlus1M + 'XX';
+  var folderConsignDate = dateY4M2D2__H2M2S2_5daysAfter;
+  // var folderAdiantDate = startYyyy + startMm + 'XX';
+  var folderAdiantDate = dateY4M2D2__H2M2S2_10daysAfter;
+  var folderRelatorio1Date = startYyyyPlus1M + startMmPlus1M + startDdPlus1M;
+  var folderManualDaObraDate = endDateStrFormatted;
+  var folderEntregaProvDate = endDateStrFormatted;
+
+  // -----------
+
+  const startDateBuilding = `${startYyyy}-${startMm}-${startDd}`;
+  var stratStartDateBuildingISO8601 = `${startDateBuilding}T07:30:00`;
+  var endStartDateBuildingISO8601 = `${startDateBuilding}T08:30:00`;
+
+  const endDateBuilding = `${endYyyy}-${endMm}-${endDd}`;
+  var startEndDateBuildingISO8601 = `${endDateBuilding}T07:30:00`;
+  var endEndDateBuildingISO8601 = `${endDateBuilding}T08:30:00`;
+
+  const endDatePlusPerfGuarPeriodBuilding = `${endYearPlusPerfGuarPeriod}-${endMonthPlusPerfGuarPeriod}-${endDayPlusPerfGuarPeriod}`;
+  var startEndDatePlusPerfGuarPeriodISO8601 = `${endDatePlusPerfGuarPeriodBuilding}T07:30:00`;
+  var endEndDatePlusPerfGuarPeriodISO8601 = `${endDatePlusPerfGuarPeriodBuilding}T08:30:00`;
+
+  // -----------
+
+  // Does not use dateFoldersAndDocuments like Cotação and Arquitectura
+  var issueDateAndDueDate = startYyyy + startMm + startDd + '-' + endYyyy + endMm + endDd;
+
+  alert(
+    'Datas de entregas (monthM2/dayD2/yearY4)',
+    'Provisória ' +
+      endMm +
+      '/' +
+      endDd +
+      '/' +
+      endYyyy +
+      '\nDefinitiva ' +
+      endMonthPlusPerfGuarPeriod +
+      '/' +
+      endDayPlusPerfGuarPeriod +
+      '/' +
+      endYearPlusPerfGuarPeriod
+  );
+
+  if (flow.partnerId == 'J') {
+    var consultancyManagerIdToFolder = ' ' + managerId;
+  } else {
+    var consultancyManagerIdToFolder = '';
+  }
+
+  if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+    var subNameListPartnership = [
+      'FACTURA' +
+        consultancyManagerIdToFolder +
+        ' ' +
+        dateFoldersAndDocuments +
+        ' | F' +
+        xdimPrice +
+        chargedPercentageWithSymbolAndSpace,
+      partner + ' ' + percentageStr + ' | F' + partnerPrice,
+    ];
+  }
+
+  const controlSchedulesFolderName = `MAPAS DE CONTROLO`;
+
+  if ((flow.partnerId == 'J' && managerId == 'J5C') || flow.partnerId == 'N') {
+    var subNameList = subNameListPartnership;
+  } else {
+    const obfuscatedAmount = obfuscateAmount(' | F' + quoteAmountApproved);
+
+    var xd5Folder = 'XD5' + consultancyManagerIdToFolder + ' ' + dateFoldersAndDocumentsBasicDatetime + obfuscatedAmount;
+
+    var subNameListComum = ['+ TEMPORARY', xd5Folder];
+
+    if (originType.includes('DW')) {
+      var subNameListADirectoDW = subNameListComum.concat(['CADERNETA']);
+      var subNameList = subNameListADirectoDW;
+    } else {
+      var subNameListCLimitadoCPublicoADirectoDX = subNameListComum.concat([
+        `+ 🔴 SOLICITAR CONTRATO ASSINADO & VISADO PELO TA`,
+        `CRONOGRAMA`,
+        `CRONOGRAMA FF`,
+        `LISTA DESTINATÁRIOS`,
+        `LICENÇA DE CONSTRUÇÃO`,
+        `LIVRO DA OBRA`,
+        `MACIÇO INAUGURAL`,
+        `MANUAL DA OBRA`,
+        controlSchedulesFolderName,
+        `PLACA DA OBRA`,
+      ]);
+
+      if (service == 'Empreitada') {
+        var subNameList = subNameListCLimitadoCPublicoADirectoDX.concat(['+ RECIBOS (TEMPORARY ATÉ REC5 FINAL)']);
+      } else if (service == 'Fiscalização') {
+        var subNameList = subNameListCLimitadoCPublicoADirectoDX;
+      }
+    }
+  }
+
+  const base = makeFolder(
+    Path(ctx.selection.destPathStr),
+    `Y ${ctx.ND} ${invoiceCs} ${ctx.ND} ${customer4Folders} ${ctx.ND} ${otherInfo4Folders}`
+  );
+
+  for (var i = 0; i < subNameList.length; i++) {
+    var folderName = subNameList[i];
+
+    const {
+      folder: thisFolder,
+      folderPathObj: thisFolderPathObj,
+      folderPathStr: thisFolderPathStr,
+    } = makeFolder(base.folderPathObj, folderName);
+
+    if (folderName === xd5Folder) {
+      var folder4QuoteFolder = thisFolder;
+
+      var xx5DigitalList = [
+        `${folderRelatorio1Date} AMOSTRAS`,
+        `${folderConsignDate} PROJECTO V1 (ORIGINAL)`,
+        `${folderInicioDate} INÍCIO`,
+        `${folderEntregaDefinDate} ENTREGA - DEFINITIVA`,
+        `${folderAdiantDate} ADIANTAMENTO 20%`,
+        `${folderConsignDate} AUTO DE CONSIGNAÇÃO (Y) / (DEPOIS DE ADIANTAMENTO?)`,
+        `${folderRelatorio1Date} RELATÓRIO - PROGRESSO 1`,
+        `${folderEntregaProvDate} ENTREGA - PROVISÓRIA`,
+        `${folderEntregaProvDate} RETENÇÃO DA GARANTIA PELA BOA EXECUÇÃO (5%)`,
+      ];
+
+      for (var j = 0; j < xx5DigitalList.length; j++) {
+        makeFolder(thisFolderPathObj, xx5DigitalList[j]);
+      }
+
+      if (managerId == 'J5X') {
+        // Excludes "FACTURA" because its name info is in X-DIM J5X (xd5Folder)
+        var subNameListPartnershipFiltered = subNameListPartnership.filter(item => !item.includes('FACTURA'));
+
+        for (var j = 0; j < subNameListPartnershipFiltered.length; j++) {
+          makeFolder(thisFolderPathObj, subNameListPartnershipFiltered[j]);
+        }
+      }
+
+      if (folderListInfoTrackESCREVER == 'ESCREVER') {
+        const { folderPathObj: thisFolder1PathObj } = makeFolder(
+          thisFolderPathObj,
+          dateY4M2D2__H2M2S2_3daysAfter +
+            ' P&C | ' +
+            issueDateAndDueDate +
+            ' | R' +
+            quoteAmountApproved +
+            '-F' +
+            quoteAmountApproved +
+            chargedPercentageWithSymbolAndSpace
+        );
+
+        // const thisFolder1PathStr = getPathStrsFromPathObjs([thisFolder1])[0];
+        // const thisFolder1PathObj = Path(thisFolder1PathStr);
+
+        if (helpCustomerStatus == 'Sim') {
+          makeFolder(thisFolderPathObj, dateY4M2D2__H2M2S2_3daysAfter + ' ' + helpCustomerFolderName);
+        }
+
+        if (service == 'Fiscalização' && manage3QuotesStatus == 'Sim') {
+          // if (manage3QuotesStatus == 'Sim') {
+          makeFolder(thisFolder1PathObj, serviceC1AndDisciplineC1And5 + 'Q1');
+          makeFolder(thisFolder1PathObj, serviceC1AndDisciplineC1And5 + 'Q2');
+          // }
+        }
+      }
+
+      if (service == 'Fiscalização') {
+        makeFolder(thisFolderPathObj, dateY4M2D2__H2M2S2_3daysAfter + '-HHMMSS GARANTIA DEFINITIVA');
+      } else if (service == 'Construção' || service == 'Empreitada') {
+        makeFolder(thisFolderPathObj, 'LOGÍSTICA');
+        makeFolder(thisFolderPathObj, 'MESTRES');
+
+        if (service == 'Empreitada') {
+          makeFolder(thisFolderPathObj, 'SUBCONTRATAÇÃO_X5');
+        }
+      }
+    }
+
+    if (service == 'Fiscalização') {
+      if (folderName == folderAdiantDate + ' ' + 'ADIANTAMENTO 20%') {
+        makeFolder(thisFolderPathObj, 'EMPREITEIRO');
+        makeFolder(thisFolderPathObj, 'X-DIM (FORA AQUI)');
+      }
+
+      if (folderName == controlSchedulesFolderName) {
+        ctx.apps.finderApp.duplicate(Path(controlSchedulesFilePathStr), { to: thisFolderPathObj });
+
+        var controlSchedulesFile = ctx.apps.seApp.aliases.byName(`${thisFolderPathStr}/${controlSchedulesFileNameWithExt}`);
+
+        controlSchedulesFile.name = `YYYYDDMM-HHMMSS-V1 _ MAPAS DE CONTROLO ${invoiceCs}.numbers`;
+      }
+    }
+  }
+
+  // // --------------- MOVE QUOTE INFO TO WORK FOLDER
+
+  if (folderListInfoTrackESCREVER != 'ESCREVER') {
+    if ((flow.partnerId == 'J' && managerId == 'J5C') || flow.partnerId == 'N') {
+      // Creating folder4QuoteFolder here because does not use regular folders where this folder is created inside "… GESTÃO" or similar folder
+      var folder4QuoteFolder = base;
+    }
+
+    quoteFolderProcessing(ctx, quoteDate, quoteFolderStr, folder4QuoteFolder, issueDateAndDueDate);
+  }
+
+  // -------------- EXTRA WORK FOLDER (TRABALHOS A MAIS)
+  if (invoiceCs[invoiceCsL - 2] == 'A' || invoiceCs[invoiceCsL - 2] == 'T') {
+    makeAlias(base.folderPathObj, Path(mainFolderStr), '# ' + base.name());
+  }
+
+  const updatedFlow = {
+    ...flow,
+    collected: {
+      company,
+      customerAndObjectInfo,
+      quoteCs,
+      invoiceCs,
+
+      projectSite,
+      customer4Xero,
+      deadlineWithUnit,
+      genderOptionsStr,
+      intervention,
+      customerGroup,
+      contractManager,
+      propLocal,
+      buildingObjectsStr,
+      durationInputWithUnit,
+      needsHMTLStr,
+      siteID,
+      chargedPercentage,
+      quoteAmountApproved,
+      percentageStr,
+      partner,
+      xdimPrice,
+      partnerPrice,
+      otherInfo4Folders,
+
+      dates: {
+        dateFoldersAndDocumentsBasicDatetime,
+        startDate: {
+          startDd,
+          startMm,
+          startMmStr,
+          startYyyy,
+
+          stratStartDateBuildingISO8601,
+          startEndDatePlusPerfGuarPeriodISO8601,
+          startEndDateBuildingISO8601,
+        },
+        endDate: {
+          endYyyy,
+          endMm,
+          endDd,
+
+          endStartDateBuildingISO8601,
+          endEndDateBuildingISO8601,
+          endEndDatePlusPerfGuarPeriodISO8601,
+        },
+      },
+
+      folderListInfoTrackESCREVER,
+
+      // ------- Building
+      invoiceCsAndCustomer,
+
+      endMmStr,
+      genderOptions,
+
+      docNumXG5,
+
+      folders: {
+        base,
+      },
+    },
+  };
+
+  runCommon({ ctx, flow: updatedFlow });
+}
+
+function runCommon({ ctx, flow }) {
+  const {
+    company,
+    customerAndObjectInfo,
+
+    quoteCs,
+    invoiceCs,
+    projectSite,
+    customer4Xero,
+    deadlineWithUnit,
+    genderOptionsStr,
+    intervention,
+    customerGroup,
+    contractManager,
+    propLocal,
+    buildingObjectsStr,
+    durationInputWithUnit,
+    needsHMTLStr: _needsHMTLStr,
+    siteID,
+    chargedPercentage,
+    quoteAmountApproved: _quoteAmountApproved,
+    percentageStr,
+    partner,
+    xdimPrice,
+    partnerPrice,
+    otherInfo4Folders,
+
+    docNumXG5,
+
+    // ------- Project
+    docNumXA5,
+    projSheetName,
+    siteDimensions,
+    customerAndObjectAndCs4BimCloud,
+
+    // ------- Building
+    invoiceCsAndCustomer,
+
+    // ------- Project & Building
+    folderListInfoTrackESCREVER,
+    genderOptions,
+
+    folders,
+  } = flow.collected;
+
+  const {
+    customerType,
+    customer4Documents,
+    objectOptions: {
+      object4Documents,
+      object4ImagesAndVideoAndDrawings,
+      object4FoldersAndExtras,
+      object4FoldersAndExtrasUpper,
+      object4DocumentsAndImagesAndFolderAndExtras,
+    },
+    customer4Folders,
+    customer4SheetOrBimCloudOrNote,
+  } = customerAndObjectInfo;
+
+  const { originType, discipline, service, isHerd } = ctx.mission;
+
+  const { p5PathStrWithSuffixP5, x5AliasQuotesPathStr, xo5AliasObrasPathObj } = ctx.paths;
+
+  let needsHMTLStr = _needsHMTLStr;
+  let quoteAmountApproved = _quoteAmountApproved;
+
+  if ((flow.kind.en === 'PROJECT' && !isHerd) || flow.kind.en === 'BUILDING') {
+    if (
+      flow.kind.en === 'PROJECT' &&
+      (invoiceCs.slice(4, 6) === 'AP' || invoiceCs.slice(4, 6) === 'UP') &&
+      (flow.partnerId == 'X' || (flow.partnerId == 'J' && flow.managerId == 'J5X'))
+    ) {
+      delay(ctx.delays.d1);
+      ctx.apps.numbersApp.activate();
+
+      var projSheet = docNumXA5.sheets[projSheetName];
+      var tableProjectInfo = projSheet.tables['Project Info'];
+
+      tableProjectInfo.cells['B1'].value = customer4Documents;
+      tableProjectInfo.cells['C1'].value = customer4SheetOrBimCloudOrNote;
+      tableProjectInfo.cells['C2'].value = invoiceCs;
+      tableProjectInfo.cells['B2'].value = object4Documents;
+      tableProjectInfo.cells['B3'].value = object4ImagesAndVideoAndDrawings;
+      tableProjectInfo.cells['B6'].value = projectSite;
+      tableProjectInfo.cells['E1'].value = customerGroup;
+      tableProjectInfo.cells['E2'].value = intervention;
+      tableProjectInfo.cells['B7'].value = flow.dates.startDate.startDateTextAndDeliveryTime;
+
+      tableProjectInfo.cells['C8'].value = flow.dates.endDate.endDd;
+      tableProjectInfo.cells['D8'].value = flow.dates.endDate.endMmStrInPT;
+      tableProjectInfo.cells['E8'].value = flow.dates.endDate.endYyyy;
+
+      // GENDER OTIONS
+      tableProjectInfo.cells['B11'].value = genderOptions[0];
+      tableProjectInfo.cells['D11'].value = genderOptions[1];
+
+      var neighborhoodWord = genderOptions[2];
+
+      if (neighborhoodWord == 'Bairro') {
+        tableProjectInfo.cells['E10'].value = 1;
+      } else if (neighborhoodWord == 'emptyBairro') {
+        tableProjectInfo.cells['E10'].value = 0;
+      }
+
+      // SITE DIMENSIONS
+      writeSiteDimensions(projSheet, siteDimensions);
+
+      numbersProjectInProcessInfoPopulate(docNumXA5, invoiceCs);
+
+      // ----- UPDATE "COORDENADAS" SHEET
+      var sheetCoordinates = docNumXA5.sheets['COORDENADAS'];
+      var coordTable = sheetCoordinates.tables['COORDENADAS - PONTOS CURVAS DE NÍVEL'];
+      coordTable.cells['E3'].value = 0; // Uncheck Correct Altitudes
+    }
+
+    // WRITE AND MERGE CUSTOMERANDCS
+    if (service == 'Construção' || service == 'Empreitada') {
+      ctx.apps.numbersApp.activate();
+      // var docNumXG5 = ctx.apps.numbersApp.open(numXG5PathObj);
+
+      docNumXG5.activeSheet.set(docNumXG5.sheets['CONTRATOS']);
+
+      var tableConstructorGeneral = docNumXG5.sheets['CONTRATOS'].tables['Table - ContractConstructorGeneral'];
+
+      var customerAndCs = invoiceCsAndCustomer.slice(12) + ' ' + invoiceCsAndCustomer.slice(0, 11);
+
+      tableConstructorGeneral.cells['C3'].value = customerAndCs;
+
+      var range4CustomerAndCS = tableConstructorGeneral.ranges['B3:C3'];
+      range4CustomerAndCS.format = 'pop up menu';
+
+      tableConstructorGeneral.cells['C3'].value = '';
+      tableConstructorGeneral.cells['C3'].format = 'text';
+
+      docNumXG5.save();
+    }
+  }
+
+  if (flow.kind.en === 'PROJECT' || flow.kind.en === 'BUILDING') {
+    if (flow.kind.en === 'PROJECT') {
+      makeAlias(folders.base.folderPathObj, folders.temp.folderPathObj, '# ' + folders.base.name());
+      delay(ctx.delays.d0p3);
+    }
+
+    if (flow.kind.en === 'BUILDING') {
+      makeAlias(folders.base.folderPathObj, xo5AliasObrasPathObj, folders.base.name());
+    }
+
+    delay(ctx.delays.d1p5);
+
+    // ----------------- WRITE INVOICE INFO
+
+    if (folderListInfoTrackESCREVER == 'ESCREVER') {
+      var tableInvoices = docNumXG5.sheets['FACTURAÇÃO'].tables['Table - Invoices'];
+
+      // Sem REPLACE em <durationInputWithUnit.replace("d", " Dias").replace("m", " Meses")>, Numbers converte 56d em 8w
+      writeCustomerAndObject(
+        tableInvoices,
+        customerType,
+        ctx.dates.dateFoldersAndDocumentsBasicDatetime,
+        invoiceCs,
+        customer4Documents,
+        customer4SheetOrBimCloudOrNote,
+        object4DocumentsAndImagesAndFolderAndExtras,
+        projectSite,
+        siteID,
+        genderOptionsStr,
+        intervention,
+        customerGroup,
+        contractManager,
+        propLocal,
+        needsHMTLStr,
+        buildingObjectsStr,
+        durationInputWithUnit.replace('d', ' dias').replace('m', ' meses'),
+        customer4Xero
+        // object4FoldersAndExtrasUpper
+      );
+    }
+
+    // ----------------- DELETE QUOTE ALIAS
+
+    var quoteAliasPathObjs = ctx.apps.seApp.folders.byName(x5AliasQuotesPathStr).files;
+
+    for (var i = 0; i < quoteAliasPathObjs.length; i++) {
+      var quoteAliasName = quoteAliasPathObjs[i].name();
+
+      if (quoteAliasName.includes(quoteCs)) {
+        ctx.apps.seApp.aliases.byName(x5AliasQuotesPathStr + '/' + quoteAliasName).delete();
+        break;
+      }
+    }
+
+    // --------------- CREATE NOTE
+
+    if (needsHMTLStr == 'null') {
+      // We get "null" string if no needs
+
+      var needsHMTLStrExtraNote = ` \n• Se for:\n"Obra integrar Code in NumXG5 - introduzir info de empreiteior em NumXG5"\n"• Urbanismo code to Get Name from QuoteTable"\n`;
+
+      if (folderListInfoTrackESCREVER == 'ESCREVER') {
+        // A5 Direct invoice
+
+        needsHMTLStr = `Necessidades: "É Direct invoice": ${needsHMTLStrExtraNote}\n\n• Ou Escrever or codeIt`;
+      } else {
+        needsHMTLStr = `Necessidades: "É Quote To invoice": ${needsHMTLStrExtraNote}`;
+      }
+    }
+  }
+
+  if (flow.kind.en === 'QUOTATION' || flow.kind.en === 'PROJECT' || flow.kind.en === 'BUILDING') {
+    if (flow.kind.en === 'QUOTATION') {
+      var cs = quoteCs;
+    } else {
+      var cs = invoiceCs;
+    }
+
+    // -------------- ARCHIVE INVOICE CONSULANCY INFO
+    var projectInfo2Archive = `\n\n${
+      ctx.dates.generated.dateFoldersAndDocuments
+    } | ${cs} | ${customer4Documents} | ${customer4SheetOrBimCloudOrNote} | ${object4DocumentsAndImagesAndFolderAndExtras} | ${projectSite} | ${genderOptionsStr} | ${intervention} | ${customerGroup} | ${contractManager} | ${propLocal} | ${buildingObjectsStr} | ${durationInputWithUnit
+      .replace('d', ' dias')
+      .replace('m', ' meses')}\n-------------- Abaixo é needsHMTLStr\n${needsHMTLStr}`;
+
+    // ARCHIVE PROJECT INFO
+    writeToFileWithAppend(
+      `${ctx.paths.inboxPathStr}/ARCHIVE - FOLDER - FACTURAÇÃO INFO - ${
+        flow.kind.pt
+        // .split('. ')[1]
+        // .toUpperCase()
+      } ${ctx.dates.now.yearY4}${ctx.dates.now.monthM2}.txt`,
+      projectInfo2Archive
+    );
+
+    // Close ARCHIVE WINDOW
+    ctx.apps.finderApp.windows[0].close();
+
+    if (flow.partnerId == 'X' || (flow.partnerId == 'J' && flow.managerId == 'J5X')) {
+      var processedHtmlInfo = processHtmlInfo(
+        customer4Documents,
+        object4Documents,
+        cs,
+        siteID,
+        contractManager,
+        propLocal,
+        needsHMTLStr
+      );
+
+      // needsHMTLStr += "\n\n" + processedHtmlInfo
+      needsHMTLStr = `${cs[4] === 'R' ? '' : `\n\n${processedHtmlInfo}`}`;
+    }
+
+    createServiceNote(cs, customer4SheetOrBimCloudOrNote, object4FoldersAndExtras, needsHMTLStr);
+
+    let expedients = [];
+
+    const dateISO8601End = formatDateV3(
+      new Date(`${flow.dates.endDate.endYyyy}-${flow.dates.endDate.endMm}-${ctx.dates.endDate.endDd}T15:30:00`)
+    ).formats.iso8601;
+
+    if (cs[3] === 'C') {
+      expedients = generateExpedients([
+        {
+          name: 'Gerir a aprovação da Cotação',
+          dateCreated: formatDateV3(new Date()).formats.iso8601,
+          dateStart: ctx.dates.generated.dateFoldersAndDocumentsISO8601,
+          dateDue: dateISO8601End,
+          priority: 3,
+        },
+      ]);
+    }
+    if (cs[3] === 'F' && cs[5] === 'P') {
+      expedients = generateExpedients([
+        {
+          name: `Entrega ${cs.slice(4, 6) === 'AP' ? 'do Projecto' : cs.slice(4, 6) === 'UP' ? 'do Plano' : 'da Produção'}`,
+          dateCreated: formatDateV3(new Date()).formats.iso8601,
+          dateStart: ctx.dates.generated.dateFoldersAndDocumentsISO8601,
+          dateDue: dateISO8601End,
+          priority: 1,
+        },
+      ]);
+
+      // } if (cs.slice(3, 6) === 'FAP') {
+    } else if (cs[3] === 'F' && cs[5] === 'F') {
+      // Qualquer fiscalizacão
+      // Início, entrega Provisória e Definitiva
+
+      expedients = generateExpedients([
+        {
+          name: 'Início da Obra',
+          dateCreated: formatDateV3(new Date()).formats.iso8601,
+          dateStart: flow.dates.startDate.stratStartDateBuildingISO8601,
+          dateDue: flow.dates.endDate.endStartDateBuildingISO8601,
+          priority: 1,
+        },
+        {
+          name: 'Entrega Provisória',
+          dateCreated: formatDateV3(new Date()).formats.iso8601,
+          dateStart: flow.dates.startDate.startEndDateBuildingISO8601,
+          dateDue: endEndDateBuildingISO8601,
+          priority: 1,
+        },
+        {
+          name: 'Entrega Definitiva',
+          dateCreated: formatDateV3(new Date()).formats.iso8601,
+          dateStart: flow.dates.startDate.startEndDatePlusPerfGuarPeriodISO8601,
+          dateDue: flow.dates.endDate.endEndDatePlusPerfGuarPeriodISO8601,
+          priority: 1,
+        },
+      ]);
+    }
+
+    const floorsCount = 1;
+    const startStory = 1;
+    const buildings = generateBuildingsTemporayFunc(object4Documents, buildingObjectsStr, floorsCount, startStory);
+
+    addContract({
+      appleContactExtended: {
+        id: null, // ADD ID HERE update contactLib to return contacts objects not piece o info
+        firstName: null,
+        lastName: null,
+        name: null,
+        phones: [],
+        emails: [],
+        urls: [],
+        addresses: [],
+        note: null,
+        birthday: null,
+        photoUrl: null,
+      },
+      entityType: 'customer',
+      contractNumber: cs,
+      entityName: customer4SheetOrBimCloudOrNote,
+      contractName: object4FoldersAndExtras.toUpperCase(),
+      contractPercentage: parseFloat(chargedPercentage),
+      contractAmount: quoteAmountApproved ? Number(quoteAmountApproved.replace(/,/g, '')) : 0.0, // Quote is 'null'
+      contractDateCreated: formatDateV3(new Date()).formats.iso8601,
+      contractDateStart: flow.dates.generated.dateFoldersAndDocumentsISO8601,
+      contractDateDue: dateISO8601End,
+      headerInfo: {
+        customer4Xero,
+        object4FoldersAndExtrasUpper,
+        deadlineWithUnit,
+        projectSite,
+      },
+      // path: '🔴🔴🔴GetRecentFolderPathCreatedHere',
+      buildings,
+      path: base.folderPathStr,
+      payments: [],
+      expedients,
+    });
+
+    // 🔴🔴🔴🔴🔴🔴 IN THE FUTURE MAYBE I MUST REMOVE THIS JSON FILE
+    contractsDetails(
+      '',
+      'ReadInvoiceInfoAndUpdateJSON',
+      p5PathStrWithSuffixP5,
+      ['All'],
+      ['All'],
+      flow.dates.now.yearY4,
+      '',
+      '',
+      3,
+      undefined
+    );
+  }
+
+  // --------------- READ INVOICE INFO AND UPDATE JSON
+
+  // --------------- XERO DIRECT INVOICE
+
+  if (flow.kind.en === 'PROJECT' || flow.kind.en === 'BUILDING') {
+    if (
+      isHerd ||
+      originType == 'Ajuste Directo (DX)' ||
+      originType == 'Concurso Limitado (CL)' ||
+      originType == 'Concurso Público (CP)' ||
+      (invoiceCs[0] == 'J' && invoiceCs[2] == 'W' && flow.managerId == 'J5C') ||
+      flow.partnerId == 'N'
+    ) {
+      // Se payVatStatus for "Sim" será automático pois será uma das Opção DX, CL, CP
+
+      delay(ctx.delays.d0p3);
+
+      // START DATE
+      var dateDdNew = flow.dates.startDate.startDd;
+      var dateMmNew = flow.dates.startDate.startMm;
+      var dateMmShortNew = flow.dates.startDate.startMmStr.slice(0, 3);
+      var dateYyyyNew = flow.dates.startDate.startYyyy;
+
+      // END DATE
+      var dateDdDue = flow.dates.endDate.endDd;
+      var dateMmDue = flow.dates.endDate.endMm;
+      var dateMmShortDue = flow.dates.endDate.endMmStr.slice(0, 3);
+      var dateYyyyDue = flow.dates.endDate.endYyyy;
+
+      var dueDate = Number(dateDdDue) + ' ' + dateMmShortDue + ' ' + dateYyyyDue;
+
+      // PROCESS spendReceiveInvoiceBillPerson for XDIMX if J5X or flow.partnerId is X
+      // != "W" para DX, CL, CP
+      if ((invoiceCs[0] == 'J' && invoiceCs[2] != 'W') || flow.partnerId == 'X') {
+        var customer4DocumentsItems = customer4Documents.split(' ');
+
+        // 🔴🔴🔴 Aqui <customer4Documents> chega UPPERCASE mas reconhece o Xero se for isHerd. Acho que os outros também pode reconecer também.
+        if (customer4DocumentsItems.length == 1 || isHerd) {
+          var spendReceiveInvoiceBillPersonForXAndJ5X = customer4Documents;
+        } else {
+          var spendReceiveInvoiceBillPersonForXAndJ5X = capitalizeText(customer4Documents, 'WithExclusions');
+        }
+      }
+
+      if (flow.partnerId == 'J' || flow.partnerId == 'N') {
+        // Se flow.managerId == "J5X" quer dizer que tem Xero Factura usando processo Cotação > Factura pois DW usa "Create - Quote (W)"
+
+        if (invoiceCs[0] == 'J' && invoiceCs[2] == 'W' && flow.managerId == 'J5C') {
+          var spendReceiveInvoiceBillPerson = 'JointVenture (J5C)';
+
+          // Se payVatStatus for "Sim" será automático
+        } else if (invoiceCs[0] == 'J' && invoiceCs[2] != 'W') {
+          var spendReceiveInvoiceBillPerson = spendReceiveInvoiceBillPersonForXAndJ5X;
+        } else if (flow.partnerId == 'N') {
+          var spendReceiveInvoiceBillPerson = 'Negociacao (N5)';
+        }
+
+        var invoiceNumberEdition = invoiceCs + ' / ' + partner;
+        var invoiceDescrEditionLine = `${percentageStr} / ${customer4Folders} ${ctx.ND} ${otherInfo4Folders} MZN${partnerPrice}`;
+
+        quoteAmountApproved = xdimPrice;
+      } else {
+        // "Ajuste Directo (DX)", "Concurso Limitado (CL)", "Concurso Público (CP)"
+
+        var spendReceiveInvoiceBillPerson = spendReceiveInvoiceBillPersonForXAndJ5X;
+
+        var invoiceNumberEdition = invoiceCs;
+        var invoiceDescrEditionLine = otherInfo4Folders;
+      }
+
+      if (flow.kind.en === 'PROJECT') {
+        if (isHerd) {
+          var referenceEdition = 'P100'; // paymentDistribution
+        } else {
+          var referenceEdition = 'P5050'; // paymentDistribution
+        }
+      } else if (flow.kind.en === 'BUILDING') {
+        var referenceEdition = '';
+      }
+
+      if (company == 'X-DIM W') {
+        if (flow.partnerId == 'N') {
+          var account = 'Negociação';
+        } else if (flow.partnerId == 'J') {
+          var account = 'Jointventure';
+        } else if (isHerd) {
+          var account = '• Rebanho';
+        }
+
+        var taxRate = 'Taxa Venda (0%)';
+      } else if (company == 'X-DIM X') {
+        // Caracter 5 do serviço
+        // XCLFPA200701 MINT MORE DETAILSHERE
+
+        // XDWFAP220905
+
+        if (invoiceCs.slice(4, 6) == 'AP') {
+          var account = '• Arquitectura';
+        } else if (invoiceCs.slice(4, 6) == 'AE') {
+          var account = '• Empreitada';
+        } else if (invoiceCs.slice(4, 6) == 'AF') {
+          var account = '• Fiscalização';
+
+          // 🔴🔴🔴 REVER NO XERO A NUMERAÇÃO DE CODES DE VENDA - Urbanismo poderá não ser "7.2.7"
+        } else if (invoiceCs.slice(4, 6) == 'UP') {
+          var account = '• Urbanismo';
+        }
+
+        //Was "IVA VENDA" before 16% because was ony 17%
+        var taxRate = 'IVA VENDA (16%)';
+      }
+
+      var quantity = '1';
+      var unitPrice = quoteAmountApproved.replace(/,/g, '');
+
+      ctx.apps.safariApp.activate();
+      delay(ctx.delays.d0p3);
+      safariLib.openURL('https://go.xero.com/AccountsReceivable/Edit.aspx');
+      delay(ctx.delays.d5);
+
+      headerInvoice(
+        spendReceiveInvoiceBillPerson,
+        dateDdNew,
+        dateMmShortNew,
+        dateYyyyNew,
+        dueDate,
+        referenceEdition,
+        invoiceNumberEdition
+      );
+
+      new_lineSpendReceiveInvoiceBillQuote(invoiceDescrEditionLine, quantity, unitPrice, account, taxRate, 'B. Create - Invoice');
+
+      delay(ctx.delays.d1);
+
+      //safariLib.superSafari("click", "class", "words", 2, 0) // APPROVE
+      delay(ctx.delays.d0p3);
+    }
+  }
+
+  // BIMCLOUD
+
+  if (
+    flow.kind.en === 'PROJECT' &&
+    (discipline == 'Arquitectura' || discipline == 'Urbanismo') &&
+    (flow.partnerId == 'X' || (flow.partnerId == 'J' && flow.managerId == 'J5X'))
+  ) {
+    ctx.apps.safariApp.activate();
+    delay(ctx.delays.d0p3);
+
+    safariLib.openURL('http://192.168.0.81:22000');
+    delay(ctx.delays.d6); // Era d3
+
+    var forgotPasswordLinkTrack = safariLib.superSafari('get', 'class', 'link test--link-forgot-password', 0, 0);
+    delay(ctx.delays.d0p3);
+
+    if (forgotPasswordLinkTrack) {
+      menuLib.copyPaste('walter');
+      delay(ctx.delays.d0p3);
+      ctx.apps.seApp.keyCode(48);
+      delay(ctx.delays.d0p3);
+      menuLib.copyPaste('xxxxx');
+      delay(ctx.delays.d0p3);
+
+      ctx.apps.safariAppControllerP.windows[0].splitterGroups
+        .at(0)
+        .tabGroups.at(0)
+        .groups.at(0)
+        .groups.at(0)
+        .scrollAreas.at(0)
+        .uiElements.at(0)
+        .groups.at(2)
+        .groups.at(3)
+        .staticTexts.byName('Log in')
+        .click();
+      delay(ctx.delays.d1p5);
+
+      // Open directly Template (PROP _ RESIDÊNCIA 2P)
+      safariLib.openURL('http://192.168.0.81:22000/#module:project-manager&id:86C2B6F2-915E-A34C-9849-E8E9DB3C4CB1');
+    } else {
+      // Open directly Template (PROP _ RESIDÊNCIA 2P)
+      safariLib.openURL('http://192.168.0.81:22000/#module:project-manager&id:86C2B6F2-915E-A34C-9849-E8E9DB3C4CB1');
+    }
+    delay(ctx.delays.d6); //Era d5
+
+    //ctx.apps.safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[71].staticTexts.byName("Duplicate").click()
+    ctx.apps.safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[56].staticTexts
+      .byName('Duplicate')
+      .click();
+    delay(ctx.delays.d1);
+
+    // PASTE NAME AND OBJECT
+    menuLib.copyPasteWithSelectAll(customerAndObjectAndCs4BimCloud);
+
+    delay(ctx.delays.d0p3);
+
+    ctx.apps.safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[0].groups[7].staticTexts
+      .byName('01 Projectos')
+      .click();
+    delay(ctx.delays.d1);
+
+    ctx.apps.safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[0].groups[23].staticTexts
+      .byName('Duplicate')
+      .click();
+    delay(ctx.delays.d6);
+
+    alert(
+      '• ARCHICAD vai iniciar automaticamente\n• Copiou codeAndCustomerAndObjectAndDateSection & Paths (Use CloudClip) para aplicar em Publisher (Pode abrir o ficheiro Text)\n\n—\nAbrir o projecto "' +
+        customerAndObjectAndCs4BimCloud +
+        '" no BIMCloud e aplicar o XML ProjectInfo & Paths para Publisher!',
+      ``
+    );
+    delay(ctx.delays.d1);
+
+    ctx.apps.archicadApp.activate();
+
+    if (intervention != 'Construção') {
+      var interventionUpperCase = intervention.toUpperCase();
+      ctx.apps.saApp.setTheClipboardTo(interventionUpperCase);
+
+      alert('Fazer Paste de "' + interventionUpperCase + '" no Vídeo Projecto, já está no Clipborad.', '');
+    }
+
+    //textEditApp.activate() // Para activar o doc TXT de Paths para PUBLISHER
+  }
+
+  if (flow.kind.en != 'PROJECT') {
+    // if Projecto don't activate Finder, keep Archicad active
+    ctx.apps.finderApp.activate();
+  }
+}
+
+// helpers
+/* function _generateCustomerForXero(customer4Folders, customer4Documents) {
+  const { capitalizeText } = Library('documentLib');
+  if (String(customer4Folders).indexOf('&') >= 0) return capitalizeText(customer4Folders, 'WithExclusions');
+  return capitalizeText(customer4Documents, 'WithExclusions');
+} */
+
+function getSiteID(projectSite, flow) {
+  if (flow.partnerId == 'X' || (flow.partnerId == 'J' && flow.managerId == 'J5X')) {
+    const projectSiteStrItems = projectSite.split(', ');
+
+    return cfl2Str(projectSiteStrItems, 'Site ID❗️', projectSiteStrItems[0]).replace(/ /g, '_').replace(/\(|\)/g, '');
+  } else {
+    return '—';
+  }
+}
+
+function customerAndObject(serviceCode, siteInfoForMinistries, isHerd, intervention, animals) {
+  var siteInfoForMinistriesItems = siteInfoForMinistries.split(' / ');
+  var province = siteInfoForMinistriesItems[0];
+  var district = siteInfoForMinistriesItems[1];
+  var cityOrVillageAdministrativePost = siteInfoForMinistriesItems[2];
+
+  // JDWFFA
+  if (serviceCode.includes('DW')) {
+    if (serviceCode[0] == 'X') {
+      var customerType = 'Individual';
+    } else if (serviceCode[0] == 'N' || serviceCode[0] == 'J') {
+      var customerType = cfl2Str(['Estado', 'Empresa Privada', 'Individual'], 'Tipo de Cliente', 'Estado');
+    }
+  } else {
+    var customerType = cfl2Str(['Estado', 'Empresa Privada'], 'Tipo de Cliente', 'Estado');
+  }
+
+  if (customerType == 'Estado') {
+    var getMinistriesInfoItems = getMinistries(province, district, cityOrVillageAdministrativePost).split(' | ');
+
+    var ministryOrProvince = getMinistriesInfoItems[0];
+    var provincialDirectorateOrNationalService = getMinistriesInfoItems[1];
+    var provDirOrNatServiceOrEmpty4PrivateCustomer = getMinistriesInfoItems[2];
+    var customer4Documents = getMinistriesInfoItems[3];
+
+    var customer4Documents = customer4Documents.replace('(', '').replace(')', '');
+
+    // Se for Ministério usa a sigla
+    if (customer4Documents.includes('/')) {
+      var customer4Folders = customer4Documents.split(' / ')[1];
+    } else {
+      // Se for Direcção Provincial ou Serviço …
+
+      var customer4DocumentsItems = customer4Documents.split(' ');
+      var customer4DocumentsItemsL = customer4DocumentsItems.length;
+
+      if (customer4Documents.includes('SERVIÇO NACIONAL DE MIGRAÇÃO')) {
+        var customer4Folders = `SENAMI`;
+      } else if (customer4Documents.includes('SERVIÇO NACIONAL DE SALVAÇÃO PÚBLICA')) {
+        var customer4Folders = `SENSAP`;
+      } else if (customer4Documents.includes('ELECTRICIDADE DE MOÇAMBIQUE')) {
+        var customer4Folders = `EDM`;
+      } else if (customer4Documents.includes('FUNDO DE PROMOÇÃO DESPORTIVA')) {
+        var customer4Folders = `FPD`;
+
+        // 🔴 SE TIVER 3 PALAVRAS
+      } else if (customer4DocumentsItemsL == 3) {
+        alert(
+          `"${customer4Documents}"\n\n—\n• Tem 3 palavras\n• Será usado em "customer4Folders".\n• Pode configurar uma abreviatura no App5.`,
+          ``
+        );
+
+        var customer4Folders = customer4Documents;
+
+        // 🔴 SE TIVER ACIMA DE 3 PALAVRAS VAI CRIAR ABREVIATURA NO PROCESSO ABAIXO
+      } else {
+        // CRIAÇÃO DE ABREVIATURAS PARA DIRECÇÕES PROVINCIAIS & MAIS
+        // NOTE QUE CONSIDERA PALAVRAS COM MAIS DE 2 CARACTERES & USA A ÚLTIMA PALAVRA A 100%
+
+        var customer4DocumentsItems = customer4Documents.split(' ');
+        var customer4DocumentsItemsL = customer4DocumentsItems.length;
+
+        var customer4FoldersAbbreviationCollection = [];
+
+        for (var i = 0; i < customer4DocumentsItemsL; i++) {
+          var word = customer4DocumentsItems[i];
+
+          if (i == customer4DocumentsItemsL - 1) {
+            customer4FoldersAbbreviationCollection.push(' ' + word);
+          } else if (word.length > 2) {
+            customer4FoldersAbbreviationCollection.push(word[0]);
+          }
+        }
+
+        var customer4Folders = customer4FoldersAbbreviationCollection.join('');
+
+        alert(
+          `"${customer4Documents}"\n---------------\n${customer4Folders}\n\n—\n• Tem mais de 3 palavras (${customer4DocumentsItemsL}) por isso, acima foi criada <Abreviatura Automática> para "customer4Folders".\n\n• Se não for consistente, configura uma no App5.`,
+          ``
+        );
+      }
+    }
+
+    if (customer4Documents.includes('/')) {
+      // Ministério
+      var customer4Documents = customer4Documents.split(' / ')[0];
+    }
+
+    // Ministério recebe 2 vezes .toUpperCase(), acima e acim pode resolver no futuro
+    var ministryOrProvinceAndOrPrivateCustomer = ministryOrProvince.toUpperCase();
+  } else if (customerType == 'Empresa Privada' || customerType == 'Individual') {
+    // XDWCAP220901
+    // XDWCR1220903
+    // if (isHerd) {
+    //   var privateCustomer = 'Rebanho RWA';
+    // } else {
+    var filtersStr = dialog(
+      'Filtrar o cliente\n\n—\nMais de um Cliente para mesma Factura, seprar os "filtros" por vírgula!\n',
+      'cliente1'
+    );
+
+    var privateCustomer = getContactInfo(
+      filtersStr,
+      '❗️Contacto deve ser nome completo\nou "Sigla consistente"\n\n—\nSelecione o(s) contacto(s)',
+      ' & ',
+      'Folder',
+      'One',
+      'Names'
+    );
+    // }
+
+    var ministryOrProvinceAndOrPrivateCustomer = privateCustomer.toUpperCase();
+    var provDirOrNatServiceOrEmpty4PrivateCustomer = '';
+    var customer4Documents = ministryOrProvinceAndOrPrivateCustomer;
+
+    if (customer4Documents.includes('&')) {
+      // 2 CLIENTES PARA MESMA FACTURA
+
+      var customer4DocumentsPeople = customer4Documents.split(' & ');
+      var customer4DocumentsPeopleL = customer4DocumentsPeople.length;
+
+      var customer4FoldersNames = [];
+
+      for (var i = 0; i < customer4DocumentsPeopleL; i++) {
+        // customer4FoldersNames.push(customer4DocumentsPeople[i].split(' ')[0]);
+
+        const customer4DocumentsPeopleItems = customer4DocumentsPeople[i].split(' ');
+
+        const customer4FoldersName =
+          customer4DocumentsPeopleItems.length === 1
+            ? customer4DocumentsPeopleItems[0]
+            : `${customer4DocumentsPeopleItems[0]} ${customer4DocumentsPeopleItems.slice(-1)[0]}`;
+
+        customer4FoldersNames.push(customer4FoldersName);
+      }
+
+      customer4FoldersNames.sort();
+
+      var customer4Folders = customer4FoldersNames.join(' & ');
+    } else {
+      var customer4DocumentsItems = customer4Documents.split(' ');
+
+      if (customer4DocumentsItems.length <= 2) {
+        // One or two names
+        var customer4Folders = customer4Documents;
+      } else {
+        // More than two names
+        var customer4Folders = getCustomerAndCsOptions([customer4Documents], 2, 'Nome para Pastas\n', 'noCs', '');
+
+        var customer4Folders = dialog('Editar customer4Folders', customer4Folders);
+
+        // Sendo nome de único cliente, substituir ", " por " " em caso de mais de dois itens
+        var customer4Folders = customer4Folders.replace(/, /g, ' ');
+      }
+    }
+  }
+
+  if (customer4Folders.includes('&')) {
+    var customer4SheetOrBimCloudOrNote = customer4Folders;
+  } else {
+    var customer4FoldersItems = customer4Folders.split(' ');
+
+    if (customer4FoldersItems.length == 1) {
+      var customer4SheetOrBimCloudOrNote = customer4FoldersItems[0];
+    } else {
+      var customer4SheetOrBimCloudOrNote = getCustomerAndCsOptions(
+        [customer4Folders],
+        1,
+        'Nome para Sheet ou BIMCloud ou Note\n',
+        'noCs',
+        ''
+      );
+
+      var customer4SheetOrBimCloudOrNote = customer4SheetOrBimCloudOrNote.replace(/,/g, '');
+    }
+  }
+
+  if (customerType == 'Estado' || customerType == 'Empresa Privada') {
+    var objectD = 'Escrever';
+  } else {
+    if (isHerd) {
+      var objectD = 'Boi';
+    } else {
+      var objectD = 'Residência Unifamiliar';
+    }
+  }
+
+  var extraObjectTitle = '';
+
+  if (customerType == 'Empresa Privada' || customerType == 'Estado') {
+    extraObjectTitle += `\n—\nEscrever o "objecto" conforme apresentado pelo cliente❗️\n`;
+  }
+
+  if (isHerd) {
+    var prefixService = `Venda `;
+  } else {
+    // XDWFPA221007
+    // XDWFAP221007 NEW
+    if (serviceCode[5] == 'P') {
+      if (intervention.includes('Built')) {
+        var prefixService = `${intervention} de `;
+      } else {
+        var prefixService = `Projecto Executivo para ${intervention} de `;
+      }
+    } else if (serviceCode[5] == 'C') {
+      var prefixService = `${intervention} de `;
+    } else if (serviceCode[5] == 'A' || serviceCode[5] == 'E' || serviceCode[5] == 'F') {
+      if (serviceCode[5] == 'A') {
+        var service = 'Assistência Técnica';
+      }
+      if (serviceCode[5] == 'E') {
+        var service = 'Empreitada';
+      }
+      if (serviceCode[5] == 'F') {
+        var service = 'Fiscalização';
+      }
+
+      var prefixService = `${service} de ${intervention} de `;
+    }
+  }
+
+  var object = getObject(extraObjectTitle, objectD, isHerd, animals);
+
+  if (intervention.includes('Built')) {
+    var prefixService = `Projecto As-Built de `;
+  }
+
+  if (object == 'Escrever') {
+    var object = dialog(`Escreve o objecto para "${prefixService}"`, ``);
+  } /* else {
+  } */
+  var objectDescription = prefixService + object;
+
+  if (isHerd) {
+    var storyNum = '';
+  } else {
+    // Resid é Residência - não reconhece acentuação
+    // Pens Pensão
+    // Escrit Escritórios
+    if (
+      objectDescription.includes('Residência') ||
+      objectDescription.includes('Escritórios') ||
+      objectDescription.includes('Pensão') ||
+      objectDescription.includes('Comercial')
+    ) {
+      var storyNumD = '2';
+    } else if (
+      objectDescription.includes('Monumento') ||
+      objectDescription.includes('Barraca') ||
+      objectDescription.includes('Vedação') ||
+      objectDescription.includes('Depósito')
+    ) {
+      var storyNumD = '0';
+    } else {
+      var storyNumD = '1';
+    }
+
+    var storyNum = cfl2Str(
+      ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'],
+      'Número de Pisos\n\n—\n0 é para situações que o objecto não tem pisos. Ex: Vedação',
+      storyNumD
+    );
+
+    var storyNum = storyNum == '0' ? '' : '(' + storyNum + 'P)';
+  }
+
+  var object4Documents = objectDescription;
+  // var object4FoldersAndExtrasFull = objectDescription + storyNum;
+  var object4FoldersAndExtrasFull = `${objectDescription} ${storyNum}`;
+
+  if (isHerd) {
+    var object4FoldersAndExtras = object4FoldersAndExtrasFull;
+  } else {
+    var object4FoldersAndExtras = objectSlicer(object, object4FoldersAndExtrasFull, 'object4FoldersAndExtras');
+  }
+
+  if (serviceCode.slice(4, 6) == 'AP' || serviceCode.slice(4, 6) == 'UP') {
+    var object4ImagesAndVideoAndDrawings = objectSlicer(object, object4FoldersAndExtrasFull, 'object4ImagesAndVideoAndDrawings');
+  } else {
+    var object4ImagesAndVideoAndDrawings = 'notNecessary';
+  }
+
+  /*  if (isHerd) {
+    var object4FoldersAndExtras = object4FoldersAndExtras;
+  } else {
+    var object4FoldersAndExtras = objectSlicer(object, object4FoldersAndExtrasFull, 'object4FoldersAndExtras');
+  } */
+
+  const object4DocumentsAndImagesAndFolderAndExtras =
+    object4Documents + ' / ' + object4ImagesAndVideoAndDrawings + ' / ' + object4FoldersAndExtras;
+
+  return {
+    customerType,
+    ministryOrProvinceAndOrPrivateCustomer,
+    provDirOrNatServiceOrEmpty4PrivateCustomer,
+    customer4Documents,
+    objectOptions: {
+      object4Documents,
+      object4ImagesAndVideoAndDrawings,
+      object4FoldersAndExtras,
+      object4FoldersAndExtrasUpper: object4FoldersAndExtras.toUpperCase(),
+      object4DocumentsAndImagesAndFolderAndExtras,
+    },
+    customer4Folders,
+    customer4SheetOrBimCloudOrNote,
+  };
+}
+
+function getBuildingObjectsStr(cs, flow, object4Documents) {
+  // XDWFAP221005
+
+  const isResidential = object4Documents.includes('Residência Unifamiliar');
+
+  // if (cs.slice(4, 6) == 'AP' && (flow.managerId == 'X5X' || flow.managerId == 'J5X')) {
+  if (cs[4] === 'A' && (flow.managerId === 'X5X' || flow.managerId === 'J5X')) {
+    var buildingObjectsStrInput = dialog(
+      `Objectos`,
+      `G101 PAISAGISMO, G201 VEDAÇÃO, G301 EDIFÍCIO PRINCIPAL, G302 ANEXO${isResidential ? '' : ', G303 GUARITA'}`
+    );
+
+    return ensureSpaceAfterCommaInStr(buildingObjectsStrInput);
+  } else {
+    return '—';
+  }
+}
+
+function generateCustomerForXero(customer4Folders, customer4Documents) {
+  if (customer4Folders.includes('&')) {
+    return capitalizeText(customer4Folders, 'WithExclusions'); // Era NoExclusions
+  } else {
+    return capitalizeText(customer4Documents, 'WithExclusions'); // Era NoExclusions
+  }
+}
+
+function contractManagerFunc(ministryOrProvince, customer4Documents) {
+  // 🔴 OS MINISTÉRIOS USAM "REPARTIÇÃO DE AQUISIÇÕES" OU "UGEA"?
+  // PROVÍNCIA DE GAZA ou GOVERNO DA PROVÍNCIA DE MAPUTO
+  if (ministryOrProvince.includes('PROVÍNCIA')) {
+    var contractManagerD = 'REPARTIÇÃO DE AQUISIÇÕES';
+  } else if (customer4Documents.includes('BANCO DE MO')) {
+    var contractManagerD = 'DEPARTAMENTO DE APROVISIONAMENTO E PATRIMÓNIO';
+  } else {
+    var contractManagerD = 'UNIDADE GESTORA EXECUTORA DAS AQUISIÇÕES';
+  }
+
+  return cfl2Str(
+    ['REPARTIÇÃO DE AQUISIÇÕES', 'UNIDADE GESTORA EXECUTORA DAS AQUISIÇÕES', 'DEPARTAMENTO DE APROVISIONAMENTO E PATRIMÓNIO'],
+    'Gestor do Contrato',
+    contractManagerD
+  );
+}
+
+function getManage3QuotesStatus() {
+  return cfl2Str(['Não', 'Sim'], 'Gestão de 3 Cotações (3Q)?', 'Sim');
+}
+
+function getHelpCustomerStatus() {
+  return cfl2Str(
+    ['Não', 'Sim'],
+    'Tem produção de ajuda (TdR, Avaliacão, …)?\n\n- Por questões de sigilo, a pasta mudou de "AJUDA AO PROPONENTE" para "AAP',
+    'Sim'
+  );
+}
+
+function getQuoteAmountApproved(ctx) {
+  var clipInfo = ctx.apps.saApp.theClipboard();
+
+  //if (clipInfo != "[NONE]" && Number(clipInfo.replace(/,/g, ""))) {
+
+  if (clipInfo && !isNaN(clipInfo.replace(/,/g, ''))) {
+    var quoteAmountApprovedD = clipInfo.replace(/,/g, '');
+  } else {
+    var quoteAmountApprovedD = '0.00';
+  }
+
+  return formatNumber(dialog('Valor da Factura (Cotação aprovada)', quoteAmountApprovedD), 2, 2);
+}
+
+function chargePercentage(quoteCs, flow) {
+  // var chargedPercentages = ["2.5", "3", "4", "5", "8", "10"]
+
+  if (quoteCs[5] == 'A') {
+    var chargedPercentages = ['2', '2.5', '3', '4', '5', '7'];
+    var chargedPercentageD = '2.5';
+  } else if (quoteCs[2] == 'W' && quoteCs[5] == 'P') {
+    var chargedPercentages = ['0', '0.2', '0.4', '0.5', '1', '1.5', '2'];
+    var chargedPercentageD = '0.5';
+  } else if ((quoteCs[2] == 'X' || quoteCs[2] == 'L' || quoteCs[2] == 'P') && quoteCs[5] == 'P') {
+    var chargedPercentages = ['3', '4', '5', '6', '7', '8', '9', '10'];
+    var chargedPercentageD = '5';
+  } else if (quoteCs[5] == 'C') {
+    var chargedPercentages = ['10', '13', '15'];
+    var chargedPercentageD = '13';
+  } else if (quoteCs[5] == 'E') {
+    var chargedPercentages = ['65', '75', '100'];
+    var chargedPercentageD = '75';
+  } else if (quoteCs[5] == 'F') {
+    var chargedPercentages = ['8', '9', '10'];
+    var chargedPercentageD = '10';
+  }
+
+  var extraAlertTitle = '';
+
+  if (flow.partnerId == 'N' || flow.managerId == 'J5C') {
+    chargedPercentages.push('----------------', 'X');
+
+    extraAlertTitle += `\n—\n"X" é especial para J5C ou N5 sem percentagem❗️\n`;
+  }
+
+  chargedPercentages.push('----------------', 'Escrever percentagem', 'Valor aplicado');
+
+  var chargedPercentage = cfl2Str(chargedPercentages, `Percentagem a cobrar\n${extraAlertTitle}`, chargedPercentageD);
+
+  if (chargedPercentage == 'Escrever percentagem' || chargedPercentage == 'Valor aplicado' || chargedPercentage == 'X') {
+    if (chargedPercentage == 'Valor aplicado' || chargedPercentage == 'X') {
+      var isAppliedAmount = true;
+    }
+
+    var chargedPercentage = dialog(`Percentagem`, ``);
+  }
+
+  return {
+    chargedPercentage,
+    percentageWithSymbol: chargedPercentage + '%',
+    chargedPercentageWithSymbolAndSpace: ' ' + chargedPercentage + '%',
+    isAppliedAmount: isAppliedAmount,
+  };
+}
+
+function jointVentureDwJ5XAlert(cs, quoteOrInvoice, flow) {
+  if (cs[0] == 'J' && cs[2] == 'W' && flow.managerId == 'J5X') {
+    if (quoteOrInvoice == 'Cotação') {
+      var extraTitle = ``;
+    } else if (quoteOrInvoice == 'Factura') {
+      var extraTitle = `Janela Xero aberta não vai ser usada.\n\n`;
+    }
+
+    alert(
+      `🔴🔴🔴\n${extraTitle}JointVenture para este tipo de CS "${cs}", DW com gestão "J5X" segue facturação normal da firma (Xero Quote then Invoice - Quote to Invoice) e não Folder5 > "XERO DIRECT INVOICE"\n\nEm J5 e N5 (XDIMW & XDIMX), é a única situação que segue esta lógica.`,
+      ``
+    );
+  }
+}
+
+function partnership(invoicingStage, quoteAmountApproved) {
+  var partner = dialog('Parceiro', '');
+  var partnerPrice = formatNumber(dialog('Valor do Parceiro', '0.00'), 2, 2);
+
+  if (invoicingStage == 'Cotação') {
+    var xdimPrice = formatNumber(dialog('Valor da X-DIM', '0.00'), 2, 2);
+  } else if (invoicingStage == 'Factura') {
+    var xdimPrice = quoteAmountApproved;
+  }
+
+  var comissionPartNumber = cfl2Str(['1', '2'], 'Partes para percentagem - X-DIM (1) & (2) Mais Outra', '2');
+
+  var percentageXDIM = dialog('Percentagem | X-DIM (X% - 35%)', '35');
+
+  if (comissionPartNumber == '1') {
+    var percentageStr = `${percentageXDIM}%${flow.partnerId}`;
+  } else {
+    var percentageOther = dialog('Percentagem | Outros (X% - 20%)', '20');
+    var percentageStr = `${percentageXDIM}%${flow.partnerId}+${percentageOther}%C`;
+  }
+
+  return `${partner} | ${partnerPrice} | ${xdimPrice} | ${percentageStr}`;
+}
+
+function quoteNumber(quoteNumberD) {
+  return addZero(Number(dialog('Número da Cotação Principal\n\n—\nNumeração automática, lendo as pastas.', quoteNumberD)));
+}
+
+function quoteFolderProcessing(ctx, quoteDate, quoteFolderStr, folder4QuoteFolder, issueDateAndDueDate) {
+  // 🔴🔴🔴 IN THE FUTURE TRY USE diskItems to USE one LOOP instead of MOVE FOLDERS and MOVE FILES
+
+  //  🔴🔴🔴 IN THE FUTURE folder4QuoteFolderUrl and Others that use URL in variable rename them to …FolderStr to uniform with other variables
+
+  var folder4QuoteFolderStr = getPathStrsFromPathObjs([folder4QuoteFolder])[0];
+
+  // ------------- MOVE FOLDERS
+  var quoteFoldersPathsStrs = getPathStrsFromPathStr(quoteFolderStr, 'folders');
+  moveItems(quoteFoldersPathsStrs, folder4QuoteFolderStr);
+
+  var invoicingFolderName = quoteFoldersPathsStrs
+    .filter(url => url.includes('P&C'))[0]
+    .split('/')
+    .slice(-1)[0];
+
+  // ------------- MOVE FILES IF EXIST
+  var quoteFilesPathsStrs = getPathStrsFromPathStr(quoteFolderStr, 'files');
+
+  if (quoteFilesPathsStrs.length > 0 && quoteFilesPathsStrs[0] != '') {
+    const { folderPathStr: folder4QuoteFolderDocsPathStr } = makeFolder(
+      Path(getPathStrsFromPathObjs([folder4QuoteFolder])[0]),
+      `+ ${quoteDate} S1Q DOCUMENTOS`
+    );
+
+    // const folder4QuoteFolderDocsPathStr = getPathStrsFromPathObjs([folder4QuoteFolderDocs])[0];
+    moveItems(quoteFilesPathsStrs, folder4QuoteFolderDocsPathStr);
+  }
+
+  // ------------- DELETE PROCESSED FOLDER
+  delay(ctx.delays.d0p3);
+  ctx.apps.finderApp.delete(Path(quoteFolderStr));
+  delay(ctx.delays.d0p3);
+
+  // ------------- IN NEW PATH
+  var folder4QuoteFolderUrl = getPathStrsFromPathObjs([folder4QuoteFolder])[0];
+
+  var newInvoicingFolderAlias = ctx.apps.seApp.aliases.byName(folder4QuoteFolderUrl + '/' + invoicingFolderName);
+
+  // + 20211017 S1Q P&C | 20211017-20211024 | C431.00 1.5%
+  var invoicingFolderNameItems = invoicingFolderName.split(' | ');
+
+  var quoteAmountApproved = invoicingFolderNameItems[2].split(' ')[0].slice(1);
+  var percentage = invoicingFolderName.match(/[A-Z0-9.]*%/)[0];
+
+  var dueAmountAndInvoiceAmount = `R${quoteAmountApproved}-F${quoteAmountApproved}`;
+
+  //  | ${invoicingFolderNameItems[3] Era Y ou Z para activa ou não da consultoria
+  var invoicingFolderNewName = `${invoicingFolderNameItems[0]} | ${issueDateAndDueDate} | ${dueAmountAndInvoiceAmount} ${percentage}`;
+
+  newInvoicingFolderAlias.name = invoicingFolderNewName;
+}
+
+function xdimAndpartnerQuoteFolderNames(ctx, flow, originType, quoteFolderStr) {
+  var partnerQuoteFolder = '';
+
+  var quoteFolders = ctx.apps.seApp.folders.byName(quoteFolderStr).folders;
+
+  // GET QUOTE DATE & QUOTE APPROVED PRICE FROM FOLDER
+  for (var i = 0; i < quoteFolders.length; i++) {
+    var folderName = quoteFolders[i].name();
+
+    // Cotação Normal - folderName.includes("COTA")
+    // Cotação Concurso Público - folderName.includes("PROPOSTAS _ ")
+
+    // COTA de COTAÇÃO, omissão de ÇÃO para evitar erros
+
+    //if (folderName.includes("COTA") || folderName.includes("PROPOSTAS")) {
+
+    if (folderName.includes('P&C')) {
+      //Versioning20210904
+
+      try {
+        // Para DX, CL, CP, J5 & N5
+        // Cotações DW não tem o valor da Cotação
+        // Determinado apenas para verificar se existe ou não, para aplicação é extraído fora da função
+        var quoteAmountApproved = folderName.match(/C(\d[,.0-9]*)/)[1];
+
+        var xdimQuoteFolder = folderName;
+      } catch {
+        //
+      }
+
+      //var xdimQuoteFolder = folderName
+    }
+
+    if ((flow.partnerId == 'J' || flow.partnerId == 'N') && folderName.includes('%')) {
+      if (partnerQuoteFolder == '') {
+        // After set partnerQuoteFolder will not entry and change it
+        var partnerQuoteFolder = folderName;
+      }
+    }
+  }
+
+  if (
+    originType == 'Ajuste Directo (DX)' ||
+    originType == 'Concurso Limitado (CL)' ||
+    originType == 'Concurso Público (CP)' ||
+    flow.partnerId == 'J' ||
+    flow.partnerId == 'N'
+  ) {
+    if (quoteAmountApproved == undefined) {
+      // Se for C0,000.00
+
+      alert('Valor da Cotação não encontrado.\nIntroduze o valor!', '', ['Cancel', 'OK'], 2, 1);
+    }
+  }
+
+  // Usamos "/" pois partnerQuoteFolder tem "|"
+  // partnerQuoteFolder if is not J5 or N5 return "undefined"
+  return xdimQuoteFolder + ' / ' + partnerQuoteFolder;
+}
+
+function getGenderOptions(
+  service,
+  discipline,
+  customer4Folders,
+  object4Documents,
+  projectSite,
+  customerType,
+  customer4Documents
+) {
+  // Last Letter of First Name
+  var firstNameLastLetter = customer4Folders.split(' ')[0].slice(-1).toLowerCase();
+
+  if (firstNameLastLetter == 'a') {
+    if (customerType == 'Empresa Privada' || customerType == 'Estado') {
+      var customerGenderD = 'a';
+    } else if (customerType == 'Individual') {
+      var customerGenderD = 'Sra.';
+    }
+  } else {
+    if (customerType == 'Empresa Privada' || customerType == 'Estado') {
+      var customerGenderD = 'o';
+    } else if (customerType == 'Individual') {
+      var customerGenderD = 'Sr.';
+    }
+  }
+
+  // Last Letter of First Word of Object
+  var objectWord1LastLetter = object4Documents.split(' ')[0].slice(-1).toLowerCase();
+
+  // Last Letter of First Word of Project Site
+  var projectSiteWord1LastLetter = projectSite.split(' ')[0].slice(-1).toLowerCase();
+
+  if (projectSiteWord1LastLetter == 'a') {
+    var pronounD = 'na';
+    var neighborhoodWordD = 'emptyBairro';
+  } else if (projectSiteWord1LastLetter != 'a' || projectSiteWord1LastLetter != 'o') {
+    var pronounD = 'no';
+    var neighborhoodWordD = 'Bairro';
+  } else {
+    var pronounD = 'em';
+    var neighborhoodWordD = 'emptyBairro';
+  }
+
+  // GENDER OPTIONS
+  if (service == 'Projecto' && discipline == 'Arquitectura') {
+    var genderOptions = cfl(
+      ['o', 'a', 'Sr.', 'Sra.', '---------------', 'em', 'no', 'na', '----------', 'emptyBairro', 'Bairro'],
+      'Géneros — Selecione uma opção em cada secção\n\n—\n' +
+        customer4Documents +
+        '\n---------------\n' +
+        object4Documents +
+        '\n---------------\n' +
+        projectSite +
+        '\n',
+      [customerGenderD, pronounD, neighborhoodWordD],
+      'm'
+    );
+
+    return (genderOptionsStr = genderOptions.join(' / '));
+  } else {
+    return (genderOptionsStr = '—');
+  }
+}
+
+function workInfo(object4FoldersAndExtrasUpper, isValidUseThisSiteForProjectStr, projectSite, invoiceCs, ctx) {
+  var projectSite4Documents = projectSite;
+  //var projectSite4FolderOptions = projectSite4Documents.toUpperCase().split(", ")
+
+  // Substituição de "DISTRITO MUNICIPAL" por "DM"
+  var projectSite4FolderOptions = projectSite4Documents.toUpperCase().replace('DISTRITO MUNICIPAL', 'DM').split(', ');
+
+  var projectSite4FolderOptionsD = [projectSite4FolderOptions[0], projectSite4FolderOptions[1]];
+
+  if (projectSite4FolderOptions.length > 3) {
+    var projectSite4FolderOptionsD = projectSite4FolderOptionsD.concat(projectSite4FolderOptions[2]);
+  }
+
+  if (projectSite4FolderOptions.length > 4) {
+    var projectSite4FolderOptionsD = projectSite4FolderOptionsD.concat(projectSite4FolderOptions[3]);
+  }
+
+  if (projectSite4FolderOptions.length == 1) {
+    var projectSite4Folder = projectSite4FolderOptions[0];
+  } else {
+    const isValidUseThisSiteForProjectStrPrompt = isValidUseThisSiteForProjectStr
+      ? `\n🔴 isValidUseThisSiteForProjectStr is "True", provável que incluia a última opção`
+      : ``;
+
+    var projectSite4Folder = cfl2Str(
+      projectSite4FolderOptions,
+      `Localização para pasta — Escolhe a melhor opção\n\n—\n• Aceita múltiplas selecções\n${isValidUseThisSiteForProjectStrPrompt}`,
+      projectSite4FolderOptionsD,
+      'm'
+    );
+
+    var projectSite4Folder = projectSite4Folder.replace(/,/g, ' - ');
+  }
+
+  var otherInfo4Folders = dialog(
+    'Outros dados',
+    `${object4FoldersAndExtrasUpper} ${ctx.ND} ${projectSite4Folder} ${ctx.ND} ${invoiceCs}`
+  );
+
+  return otherInfo4Folders;
+}
+
+function invoiceCsAndCustomer2Write(invoiceCs, customer4Folders) {
+  var customerItems = customer4Folders.split(' ');
+
+  if (customerItems.length > 1) {
+    var customerFirstAndLastNames = customerItems[0] + ' ' + customerItems[customerItems.length - 1];
+  } else {
+    var customerFirstAndLastNames = customer4Folders;
+  }
+
+  return dialog('CS & Cliente — Exclusivamente para Contratos', invoiceCs + ' ' + customerFirstAndLastNames);
+}
+
+function processHtmlInfo(
+  customer4Documents, //
+  object4Documents,
+  cs,
+  siteID,
+  contractManager,
+  propLocal,
+  needsHMTLStr
+) {
+  const subject1 = `Assunto: Solicitação de Informação | UseThis`;
+
+  const contractManagerString = contractManager === '—' ? '' : ` &n ${contractManager}`;
+
+  const htmAlertLine = `<div>${needsHMTLStr}</div>
+  <div><br></div>`;
+
+  const subjectAndLetterInfo = `<div>
+   <font color="#FFFF00">${subject1}</font>
+</div>
+<div>
+   <font color="#FFFF00">—</font><br>
+</div>
+<div>
+   <font color="#FFFF00">Estimados Senhores,</font>
+</div>
+<div>
+   <font color="#FFFF00"><br></font>
+</div>
+<div>
+   <font color="#FFFF00">Seguindo as interações e instruções que nos foram dadas ontem, enviamos para vossa apreciação
+      os esclarecimentos relativos aos atrasos ocorridos, bem como as novas previsões para a conclusão das três obras em
+      questão.</font>
+</div>
+<div>
+   <font color="#FFFF00"><br></font>
+</div>
+<div>
+   <font color="#FFFF00">Atenciosamente,</font><br>
+</div>
+<div>——————</div>`;
+
+  const htmOther = `<div><br></div>
+<div><b>
+      <font color="#FF1F00">
+         <h1>Notas</h1>
+      </font>
+   </b>
+</div>
+<ul>
+   <li>
+      <font color="#FF1F00">Manter protocolo, etiqueta e alta deferência sem influência de terceiros</font>
+   </li>
+   <li>
+      <font color="#FF1F00">(CS _) - CS se for HUB5</font>
+   </li>
+</ul>
+<div><br></div>
+<div><b>
+      <font color="#205AFF">
+         <h1>Necessidades</h1>
+      </font>
+   </b>
+</div>
+<ul>
+   <li>Item1</li>
+</ul>
+<div><br></div>
+<div><b>
+      <font color="#205AFF">
+         <h1>Levantamento YYYYMMDD-HHMMSS</h1>
+      </font>
+   </b>
+</div>
+<ul>
+   <li>Item1</li>
+</ul>
+<div><br></div>
+<div><b>
+      <font color="#205AFF">
+         <h1>Actividades</h1>
+      </font>
+   </b>
+</div>
+<ul>
+   <li>Item1</li>
+   <li>Item2</li>
+</ul>
+<div><br></div>
+<div><b>
+      <font color="#205AFF">
+         <h1>Produção</h1>
+      </font>
+   </b>
+</div>
+<ul>
+   <li>Produção 1</li>
+   <li>Produção 2</li>
+</ul>
+<div><br></div>
+<div><b>
+      <font color="#205AFF">
+         <h1>Encontros &amp Apresentações</h1>
+      </font>
+   </b>
+</div>
+<div></div>
+<div><b>
+      <font color="#0CFFFF">
+         <h2>2025XXXX-XXXXXX _ APRESENTAÇÃO DO PROJECTO _ X-DIM (WALTER, NOME), FOUR SEASON (HELDER), CMM (NOME) | ENCONTRO ||
+            CMC DEPARTAMENTO X </h2>
+      </font>
+   </b></div>
+<ul>
+   <li>Recebemos<br></li>
+</ul>
+<div><br></div>
+<div><b>
+      <font color="#205AFF">
+         <h1>Correspondências</h1>
+      </font>
+   </b>
+</div>
+<div></div>
+<div><b>
+      <font color="#0CFFFF">
+         <h2>20250817-110700 _ (CS _) LIGAÇÃO DE ENERGIA ELÉCTRICA _ DPM MANICA - AVANÇO | EMAIL</h2>
+      </font>
+   </b></div>
+<div><br></div>
+<div>Prezada XXXXX,</div>
+<div><br></div>
+<div><br></div>
+<div><br></div>`;
+
+  // , 'Thank God'
+
+  const htmlObject = [`${object4Documents} | ${siteID} | ${cs}`]
+    .map(item => `<li>${item}</li>`)
+    .map((item, i, items) => {
+      if (i === 0 && i === items.length - 1) {
+        return `<ul>\n${item}\n</ul>`;
+      } else if (i === 0) {
+        return `<ul>\n${item}`;
+      } else if (i === items.length - 1) {
+        return `${item}\n</ul>`;
+      }
+
+      return item;
+    })
+    .join('\n');
+
+  const xdimLetterItems = [
+    `1.1.1 | Walter Chongo | Director Geral | xdimag@gmail.com`,
+    // `1.2.1 | KGC MAHUMANE &n &n Maputo _ KGC MAHUMANE | Central | geral@kgc-mahumane.com`,
+    // `1.2.2 | Miguel | Director Geral | miguel@kgc-mahumane.com`,
+  ];
+
+  const customerLetterItems = [
+    `2.1.1 | ${capitalizeText(
+      customer4Documents,
+      'WithExclusions'
+    )}${contractManagerString} &n &n ${propLocal} | Central | nomeapelido@gmail.com`,
+    // `2.1.2 | David Felisberto David | Cargo | david03david@gmail.com`,
+    // `2.1.3 | Eugenio Simbine | Assessor | eugeniosimbine91@gmail.com`,
+  ];
+
+  const htmlAuthorLines = [...xdimLetterItems, ...customerLetterItems]
+    //   .map(item => `<li>${item}</li>`)
+    .map((item, i, items) => {
+      let brString = '';
+
+      if (i !== items.length - 1) {
+        // return `${item}\n</ul>`;
+
+        brString = `<br>`;
+      }
+
+      return `<div>${item}${brString}</div>`;
+    })
+    .join('\n');
+
+  const htmNote = [
+    htmAlertLine,
+    `<div>——————</div>`,
+    htmlAuthorLines,
+    `<div>———</div>`,
+    htmlObject,
+    `<div>———</div>`,
+    subjectAndLetterInfo,
+    htmOther,
+  ];
+
+  return htmNote.join('\n');
+}
+
+function writeprojectInfoInCoverEstimate(
+  ctx,
+  estimatePathStr,
+  customer4Documents,
+  object4Documents,
+  contractManager,
+  endMmStrInPTAndEndYyyy
+) {
+  var docNumEstimateByQ = ctx.apps.numbersApp.open(Path(estimatePathStr));
+
+  var tableCover = docNumEstimateByQ.sheets['00 CAPA'].tables[0];
+
+  tableCover.cells['A1'].value = `${customer4Documents}\n${contractManager.toUpperCase()}`;
+  tableCover.cells['A2'].value = object4Documents.toUpperCase();
+  tableCover.cells['A5'].value = endMmStrInPTAndEndYyyy;
+
+  docNumEstimateByQ.save();
+  delay(ctx.delays.d1);
+  docNumEstimateByQ.close();
+}
+
+function writeSiteDimensions(projSheet, siteDimensions) {
+  var tableDescription02ARQ = projSheet.tables['Memória 02ARQ'];
+
+  var tableRowsL = tableDescription02ARQ.rowCount();
+  for (var i = 0; i < tableRowsL; i++) {
+    var iNum = i + 1;
+
+    var infoLine = tableDescription02ARQ.cells['C' + iNum].value();
+
+    if (infoLine.toLowerCase().includes('área do projecto')) {
+      if (siteDimensions == 'LxC') {
+        tableDescription02ARQ.cells['C' + (iNum + 1)].value = '—';
+      } else {
+        var siteDimensionsItems = siteDimensions.split('x');
+
+        tableDescription02ARQ.cells['C' + (iNum + 1)].value =
+          formatNumber(siteDimensionsItems[0], 2, 2) + 'mx' + formatNumber(siteDimensionsItems[1], 2, 2) + 'm';
+      }
+      break;
+    }
+  }
+}
+
+function generateBuildingsTemporayFunc(
+  object4Documents,
+  buildingObjectsStr,
+  floorsCount,
+  startStory,
+  circulationPercentage = 30
+) {
+  const buildingLines = buildingObjectsStr
+    .split(',')
+    .map(line => line.trim())
+    .filter(line => line.startsWith('G3'));
+
+  const buildindsTyped = [];
+
+  return buildingLines.map(line => {
+    const [code, ...nameParts] = line.split(' ');
+    const name = nameParts.join(' ');
+
+    const nameLowerCase = name.toLowerCase();
+    const object4DocumentsLowerCase = object4Documents.toLowerCase();
+
+    const prompt = `${object4Documents}\n-----\nSelecione o tipo para o edifício ${code} (${name})${
+      buildindsTyped.length > 0 ? `\n\nEdificações tipificadas:\n${buildindsTyped.map(b => `• ${b}`).join('\n')}` : ``
+    }`;
+
+    const defaultTypeValue = 'Residential';
+    let defaultTypeLabel = 'Residencial';
+    let buildingType;
+
+    if (
+      (object4Documents.includes('Residência Unifamiliar') || object4Documents.includes('Veraneio')) &&
+      nameLowerCase.includes('principal')
+    ) {
+      buildingType = defaultTypeValue;
+    } else {
+      if (object4DocumentsLowerCase.includes('escritório')) {
+        defaultTypeLabel = 'Escritório';
+      }
+
+      const buildingTypes = getBuildingTypes();
+      const labels = buildingTypes.map(t => t.label);
+
+      const buildingTypeLabel = cfl2Str(labels, prompt, defaultTypeLabel);
+
+      buildingType = buildingTypes.find(t => t.label === buildingTypeLabel).value;
+
+      if (!buildingType) {
+        alert(`Tipo de construção em EN não encontrado para "${buildingTypeLabel}".`);
+      }
+    }
+
+    buildindsTyped.push(`${name}: ${buildingType}`);
+
+    return {
+      id: generateUUID(),
+      code,
+      type: buildingType, // Default type, you can modify this as needed
+      name,
+      floors: floorsCount,
+      startStory,
+      circulationPercentage,
+      stories: [
+        {
+          id: generateUUID(),
+          number: startStory,
+          name: `Piso`,
+          typologyGroups: [
+            {
+              name: 'Tipologia',
+              number: 1,
+              label: 'Editar (para T3)',
+              unitsPerStory: 1,
+              circulationPercentage: 30,
+              rooms: [],
+            },
+          ],
+        },
+      ],
+    };
+  });
+}
+
+function obfuscateAmount(monetaryValue, isReverse) {
+  if (isReverse) {
+    // Deobfuscate: Replace "Y" back to the decimal point and "X" back to commas
+    return monetaryValue.replace(/Y/g, '.').replace(/X/g, ',');
+  } else {
+    // Obfuscate: Replace commas with "X" and the decimal point with "Y"
+    return monetaryValue.replace(/,/g, 'X').replace(/\./g, 'Y');
+  }
+}

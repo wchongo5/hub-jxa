@@ -1,0 +1,490 @@
+// v1.0
+// const {
+// 	cloudClipMenu,
+// 	generateTextOfObjectKeysAndValues,
+// 	getUniqueItems,
+// 	itemsAreEqual,
+// 	letterFromLetterAndNumberPairs,
+// 	printSaveAsPDF,
+// 	saveLogAutoProcess,
+// 	saveAsPDF,
+// 	saveDoc,
+// 	sortArray,
+
+// 	// ----- Affinity Publisher
+// 	getAffinityPublisherName,
+// 	publisherCreateCSV,
+// 	publisherExport2PDF,
+// 	publisherPathDialogFinder,
+// 	publisherUpdateDataMerge,
+
+// 	// ----- Calendar
+// 	calendarAddIcsFile,
+// 	calendarExtractDatesFromIcs,
+// } = Library("appLib")
+
+const cflLib = Library('cflLib');
+
+const objCLib = Library('objCLib');
+
+const { convertBasicDT2ISO, getDelays, formatDateV3, timeElapsed } = Library('datetimeLib');
+const { alert, dialog } = Library('displayLib');
+const {
+  adjustPathSeparator,
+  analyzePath,
+  deleteFinderItems,
+  getND,
+  getItemNamesFromPathStrs,
+  getPathStrsFromPathStr,
+  goToFolderCopyPaste,
+} = Library('finderLib');
+const iWorkLib = Library('iWorkLib');
+const documentLib = Library('documentLib');
+
+const { copyPaste, doMenu, paste } = Library('menuLib');
+
+const { enter, scape, tab } = Library('systemLib');
+
+// ---------------------------------------
+const ND = getND();
+// ---------------------------------------
+
+const affinityPublisherName = getAffinityPublisherName();
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+
+const finderApp = Application('Finder');
+
+const { d0p1, d0p3, d0p5, d1, d1p5, d2, d3, d5, d7 } = getDelays();
+
+// ---------------------------------------
+
+function cloudClipMenu() {
+  delay(d0p1);
+  seApp.keystroke('V', { using: ['control down', 'option down', 'command down'] });
+  delay(d0p1);
+}
+
+function generateTextOfObjectKeysAndValues(object) {
+  return Object.entries(object)
+    .filter(([_, value]) => value != null) // Remove null and undefined
+    .map(([key, value]) => `• ${key}: ${value}`)
+    .join('\n');
+}
+
+function getUniqueItems(list) {
+  var uniqueItems = [];
+
+  for (var i = 0; i < list.length; i++) {
+    var uniqueItem = list[i];
+
+    if (!uniqueItems.includes(uniqueItem)) {
+      uniqueItems.push(uniqueItem);
+    }
+  }
+
+  return uniqueItems;
+}
+
+function itemsAreEqual(items) {
+  var itemsCollection = [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+
+    if (!itemsCollection.includes(item)) {
+      itemsCollection.push(item);
+    }
+  }
+
+  if (itemsCollection.length > 1) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+function letterFromLetterAndNumberPairs(number) {
+  var letterAndNumberPairs = {
+    1: 'A',
+    2: 'B',
+    3: 'C',
+    4: 'D',
+    5: 'E',
+    6: 'F',
+    7: 'G',
+    8: 'H',
+    9: 'I',
+    10: 'J',
+    11: 'K',
+    12: 'L',
+    13: 'M',
+    14: 'N',
+    15: 'O',
+    16: 'P',
+    17: 'Q',
+    18: 'R',
+    19: 'S',
+    20: 'T',
+    21: 'U',
+    22: 'V',
+    23: 'W',
+    24: 'X',
+    25: 'Y',
+    26: 'Z',
+    27: 'AA',
+    28: 'AB',
+    29: 'AC',
+    30: 'AD',
+    31: 'AE',
+    32: 'AF',
+    33: 'AG',
+    34: 'AH',
+    35: 'AI',
+    36: 'AJ',
+    37: 'AK',
+    38: 'AL',
+    39: 'AM',
+    40: 'AN',
+    41: 'AO',
+    42: 'AP',
+    43: 'AQ',
+    44: 'AR',
+    45: 'AS',
+    46: 'AT',
+    47: 'AU',
+    48: 'AV',
+    49: 'AW',
+    50: 'AX',
+    51: 'AY',
+    52: 'AZ',
+  };
+
+  return letterAndNumberPairs[number];
+}
+
+function printSaveAsPDF(appName) {
+  var appControllerP = seApp.processes[appName];
+
+  doMenu(appName, 'File', 'Print…'); // Print…
+  delay(d2); // Was d1
+
+  // Before Ventura
+
+  // // Click PDF
+  // appControllerP.windows[0].sheets[0].splitterGroups[0].menuButtons["PDF"].click()
+  // delay(d0p3)
+
+  // appControllerP.windows[0].sheets[0].splitterGroups[0].menuButtons["PDF"].menus["PDF"].menuItems["Save as PDF"].click() // Click PDF
+
+  // Click PDF directly in Ventura
+  appControllerP.windows[0].sheets[0].splitterGroups[0].groups[1].buttons[0].click();
+  delay(d3); // NEW was d2 in saveAsPDF after <printSaveAsPDF>
+}
+
+function saveLogAutoProcess(startTime, endTime, processedFilePathStr, autoOrManualRun) {
+  const timeElapsed_ = timeElapsed(startTime, endTime);
+
+  const { dateY4M2D2__H2M2S2: start_dateY4M2D2__H2M2S2 } = formatDateV3(startTime).formats;
+
+  const { yearY4M2, dateY4M2D2__H2M2S2: end_dateY4M2D2__H2M2S2 } = formatDateV3(endTime).formats;
+
+  const txtToLog = `${start_dateY4M2D2__H2M2S2} - ${end_dateY4M2D2__H2M2S2} - ${timeElapsed_} - ${autoOrManualRun}`;
+
+  const processedFilePathStrItems = processedFilePathStr.split('/');
+  const fileName = processedFilePathStrItems.pop().split('.')[0];
+
+  const filePathStr = processedFilePathStrItems.join('/') + `/XX5 - ${yearY4M2} - Log - ${fileName}.txt`;
+
+  if (finderApp.exists(Path(filePathStr))) {
+    const loggedFileText = objCLib.readFile(filePathStr);
+    const nextLogNumber = loggedFileText.split('\n').length;
+
+    objCLib.appendToFile(filePathStr, `${nextLogNumber + 1} - ${txtToLog}`, (revealFile = false));
+  } else {
+    objCLib.writeToFile(filePathStr, `1 - ${txtToLog}`, (revealFile = false));
+  }
+}
+
+function saveAsPDF(pathStr, fileName) {
+  var frontmostAppName = seApp.applicationProcesses.where({ frontmost: true }).name()[0];
+
+  printSaveAsPDF(frontmostAppName);
+  // delay(d2)
+  saApp.setTheClipboardTo(fileName);
+  delay(d0p3);
+  //seApp.keystroke("v", { using: "command down" })
+  paste();
+  delay(d0p3);
+
+  goToFolderCopyPaste(pathStr);
+  delay(d3);
+
+  finderApp.reveal(Path(pathStr + '/' + fileName + '.pdf')).extensionHidden = true;
+  delay(d0p3);
+}
+
+function saveDoc(docObj, destinyPathStr, fileDatetimeAndVersion, fileName, fileExt, deleteExistingFile = false, datePosition) {
+  let finalFileName = '';
+
+  if (datePosition == 'dateAtStart') {
+    finalFileName = `${fileDatetimeAndVersion} ${fileName}.${fileExt}`;
+  } else if (datePosition == 'dateAtEnd') {
+    finalFileName = `${fileName} ${ND} ${fileDatetimeAndVersion}.${fileExt}`;
+  }
+
+  if (deleteExistingFile) {
+    var filePathsStrs = getPathStrsFromPathStr(destinyPathStr, 'files');
+
+    if (filePathsStrs.length > 0) {
+      var fileNames = getItemNamesFromPathStrs(filePathsStrs, ['']);
+
+      // var fileNameToDelete = fileNames.find(fileNameExisting => documentLib.doesStr1IncludeStr2(fileNameExisting, fileName))
+      var fileNameToDelete = documentLib.deletePreviousFile(fileNames, fileName);
+
+      if (fileNameToDelete) {
+        var filePathStrToDelete = `${destinyPathStr}/${fileNameToDelete}`;
+        deleteFinderItems([filePathStrToDelete]);
+      }
+    }
+  }
+
+  // Replace all "/" with ":", what is expected of macOS for "/" in a file or folder name
+  // finalFileName = finalFileName.replace(/\//g, ':');
+  finalFileName = adjustPathSeparator(finalFileName);
+
+  const filePath = `${destinyPathStr}/${finalFileName}`;
+
+  // const { totalInfo, componentExcessInfo } =
+  analyzePath(filePath);
+
+  const filePathObj = Path(filePath);
+
+  docObj.save({ in: filePathObj }); // SAVE
+  delay(d1); // Era d0p3
+
+  finderApp.reveal(Path(filePath)).extensionHidden = true;
+  // delay(d0p3)
+
+  return filePath;
+}
+
+/*
+function sortArray(array) {
+  // ----- ALPHANUMERICAL STRINGS
+  var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  return array.sort(collator.compare);
+}
+*/
+
+function sortArray(arr) {
+  // ----- ALPHANUMERICAL STRINGS
+  return [...arr].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+// --------------------------------------- Affinity Publisher
+
+/// 🔴🔴🔴🔴 APPLY MENU LIBRARY
+
+function getAffinityPublisherName() {
+  return 'Affinity Publisher 2';
+}
+
+// function publisherCreateCSV(numbersApp, imageCsvInfoPathStr, text) {
+
+// 	objCText = $.NSString.alloc.initWithUTF8String(text);
+// 	objCText.writeToFileAtomically(imageCsvInfoPathStr, true);
+
+// 	/* // 🔴🔴🔴🔴 DON'T OPEN AND UPDATE FONT TO CORRECT ACCENTS, CODE TO PREVENT ERROS
+// 	// Open CSV to change Font to Arial and Export as CSV to recognize Accents
+// 	var docNumCsvWritten = numbersApp.open(Path(imageCsvInfoPathStr))
+
+// 	// CHANGE FONT
+// 	var tableCsv = docNumCsvWritten.sheets[0].tables[0]
+// 	tableCsv.selectionRange = tableCsv.cellRange()
+// 	var allCellsRange = tableCsv.selectionRange()
+
+// 	allCellsRange.fontName = "Arial";
+
+// 	// Export and Overwrite docNumCsvWritten
+
+// 	//iWorkLib.numbersExportNumbersCSV2CSV(numbersApp, docNumCsvWritten, imageCsvInfoPathStr, "CSV")
+// 	numbersApp.export(docNumCsvWritten, {to: Path(imageCsvInfoPathStr), as: "CSV"})
+
+// 	delay(d1p5)
+// 	docNumCsvWritten.close({saving: "no"})
+// 	*/
+// }
+
+function publisherExport2PDF(publisherAppControllerAp, imagesPathStr, exportedImagesPathStr, docName) {
+  /*
+	delay(3)
+	doMenu(affinityPublisherName, "File", "Export…")
+	// delay(d1p5)
+	delay(15)
+	*/
+
+  try {
+    // delay(3)
+    doMenu(affinityPublisherName, 'File', 'Export…');
+    // delay(d1p5)
+    delay(15);
+  } catch (error) {
+    alert(`Error for click "Export…"`, ``);
+  }
+
+  // // --------------- Preflight Errors check no "Never"
+  // delay(5)
+  // enter(1)
+  // // ---------------
+
+  // delay(15)
+
+  // publisherAppControllerAp.windows.byName("Export").buttons.byName("Export").click()
+  Application('System Events')
+    .applicationProcesses.byName('Affinity Publisher 2 MAS')
+    .windows.byName('Export (16%)')
+    .buttons.byName('Export')
+    .click();
+  delay(d1); // Was d1p5
+
+  //var imagesPathStr = projectPathStr + "/XX5 PROJECTO DIGITAL/IMAGENS"
+
+  publisherPathDialogFinder(docName, imagesPathStr);
+  delay(d7);
+
+  //saApp.setTheClipboardTo(docName); // Copiar o nome do doc para usar em Export, se necessário
+
+  //var exportedImagesPathStr = projectPathStr + "/" + docName + ".pdf"
+  //var exportedImagesPathStr = imagesPathStr + "/" + docName + ".pdf"
+
+  finderApp.reveal(Path(exportedImagesPathStr)).extensionHidden = true;
+
+  delay(d1); // To see exported PDF
+}
+
+function publisherPathDialogFinder(docName, pathStr) {
+  if (docName != '') {
+    // seApp.keyCode([48, 48]);
+
+    /* // DEIXOU DE SER NECESSÁRIO 20220710
+		if (operation == "imagesPreration") {
+			seApp.keyCode(48);
+			delay(d0p3)
+			seApp.keyCode(48);
+		}
+		*/
+
+    delay(d0p3);
+    saApp.setTheClipboardTo(docName);
+    delay(d1);
+    seApp.keystroke('v', { using: 'command down' });
+    delay(d0p3);
+  }
+
+  saApp.setTheClipboardTo(pathStr);
+
+  delay(d1);
+  seApp.keystroke('g', { using: ['shift down', 'command down'] });
+
+  delay(d1); // Era d0p3
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d1); // Era d0p3
+  seApp.keyCode(76); // Go
+  delay(d1); // Era d0p3
+  seApp.keyCode(76); // Go
+}
+
+/*
+function publisherUpdateDataMerge(publisherAppControllerAp) {
+
+	doMenu(affinityPublisherName, "Window", "Data Merge Manager…")
+	delay(d1p5)
+
+	publisherAppControllerAp.windows.byName("Data Merge").scrollAreas[1].buttons.byName("Update").click()
+	delay(d1p5)
+
+	publisherAppControllerAp.windows.byName("Data Merge").buttons[4].click() // Close Data Merge
+	delay(d5) // Era d1p5
+}
+*/
+
+function publisherUpdateDataMerge(publisherAppControllerAp, affinityPublisherApp, index) {
+  const pageNumber = index + 1;
+
+  if (pageNumber > 1) {
+    affinityPublisherApp.activate();
+    delay(d1); // To open DataMerge window while Publisher visible
+  }
+
+  doMenu(affinityPublisherName, 'Window', 'Data Merge Manager…');
+  delay(d1p5);
+
+  publisherAppControllerAp.windows.byName('Data Merge').scrollAreas[1].buttons.byName('Update').click();
+  // delay(d1p5)
+  delay(10);
+  delay(10);
+  // delay(d0p3)
+
+  if (pageNumber > 1) {
+    tab(1);
+    copyPaste(pageNumber.toString());
+  }
+
+  // delay(d1p5)
+  delay(d0p3);
+
+  publisherAppControllerAp.windows.byName('Data Merge').buttons[4].click(); // Close Data Merge
+  delay(d0p3); // Era d5, d1p5
+}
+
+// --------------------------------------- Calendar
+
+function calendarAddIcsFile(iscFilePathStr, calendarNameIcs) {
+  currentApp.doShellScript(`open -a Calendar "${iscFilePathStr}"`);
+
+  const calendarApp = Application('Calendar');
+
+  calendarApp.activate();
+
+  var seApp = Application('System Events');
+  var calendarAppControllerP = seApp.processes['Calendar'];
+  delay(1);
+  calendarAppControllerP.windows[0].popUpButtons[0].click();
+  delay(1);
+  calendarAppControllerP.windows[0].popUpButtons[0].menus[0].menuItems[calendarNameIcs].click();
+
+  enter();
+  delay(1);
+  // enter();
+  scape();
+}
+
+function calendarExtractDatesFromIcs(filePath) {
+  const content = currentApp.doShellScript(`cat "${filePath}"`);
+  const lines = content.split(/\r\n|\n|\r/);
+
+  let startDate = null;
+  let endDate = null;
+
+  lines.forEach(line => {
+    line = line.trim(); // Clean up the line from any extra whitespace
+
+    if (line.startsWith('DTSTART')) {
+      // "startDate": "20240814T100000"
+      startDate = line.split(':')[1].trim();
+
+      // "startDate": "2024-08-14T10:00:00"
+      startDate = convertBasicDT2ISO(startDate.replace('T', '-')).dateISO8601;
+    } else if (line.startsWith('DTEND')) {
+      // "endDate": "20240814T113000"
+      endDate = line.split(':')[1].trim();
+
+      // "endDate": "2024-08-14T11:30:00"
+      endDate = convertBasicDT2ISO(endDate.replace('T', '-')).dateISO8601;
+    }
+  });
+
+  return { startDate, endDate };
+}

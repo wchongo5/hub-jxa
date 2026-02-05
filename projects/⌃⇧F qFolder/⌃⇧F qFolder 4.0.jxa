@@ -1,0 +1,633 @@
+// v4.0
+
+const { alert, dialog } = Library('displayLib');
+
+const { generateTextOfObjectKeysAndValues } = Library('appLib');
+
+const {
+  getContratFolderInfo,
+  getFinderFolderPathSr,
+  getItemNamesFromPathStrs,
+  getND,
+  getPathStrsFromPathObjs,
+  process255FolderNameCharacters,
+  renameItem,
+} = Library('finderLib');
+
+const { cfl, cfl2Str } = Library('cflLib');
+const { formatDateV3, getExpedientDates } = Library('datetimeLib');
+const { addExpedient, getInteractionWayAndPlaceInfo, getInteractionWayInfo, listTasks, getXdimInfo } = Library('documentLib');
+const {
+  getAuthorsInfo,
+  getCompanyAndPersonInfo,
+  getXd5MemberInfo,
+  processAuthorNameIfIsCompanyWithMoreThanOneEmail,
+  processCorrespondeceNoteText,
+  workerNameProcess,
+} = Library('notesLib');
+const projectLib = Library('projectLib');
+const { applyColorsToBlocks, decodeQuotedPrintable, saveMailMessagesAttachments, getMailMessagesInfo, processAndSaveHtmlFile } =
+  Library('mailLib');
+const { addZero } = Library('numberLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+
+const finderApp = Application('Finder');
+
+const mailApp = Application('Mail');
+
+const { officeName } = getXdimInfo();
+
+// -------------
+const today = new Date();
+const todayFormatted = formatDateV3(today);
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+var { dateY4M2D2__H2M2S2 } = nowFormatted.formats;
+
+// let dateY4M2D2__H2M2S2 = _dateY4M2D2__H2M2S2;
+
+// -------------
+
+listTasks([
+  [
+    `Erro percebido: os anexos tem mesmo nome (notify in this scenario)/ No lugar de dois, gravou um anexo no email de Jojo de 20250605-114627 "relatório de levantamento das três obras da província de Manica"`,
+  ],
+  [
+    `"/" cria erro em "Indicação de Período para Divulgação dos Limites Orçamentais Definitivos Para Pagamento da Fatura n.º 99/2019"`,
+  ],
+  [`Eliminar a opção 'Enviado para Terceiro'`],
+  [
+    `Test if "generateContractTitle" function works now and use it in documentLib - now using TEMPORARY local CODE.`,
+    [`Sometimes works if remove displayLib in xxNodejsJXALibV2`],
+  ],
+  [`Update to accepted '/' in folder as escaped "/", see one place is in .replace(/\//g, ':')`],
+  [
+    `Na opção "Produção" incluir criacão de Pasta para relatório, depois de escolher o CS`,
+    [`deve numerar o resto no nome "20230927 _ XDXFAF210601 _ AUTO 2 E RELATÓRIO 2" - considerar se for primeiro`],
+  ],
+]);
+
+// -------------
+
+var finderSelection = finderApp.selection();
+var itemCount = finderSelection.length;
+
+// -------------
+const centralStr = 'Central';
+let subjectEmail = null;
+// -------------
+
+// -------------
+
+const finderFolderPathSr = getFinderFolderPathSr();
+
+const {
+  isFolderWithoutCs,
+  isHubFolder,
+  parentFolderSubject,
+  companyIdentifier,
+  contractNumber: invoiceCs,
+  contractNumbers: invoiceCSs,
+  entity4Folders: customer4Folders,
+} = getContratFolderInfo(finderFolderPathSr);
+
+const invoiceCSsL = invoiceCSs.length;
+const invoiceCSsUpdated = invoiceCSsL > 0 ? invoiceCSs : [invoiceCs];
+
+const invoiceCsIsCs = projectLib.isCs(invoiceCs);
+
+const ND = getND();
+const ND2 = getND(2);
+
+// -------------
+
+let foundMessage = null;
+var subject = `__Assunto__`;
+let subjectUpperCased = `__ASSUNTO__`;
+let isCreateFolder = true;
+let folderTypeIsInterationOrProdutionOrFindFolders = false;
+let tagThisFolder = false;
+let priorityNumberString;
+
+let emailId;
+
+// -------------
+const withSelectionItemCountDateToday = 'Com Seleção (' + itemCount + ') — DataHoje';
+const withSelectionItemCountDateTodayInitial = 'Com Seleção (' + itemCount + ') — DataHoje Nome Inicial';
+const withSelectionItemCountDateTodayNumbered = 'Com Seleção (' + itemCount + ') — DataHoje Numerada';
+const withSelectionItemCountDateTodayDescription = 'Com Seleção (' + itemCount + ') — DataHoje + Descrição';
+
+const general = 'Geral';
+const dateToday = 'Data de hoje';
+const dateTodayInitial = 'Data de hoje Nome Inicial';
+const interation = 'Interação';
+const interationHub = 'Interação - Hub';
+const findFolders = 'Procurar pastas';
+const production = 'Produção';
+
+if (isHubFolder) {
+  var folderTypeD = interationHub;
+} else {
+  if (isFolderWithoutCs) {
+    var folderTypeD = withSelectionItemCountDateTodayInitial;
+  } else {
+    var folderTypeD = interation;
+  }
+}
+
+var folderType = cfl2Str(
+  [
+    general,
+    dateToday,
+    dateTodayInitial,
+    interation,
+    interationHub,
+    findFolders,
+    production,
+    '-------------',
+    withSelectionItemCountDateToday,
+    withSelectionItemCountDateTodayInitial,
+    withSelectionItemCountDateTodayNumbered,
+    withSelectionItemCountDateTodayDescription,
+  ],
+  'Criar pasta',
+  folderTypeD
+);
+
+if (
+  folderType == general ||
+  folderType == withSelectionItemCountDateToday ||
+  folderType == withSelectionItemCountDateTodayInitial ||
+  folderType == withSelectionItemCountDateTodayNumbered ||
+  folderType == withSelectionItemCountDateTodayDescription
+) {
+  if (folderType == withSelectionItemCountDateToday || folderType == withSelectionItemCountDateTodayNumbered) {
+    var folderName = dateY4M2D2__H2M2S2;
+  } else if (folderType == withSelectionItemCountDateTodayDescription) {
+    var folderName = dateY4M2D2__H2M2S2 + ' ' + dialog('Nome da pasta', '');
+  } else {
+    var folderName = dialog('Nome da pasta', `${dateY4M2D2__H2M2S2} `);
+  }
+} else if (folderType == dateToday) {
+  var folderName = dateY4M2D2__H2M2S2;
+} else if (folderType == dateTodayInitial) {
+  var folderName = dialog('Descrição', dateY4M2D2__H2M2S2 + ' ');
+} else if (folderType.includes('Interação') || folderType.includes('Produção')) {
+  folderTypeIsInterationOrProdutionOrFindFolders = true;
+  // let isXd5Member = false;
+  let endingStr = '';
+
+  const { authorsCentralNamesExclduingMainAuthor } = getAuthorsInfo(invoiceCSsUpdated);
+
+  const { interactionWay, place, interactionWayAndPlace, isMultiAuthor, isPlaceBased } = getInteractionWayAndPlaceInfo(
+    folderType,
+    [customer4Folders, ...authorsCentralNamesExclduingMainAuthor]
+  );
+
+  // const { isMultiAuthor, isPlaceBased } = getInteractionWayInfo(interactionWay);
+
+  const interactionWayAndPlaceUpperCase = interactionWayAndPlace.toUpperCase();
+
+  if (folderType === 'Produção') {
+    endingStr = ``;
+  } else {
+    if (!parentFolderSubject) {
+      const defaultPriorityNumberStringOne = interactionWay === 'Email' || interactionWay === 'Hardcopy';
+
+      priorityNumberString = cfl2Str(
+        ['-1', '0', '1', '2', '3', '4', '5'],
+        `Prioridade\n\n—\n• "-1" não adiciona o expediente no contrato.\n• "5" exclusivo ao expediente "X-DIM - GESTÃO XD5 🎈".`,
+        defaultPriorityNumberStringOne ? '1' : '-1'
+      );
+
+      tagThisFolder = Number(priorityNumberString) > 0;
+    }
+
+    let processesL = 1;
+
+    /*  let interactionDirection;
+
+    if (isPlaceBased) {
+      interactionDirection = place === officeName ? 'Entrada' : 'Saída';
+    } else {
+      interactionDirection = cfl2Str(
+        ['Entrada', 'Saída', 'Update Email FolderInfo'],
+        `Sentido da interação (${interactionWay})`,
+        interactionWay === 'Email' ? 'Entrada' : 'Saída'
+      );
+    } */
+
+    const interactionDirectionD =
+      isPlaceBased && place === officeName ? 'Entrada' : interactionWay === 'Email' ? 'Entrada' : 'Saída';
+
+    const interactionDirection = cfl2Str(
+      ['Entrada', 'Saída', 'Update Email FolderInfo'],
+      `Sentido da interação (${interactionWay})`,
+      interactionDirectionD
+    );
+
+    var {
+      authorsLinesFull,
+      authorsLinesFullXd5Excluded,
+      authorsLinesClean,
+      authorsLinesCleanXd5Excluded,
+      selectedObjectsAndCssStr,
+      subject,
+      hasUseThisSubject,
+    } = processCorrespondeceNoteText(
+      '',
+      customer4Folders,
+      // invoiceCSsForFiltersOfNotes,
+      invoiceCSsUpdated,
+      'CriarPasta',
+      interactionWay,
+      interactionDirection,
+      parentFolderSubject
+    );
+
+    if (parentFolderSubject && !hasUseThisSubject) {
+      var subject = parentFolderSubject;
+    }
+
+    var cSs = projectLib.getCSs(selectedObjectsAndCssStr);
+
+    const isMailIn = interactionDirection === 'Entrada' && interactionWayAndPlaceUpperCase.includes('EMAIL');
+
+    if (isMailIn) {
+      const messages = mailApp.selection();
+
+      var messagesSorted = messages.sort((a, b) => {
+        return b.dateReceived() - a.dateReceived();
+      });
+
+      var mailMessagesInfo = getMailMessagesInfo(messagesSorted, isCreateFolder);
+      processesL = mailMessagesInfo.length;
+
+      var saveHtmlFileStr = cfl2Str(['Não', 'Sim'], 'Gravar HTML?', 'Não');
+      var saveHtmlFile = saveHtmlFileStr === 'Sim' ? true : false;
+    } else {
+      var { dateCreated, dateStart, dateDue, dateY4M2D2__H2M2S2 } = getExpedientDates(today, null, tagThisFolder, 'Datas');
+    }
+
+    for (let i = 0; i < processesL; i++) {
+      if (isMailIn) {
+        var { idToFind, senderEmailFound, dateY4M2D2__H2M2S2 } = mailMessagesInfo[i];
+
+        emailId = idToFind;
+
+        var dates = getExpedientDates(null, dateY4M2D2__H2M2S2, tagThisFolder, 'Datas');
+
+        var { dateCreated, dateStart, dateDue, dateY4M2D2__H2M2S2 } = dates;
+
+        for (let j = 0; j < messagesSorted.length; j++) {
+          const messageId = messagesSorted[j].id();
+          if (messageId === idToFind) {
+            foundMessage = messagesSorted[j];
+            break;
+          }
+        }
+      }
+
+      let companyAndWorkerName = '';
+
+      if (interactionDirection === 'Entrada' || interactionDirection === 'Saída') {
+        const sentToThirdPersonItemStr = 'Enviado para Terceiro';
+        const thirdPersonSeparator = '-----------------';
+
+        if (interactionDirection === 'Entrada') {
+          authorsLinesCleanXd5Excluded = authorsLinesCleanXd5Excluded.concat(thirdPersonSeparator, sentToThirdPersonItemStr);
+        }
+
+        let authorLineDFilter = senderEmailFound ? senderEmailFound : '2.1.1';
+
+        const authorLineD = authorsLinesCleanXd5Excluded.find(item => item.includes(authorLineDFilter));
+
+        if (!authorLineD && senderEmailFound) {
+          alert(`Endereço electrónico "${senderEmailFound}" não está na nota do contrato ${invoiceCs}.`, ``);
+        }
+
+        let authorsLinesChoosePrompt = 'Destinatário';
+
+        if (isMultiAuthor) {
+          authorsLinesChoosePrompt = 'Participante(s)';
+        } else if (interactionDirection === `Entrada`) {
+          authorsLinesChoosePrompt = 'Rementente';
+        }
+
+        if (senderEmailFound) {
+          var authorsLines = authorsLinesCleanXd5Excluded.filter(item => item.includes(senderEmailFound));
+        } else {
+          // var authorsLines = cfl(authorsLinesCleanXd5Excluded, authorsLinesChoosePrompt, authorLineD, 'm');
+          var authorsLines = cfl(
+            isMultiAuthor ? authorsLinesClean : authorsLinesCleanXd5Excluded,
+            authorsLinesChoosePrompt,
+            authorLineD,
+            isMultiAuthor ? 'm' : ''
+          );
+        }
+
+        companyAndWorkerName = generateCompanyAndWorkerName(
+          authorsLinesFull,
+          authorsLinesFullXd5Excluded,
+          isMultiAuthor,
+          authorsLines
+        );
+      }
+
+      if (interactionDirection === 'Entrada' || interactionDirection === 'Update Email FolderInfo') {
+        if (interactionWayAndPlaceUpperCase.includes('EMAIL')) {
+          if (interactionDirection === 'Update Email FolderInfo') {
+            isCreateFolder = false;
+          }
+
+          subjectEmail = foundMessage.subject();
+          // For path that accpets "/" as ":". Note that it will writes "/" not ":" in folder name
+          subjectEmail = subjectEmail.replace(/\//g, ':');
+
+          subjectEmail = subjectEmail === '' ? 'No Subject' : subjectEmail;
+
+          if (interactionDirection === 'Update Email FolderInfo') {
+            const finderFolderName = getItemNamesFromPathStrs([finderFolderPathSr], [''])[0];
+            var newName = finderFolderName.replace(/\d{8}-\d{6}/, dateY4M2D2__H2M2S2);
+
+            renameItem(finderFolderPathSr, newName, 'noReveal');
+          }
+        }
+
+        // const authorsLineThird = `${companyAndWorkerName}`;
+
+        endingStr = ` ${ND2} ${companyAndWorkerName} | ${interactionWayAndPlaceUpperCase}`;
+      } else if (interactionDirection === 'Saída') {
+        endingStr = ` ${ND} ${`${companyAndWorkerName}`} | ${interactionWayAndPlaceUpperCase}`;
+      }
+
+      if (subjectEmail && !hasUseThisSubject) {
+        subject = subjectEmail;
+      } else if (hasUseThisSubject || parentFolderSubject) {
+        const subjectsMap = { subjectEmail, parentFolderSubject, subject };
+
+        subject = projectLib.selectSubject(subjectsMap);
+      }
+
+      subject = dialog('Assuto', `${subject}`);
+      subjectUpperCased = subject.toUpperCase();
+
+      if (isCreateFolder) {
+        if (folderType == interation) {
+          var folderName = `${dateY4M2D2__H2M2S2} ${ND} ${subjectUpperCased}${endingStr}`;
+        } else if (folderType == interationHub) {
+          const dateAndND = `${dateY4M2D2__H2M2S2} ${ND} `;
+
+          const cSsAndSubjectUpperCasedAndEndingStr = `${cSs.join(` - `)} ${ND} ${subjectUpperCased}${endingStr}`;
+
+          if (isMailIn) {
+            var folderName = `${dateAndND}${cSsAndSubjectUpperCasedAndEndingStr}`;
+          } else {
+            var folderName = `${dateAndND}${cSsAndSubjectUpperCasedAndEndingStr}`;
+          }
+        }
+
+        var folderName = process255FolderNameCharacters(folderName);
+
+        var emailFileNamePartial = `${dateY4M2D2__H2M2S2} ${ND} ${companyAndWorkerName} ${ND} ${subjectUpperCased}`;
+
+        createdFolderAndMoveItems('', isCreateFolder, folderName, folderType, foundMessage, saveHtmlFile, '', '', '', '');
+
+        if (priorityNumberString && priorityNumberString !== '-1') {
+          addExpedient({
+            contractNumber: invoiceCSsL > 0 ? invoiceCSsUpdated.join(' - ') : invoiceCs,
+            customer4Folders,
+            emailId,
+            name: isHubFolder ? `${subject} ${cSs.join(' - ')}` : subject,
+            dateCreated, //
+            dateStart, //
+            dateDue, //
+            priority: Number(priorityNumberString), //
+            usePathAbsolute: !invoiceCsIsCs, //false,
+            pathRelative: invoiceCsIsCs ? folderName : null, // null because will use path
+            path: `${finderFolderPathSr}/${folderName}`,
+          });
+        }
+
+        foundMessage = null;
+      }
+    }
+  }
+
+  if (isCreateFolder && folderType.includes('Produção')) {
+    var folderName = `${dateY4M2D2__H2M2S2} ${ND} ` + dialog('Descrição', `${subjectUpperCased}${endingStr}`);
+  }
+} else if (folderType == findFolders) {
+  folderTypeIsInterationOrProdutionOrFindFolders = true;
+
+  var filters = dialog('Filtros\n\n- Seja específico possível visto que abre cada pasta na sua janela.', `03, vistor, prov`)
+    .split(',')
+    .map(item => item.trim());
+
+  // alert('THANKS GOD!');
+
+  // const filters = ['XDXFAF210601 _ AUTO 1'];
+
+  finderApp.includeStandardAdditions = true;
+
+  // Get the current selection in Finder (should be a folder)
+  var sel = finderApp.selection();
+
+  if (sel.length > 0) {
+    var currentFolder = sel[0];
+
+    // Check that the selected item is a folder
+    if (currentFolder.kind() === 'Folder') {
+      // Retrieve all items inside the selected folder
+      var subItems = currentFolder.items();
+
+      // Filter the items: select only folders where every filter string is found in the folder's name
+      var matchingFolders = subItems.filter(item => {
+        if (item.kind() === 'Folder') {
+          return filters.every(filter => {
+            const itemName = item.name();
+            if (itemName.includes(filter)) {
+              console.log('Found match:', itemName);
+            }
+            return itemName.toLowerCase().includes(filter.toLowerCase());
+          });
+        }
+        return false;
+      });
+
+      /*   // Log the names of the matching folders for verification
+      console.log(
+        'Matching folder names:',
+        matchingFolders.map(folder => folder.name())
+      ); */
+
+      /*   alert(
+        'Matching folder names:' + matchingFolders[0].name()
+        // matchingFolders.map(folder => folder.name())
+      ); */
+
+      delay(0.3);
+      // Activate Finder to ensure UI changes are visible.
+      finderApp.activate();
+      // Optionally wait a short while to let Finder refresh.
+      delay(0.3);
+
+      // finderApp.selection = matchingFolders;
+
+      // Works but opens new window for every item
+      matchingFolders.forEach(item => {
+        finderApp.select(item);
+      });
+    } else {
+      console.log('The selected item is not a folder. Please select a folder in Finder.');
+    }
+  } else {
+    console.log('No selection made in Finder.');
+  }
+}
+
+if (!folderTypeIsInterationOrProdutionOrFindFolders) {
+  createdFolderAndMoveItems(
+    finderSelection,
+    isCreateFolder,
+    folderName,
+    folderType,
+    foundMessage,
+    false,
+    withSelectionItemCountDateToday,
+    withSelectionItemCountDateTodayInitial,
+    withSelectionItemCountDateTodayNumbered,
+    withSelectionItemCountDateTodayDescription
+  );
+}
+
+function createdFolderAndMoveItems(
+  finderSelection,
+  isCreateFolder,
+  folderName,
+  folderType,
+  foundMessage,
+  saveHtmlFile,
+  withSelectionItemCountDateToday,
+  withSelectionItemCountDateTodayInitial,
+  withSelectionItemCountDateTodayNumbered,
+  withSelectionItemCountDateTodayDescription
+) {
+  if (isCreateFolder) {
+    if (
+      folderType == withSelectionItemCountDateToday ||
+      folderType == withSelectionItemCountDateTodayInitial ||
+      folderType == withSelectionItemCountDateTodayNumbered ||
+      folderType == withSelectionItemCountDateTodayDescription
+    ) {
+      var itemContainerPathStr = decodeURI(finderSelection[0].container().url()).slice(7);
+      var destinyFolderObj = Path(itemContainerPathStr);
+
+      if (folderType == withSelectionItemCountDateTodayNumbered) {
+        for (var s = 1; s < 10; s++) {
+          var folderName = folderName + ' - ' + addZero(s);
+          var folderPathInContainer = Path(itemContainerPathStr + '/' + folderName);
+
+          if (!finderApp.exists(folderPathInContainer)) {
+            break;
+          }
+
+          var folderName = folderName.split(' - ')[0];
+        }
+      }
+    } else {
+      var destinyFolderObj = Path(finderFolderPathSr);
+    }
+
+    var createdFolder = finderApp.make({ new: 'folder', at: destinyFolderObj, withProperties: { name: folderName } });
+
+    if (
+      folderType == withSelectionItemCountDateToday ||
+      folderType == withSelectionItemCountDateTodayInitial ||
+      folderType == withSelectionItemCountDateTodayNumbered ||
+      folderType == withSelectionItemCountDateTodayDescription
+    ) {
+      var itemPathObj = finderApp.selection();
+
+      for (var i = 0; i < itemPathObj.length; i++) {
+        finderApp.move(itemPathObj[i], { to: createdFolder });
+      }
+    }
+
+    finderApp.reveal(createdFolder);
+
+    const pathStr = getPathStrsFromPathObjs([createdFolder])[0];
+
+    if (foundMessage) {
+      saveMailMessagesAttachments([foundMessage], pathStr);
+
+      if (saveHtmlFile) {
+        const emailContent = foundMessage.content();
+        const emailSource = foundMessage.source();
+
+        let allHeaders = foundMessage.allHeaders();
+
+        const date = allHeaders.match(/^Date:\s.*/m);
+        const from = allHeaders.match(/^From:\s.*/m);
+        const subject = allHeaders.match(/^Subject:\s.*/m);
+        const to = allHeaders.match(/^To:\s.*/m);
+        const cc = allHeaders.match(/^Cc:\s.*/m);
+
+        // .replace(/</g, "(") because email address between <> does not appear in HTML file in Browser
+        const headerEssential = `${date[0]}\n${from[0]}\n${subject[0]}\n${to[0]}${cc ? '\n' + cc[0] : ''}\n\n-----------\n\n`
+          .replace(/</g, '(')
+          .replace(/>/g, ')');
+
+        const pathStrWithName = `${pathStr}/${emailFileNamePartial}`;
+
+        // ---------- TXT not necessary beacuse HTML saves correctly now.
+        // objCLib.writeToFile(`${pathStrWithName}.txt`, `${headerEssential}${emailContent}`)
+        processAndSaveHtmlFile(emailSource, headerEssential, pathStrWithName);
+      }
+    }
+
+    /*
+
+    // if (tagThisFolder && !parentFolderSubject) {
+    if (tagThisFolder) {
+      // modifyTags(pathStr, [tagOpenExpedinet], [], []);
+      modifyTags(pathStr, [`Prioridade ${priorityNumberString}`], [], []);
+    }
+      */
+  }
+}
+
+function generateCompanyAndWorkerName(authorsLinesFull, authorsLinesFullXd5Excluded, isMultiAuthor, authorsLines) {
+  const groupedByCompany = {};
+
+  authorsLines.forEach(authorLine => {
+    const [, , authorId] = authorLine.split(' / ');
+
+    const { companyShortName, workerName } = getCompanyAndPersonInfo(
+      isMultiAuthor ? authorsLinesFull : authorsLinesFullXd5Excluded,
+      authorId,
+      customer4Folders
+    );
+
+    const workerNameProcessed = workerNameProcess(workerName, true, true);
+
+    if (!groupedByCompany[companyShortName]) {
+      groupedByCompany[companyShortName] = [];
+    }
+    groupedByCompany[companyShortName].push(workerNameProcessed);
+  });
+
+  // Build the final string
+  const companyAndWorkerName = Object.entries(groupedByCompany)
+    .map(([company, workers]) => `${company} (${workers.join(', ')})`)
+    .join(' + ');
+
+  return companyAndWorkerName;
+}

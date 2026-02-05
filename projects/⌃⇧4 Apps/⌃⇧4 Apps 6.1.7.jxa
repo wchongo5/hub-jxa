@@ -1,0 +1,616 @@
+
+
+// v6.1.7
+
+
+var finderLib = Library("finderLib")
+var safariLib = Library("safariLib")
+
+var datetimeLib = Library("datetimeLib")
+var displayLib = Library("displayLib")
+var cflLib = Library("cflLib")
+var menuLib = Library("menuLib")
+
+
+
+
+var currentApp = Application.currentApplication()
+var saApp = (currentApp.includeStandardAdditions = true, currentApp)
+var systemEventsApp = Application("System Events")
+
+var finderApp = Application("Finder")
+var safariApp = Application("Safari")
+var safariAppControllerP = systemEventsApp.processes["Safari"]
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3
+var d1 = 1
+//var d1p5 = 1.5
+var d3 = 3
+var d6 = 6
+
+
+// ---------------------------------------------------------
+
+var dateMain = new Date()
+var yyyy = (dateMain.getFullYear().toString())
+
+
+
+var theApp = cflLib.cfl2Str(["Make updates: Adicionar — bimobject, Polligon, Megan | in X-Apps Udates", "**************************************", "BuildingSMART*", "Redes", "Safari", "--------------", "0. Frequent Sites", "1. Apple", "2. Dropbox", "3. Epic Games", "4. Google", "5. Graphisoft", "6. Microsoft", "7. Xero", "--------------", "Cr4cks", "Kickasstorrents", "Uploaded", "--------------", "Imagem + Textura (Trazer) + Vídeo", "Lojas", "Publicidade", "Objectos", "--------------", "Dicionários"], "Referência", "0. Frequent Sites")
+
+safariApp.activate()
+
+if (theApp == "BuildingSMART*") {
+
+	var theOption = cflLib.cfl2Str(["Intro", "IFC", "Certified Software", "Bring More Relevant"], theApp, "Certified Software")
+
+	if (theOption == "Intro") {
+		safariLib.openURL("https://www.buildingsmart.org");
+	} else if (theOption == "IFC") {
+		safariLib.openURL("https://www.buildingsmart.org/standards/bsi-standards/industry-foundation-classes/");
+	} else if (theOption == "Certified Software") {
+		safariLib.openURL("https://www.buildingsmart.org/compliance/software-certification/certified-software/");
+	}
+
+} else if (theApp == "Redes") {
+
+	currentApp.activate();
+	var theOption = cflLib.cfl2Str(["BIMcloud", "MikroTik", "TVCabo Router"], theApp, "BIMcloud")
+
+	if (theOption == "BIMcloud") {
+		var theOptionSub = cflLib.cfl2Str(["AC22", "AC23"], theApp, "AC23")
+
+		var theLockerAutoF = "xxxxx"
+
+		safariApp.activate();
+		delay(d0p3)
+
+		if (theOptionSub == "AC22") {
+			safariLib.openURL("http://192.168.0.81:22003");
+
+		} else if (theOptionSub == "AC23") {
+
+			safariLib.openURL("http://192.168.0.81:22000");
+		}
+		delay(d3)
+
+		saApp.setTheClipboardTo("walter");
+		delay(d0p3)
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d0p3)
+
+		saApp.setTheClipboardTo("xxxxx");
+		systemEventsApp.keyCode(48);
+		delay(d0p3)
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d0p3)
+
+		if (theOptionSub == "AC22") {
+			safariAppControllerP.windows[0].splitterGroups.at(0).tabGroups.at(0).groups.at(0).groups.at(0).scrollAreas.at(0).uiElements.at(0).groups.at(2).groups.at(3).staticTexts.byName("Log in").click()
+
+		} else if (theOptionSub == "AC23") {
+			safariAppControllerP.windows[0].splitterGroups.at(0).tabGroups.at(0).groups.at(0).groups.at(0).scrollAreas.at(0).uiElements.at(0).groups.at(2).groups.at(3).staticTexts.byName("Log in").click()
+		}
+		delay(d1)
+
+		safariLib.superSafari("click", "class", "test--btn-project-manager", 0, 0)
+
+	} else if (theOption == "MikroTik") {
+		var theOptionSub = cflLib.cfl2Str(["L100", "VO5"], theOption, "L100")
+
+		safariApp.activate();
+		delay(d0p3)
+
+		if (theOptionSub == "L100") {
+			safariLib.openURL("http://192.168.0.3");
+
+		} else if (theOptionSub == "VO5") {
+			safariLib.openURL("http://192.168.0.4/webfig/");
+		}
+		delay(d3)
+
+		safariLib.superSafari("input", "id", "name", 0, "P4X")
+		safariLib.superSafari("input", "id", "password", 0, "P4-Admin5")
+		delay(d1)
+
+		if (theOptionSub == "L100") {
+			// Esta entrada é no MikroTik ou no iMac Media5?
+			safariAppControllerP.windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[4].groups[0].groups[0].staticTexts.byName("Login").click()
+
+		} else {
+			safariLib.superSafari("click", "id", "dologin", 0, 0)
+		}
+
+	} else if (theOption == "TVCabo Router") {
+
+		safariApp.activate();
+		delay(d0p3)
+
+		safariLib.openURL("http://192.168.100.1");
+		delay(d3)
+
+		safariLib.superSafari("input", "id", "txt_Username", 0, "root")
+		safariLib.superSafari("input", "id", "txt_Password", 0, "P4-Admin5")
+		delay(d1)
+
+		safariLib.superSafari("click", "id", "button", 0, 0)
+	}
+} else if (theApp == "Safari") {
+
+	var theOption = cflLib.cfl2Str(["PDF Web Page", "Email Web Page"], theApp, "PDF Web Page")
+
+	if (theOption == "PDF Web Page") {
+
+		var folderSelected  = finderApp.selection()[0]; // List
+		var destinyPathString = decodeURI(folderSelected.url()).slice(7).replace(/%23/g, "#");
+
+		// "Show Reader" // Melhor não usar Reader para ter a página original
+
+		menuLib.doMenu("Safari", "File", "Export as PDF…")
+		delay(d1)
+
+		finderLib.goToFolderCopyPaste(destinyPathString)
+
+		delay(d0p3)
+
+		finderApp.activate()
+
+	} else if (theOption == "Email Web Page") {
+		menuLib.doSubMenu("Safari", "File", "Share", "Email this page")
+	}
+
+} else if (theApp == "0. Frequent Sites") {
+
+	// https://central.xero.com/s/article/Xero-Releases
+
+	//var mm = Number(dateMain.getMonth() + 1)
+	var mmNum = dateMain.getMonth() + 1
+
+	var dd = dateMain.getDate()
+
+	// Janeiro a 15 de Fevereiro usano o ano anterior
+	// A partir de 16 de Fevereiro usa o ano corrente
+
+	if (mmNum <= 2) {
+
+		if (mmNum == 1) {
+			var yyyyTrack = yyyy - 1
+
+		} else {
+			if (dd > 15) {
+				var yyyyTrack = yyyy
+
+			} else {
+				var yyyyTrack = yyyy - 1
+			}
+		}
+
+	} else {
+		var yyyyTrack = yyyy
+	}
+
+	safariLib.openURL("https://blog.dropbox.com/topics/product")
+	safariLib.openURL("https://www.dropboxforum.com/t5/Paper-Ideas/idb-p/101002012")
+	safariLib.openURL("https://www.xero.com/blog/category/product/");
+	safariLib.openURL("https://community.xero.com/business/topic/23/4/latest/?status=WorkingOnIt");
+	safariLib.openURL("https://central.xero.com/s/article/Xero-Releases#" + yyyyTrack);
+	safariLib.openURL("https://central.xero.com/s/article/Invoicing-in-Xero");
+
+} else if (theApp == "1. Apple") {
+
+	var theOption = cflLib.cfl2Str(["AppleID", "iCloud", "Newsroom"], " " + theApp, "iCloud")
+
+	safariApp.activate();
+	delay(d0p3)
+
+	if (theOption == "AppleID") {
+		safariLib.openURL("https://appleid.apple.com/#!&page=signin");
+
+	} else if (theOption == "iCloud") {
+		safariLib.openURL("https://www.icloud.com");
+
+	} else if (theOption == "Newsroom") {
+		safariLib.openURL("https://www.apple.com/newsroom/");
+	}
+} else if (theApp == "2. Dropbox") {
+
+	var theOption = cflLib.cfl2Str(["Home", "Community, Discover, Paper", "Product, Paper Ideias", "Walter - Badges & Notifications"], theApp, "Product, Paper Ideias")
+
+	safariApp.activate();
+	delay(d0p3)
+
+	if (theOption == "Home") {
+		safariLib.openURL("https://www.dropbox.com/h")
+
+	} else if (theOption == "Community, Discover, Paper") {
+		safariLib.openURL("https://www.dropboxforum.com/t5/English/ct-p/English")
+		safariLib.openURL("https://www.dropboxforum.com/t5/Discover/ct-p/101007?utm_source=community&utm_medium=navbar")
+		safariLib.openURL("https://www.dropboxforum.com/t5/Dropbox-Paper/ct-p/101007B?utm_source=community&utm_medium=navbar")
+
+	} else if (theOption == "Product, Paper Ideias") {
+		safariLib.openURL("https://blog.dropbox.com/topics/product")
+		safariLib.openURL("https://www.dropboxforum.com/t5/Paper-Ideas/idb-p/101002012")
+
+	} else if (theOption == "Walter - Badges & Notifications") {
+		safariLib.openURL("https://www.dropboxforum.com/t5/badges/userbadgespage/user-id/1014539/page/1")
+		safariLib.openURL("https://www.dropboxforum.com/t5/notificationfeed/page")
+	}
+
+} else if (theApp == "3. Epic Games") {
+
+	var theOption = cflLib.cfl2Str(["Unreal Engine", "FAQ", "----------", "Unreal Studio", "Twinmotion", "Industries", "----------", "Launcher Settings Upadte", "C - Welcome", "C - Getting Started", "C - General Information, Technical Issues & Discussions", "Twinmotion Public Roadmap (New)", "----------", "Videos", "Youtube", "----------", "Crashes - Check Twinmotion + Clean hidden files"], theApp, "C - General Information, Technical Issues & Discussions")
+
+	safariApp.activate();
+	delay(d0p3)
+
+	if (theOption == "Unreal Engine") {
+		safariLib.openURL("https://www.unrealengine.com/en-US/feed")
+
+	} else if (theOption == "FAQ") {
+		safariLib.openURL("https://www.unrealengine.com/en-US/faq")
+
+	} else if (theOption == "Unreal Studio") {
+		safariLib.openURL("https://www.unrealengine.com/en-US/studio")
+
+	} else if (theOption == "Twinmotion") {
+		safariLib.openURL("https://www.unrealengine.com/en-US/twinmotion")
+
+	} else if (theOption == "Industries") {
+		safariLib.openURL("https://www.unrealengine.com/en-US/industries")
+
+	} else if (theOption == "Launcher Settings Upadte") {
+		safariLib.openURL("https://trello.com/b/GXLc34hk/epic-games-store-roadmap")
+
+	} else if (theOption == "C - Welcome") {
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/")
+
+	} else if (theOption == "C - Getting Started") {
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/topic/0TO2L000000LNBjWAO/getting-started")
+
+	} else if (theOption == "C - General Information, Technical Issues & Discussions") {
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/topic/0TO2L000000LNBeWAO/general-information")
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/topic/0TO2L000000LNBoWAO/technical-issues")
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/discussions")
+
+	} else if (theOption == "Twinmotion Public Roadmap (New)") {
+		safariLib.openURL("https://portal.productboard.com/7pu88c9kpmqtzt8hwg6arujh/tabs/5-in-progress")
+
+	} else if (theOption == "Videos") {
+		safariLib.openURL("https://www.youtube.com/user/twinmotion/featured")
+
+	} else if (theOption == "Youtube") {
+		safariLib.openURL("https://www.youtube.com/playlist?list=PL6jXt5vX3A7M0Bg0irAT1Hl1m_QW7OZkP")
+
+	} else if (theOption == "Crashes - Check Twinmotion + Clean hidden files") {
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/article/What-to-check-if-Twinmotion-crashes")
+		safariLib.openURL("https://twinmotionhelp.epicgames.com/s/article/Clean-Twinmotion-hidden-files")
+	}
+} else if (theApp == "4. Google") {
+
+	var theOption = cflLib.cfl2Str(["Search", "Acconut", "Play", "Translate", "----------", "Maps", "Google Earth + More from Earth", "Earth Studio - Overview + Documentation", "Earth Studio - Projects", "----------", "Chrome Download", "Earth Downloads"], theApp, "Earth Studio - Projects")
+
+	safariApp.activate();
+	delay(d0p3)
+
+	if (theOption == "Search") {
+		safariLib.openURL("https://www.google.co.mz/webhp?tab=ww")
+
+	} else if (theOption == "Account") {
+		safariLib.openURL("https://myaccount.google.com/?utm_source=OGB&tab=wk&utm_medium=currentApp")
+
+	} else if (theOption == "Play") {
+		safariLib.openURL("https://play.google.com/store/apps")
+
+	} else if (theOption == "Translate") {
+		safariLib.openURL("https://translate.google.co.mz/?hl=en&tab=wT&authuser=0")
+
+	} else if (theOption == "Maps") {
+		safariLib.openURL("https://www.google.co.mz/maps/@-25.826948,32.5624548,15z/data=!5m1!1e1?authuser=1")
+
+	} else if (theOption == "Google Earth + More from Earth") {
+		safariLib.openURL("https://www.google.com/earth/")
+
+	} else if (theOption == "Earth Studio - Overview + Documentation") {
+		safariLib.openURL("https://www.google.com/earth/studio/")
+		safariLib.openURL("https://earth.google.com/studio/docs/")
+
+	} else if (theOption == "Earth Studio - Projects") {
+		safariLib.openURL("https://earth.google.com/studio")
+
+	} else if (theOption == "Chrome Download") {
+		safariLib.openURL("https://www.google.com/chrome/")
+
+	} else if (theOption == "Earth Downloads") {
+		safariLib.openURL("https://www.google.com/earth/versions/")
+	}
+
+} else if (theApp == "5. Graphisoft") { // *NÃO CONFIGURADO PARA "SAFARI"/"CHROME"
+
+	var theOption = cflLib.cfl2Str(["BIMx + Presenter", "GraphisoftID", "---------------", "Graphisoft + News", "Support + News", "BIMx Lab", "BIMx News", "BIMx Optimization", "---------------", "Algorithmic Design", "OpenBIM", "EcoDesigner STAR", "MEP Modeler", "Partner Solutions", "STAR(T) Edition", "---------------", "AC Blogs"], theApp, "BIMx + Presenter")
+
+	safariApp.activate();
+	delay(d0p3)
+
+	if ((theOption == "BIMx + Presenter") || (theOption == "GraphisoftID")) {
+
+		var theUserCompany = "walexchongo@gmail.com"
+		var theLockerAutoF = "AutoF19y1"
+
+		if (theOption == "BIMx + Presenter") {
+			safariLib.openURL("https://graphisoftid.graphisoft.com/Account/ServiceLogin?Application=BIMXSITE&ReturnUrl=https%3A%2F%2Fbimx.graphisoft.com%2Fprofile%2Fcompanyfolders");
+		} else if (theOption == "GraphisoftID") {
+			safariLib.openURL("https://graphisoftid.graphisoft.com/#/login");
+		}
+		delay(d3)
+
+		saApp.setTheClipboardTo(theUserCompany);
+		systemEventsApp.keyCode(48);
+		delay(d0p3)
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d0p3)
+
+		saApp.setTheClipboardTo(theLockerAutoF);
+		systemEventsApp.keyCode(48);
+		delay(d0p3)
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d0p3)
+
+		if (theOption == "GraphisoftID") {
+			systemEventsApp.keyCode(126); // Para corrigir falha na leitura do PW em GraphisoftID
+		}
+
+		delay(d0p3)
+
+		safariLib.superSafari("click", "class", "btn", 1, 0) // Entrar
+
+
+	} else if (theOption == "Graphisoft + News") {
+		safariLib.openURL("https://www.graphisoft.com")
+	} else if (theOption == "Support + News") {
+		safariLib.openURL("https://www.graphisoft.com/support/")
+
+	} else if (theOption == "BIMx Lab") {
+		safariLib.openURL("https://helpcenter.graphisoft.com/knowledgebase/85303/")
+
+	} else if (theOption == "BIMx News") {
+		safariLib.openURL("https://helpcenter.graphisoft.com/knowledgebase/75565/")
+
+	} else if (theOption == "BIMx Optimization") {
+		safariLib.openURL("https://helpcenter.graphisoft.com/knowledgebase/25551/")
+
+	} else if (theOption == "Algorithmic Design") {
+		safariLib.openURL("https://www.graphisoft.com/archicad/rhino-grasshopper/")
+
+	} else if (theOption == "OpenBIM") {
+		var theOption = cflLib.cfl2Str(["Intro", "About BIM", "OPEN BIM Program", "Structural Workflows", "MEP Workflows", "Downloads"], theOption, "About BIM")
+
+		if (theOption == "Intro") {
+			safariLib.openURL("https://www.graphisoft.com/archicad/open_bim/")
+
+		} else if (theOption == "About BIM") {
+			safariLib.openURL("https://www.graphisoft.com/archicad/open_bim/about_bim/")
+
+		} else if (theOption == "OPEN BIM Program") {
+			safariLib.openURL("https://www.graphisoft.com/archicad/open_bim/open_bim_program/")
+
+		} else if (theOption == "Structural Workflows") {
+			safariLib.openURL("https://www.graphisoft.com/archicad/open_bim/structural_workflows/")
+
+		} else if (theOption == "MEP Workflows") {
+			safariLib.openURL("https://www.graphisoft.com/archicad/open_bim/mep_workflows/")
+
+		} else if (theOption == "Downloads") {
+			safariLib.openURL("https://www.graphisoft.com/downloads/addons/ifc/index.html")
+		}
+	} else if (theOption == "EcoDesigner STAR") {
+		safariLib.openURL("https://www.graphisoft.com/archicad/ecodesigner_star/")
+
+	} else if (theOption == "MEP Modeler") {
+		safariLib.openURL("https://www.graphisoft.com/archicad/mep_modeler/")
+
+	} else if (theOption == "Partner Solutions") {
+		safariLib.openURL("https://www.graphisoft.com/archicad/partner_solutions/")
+
+	} else if (theOption == "STAR(T) Edition") {
+		safariLib.openURL("https://www.graphisoft.com/archicad/start-edition/")
+
+	} else if (theOption == "AC Blogs") {
+		var dict = ["AC Blogs list (22)", "   - ARCHICAD South Africa", "   - ARCHVISTA Consulting | Cases", "   - Arquitecturama.MX (in English and Spanish)", "   - AsiaBIM", "   - Atinne Blog (in Spanish)", "   - BIM Engine Blog", "   - BIM6x Blog", "   - BIMES Blog", "   - Bobrow Consulting Group", "   - Bond Bryan Architects BIM Blog", "   - Cadimage Blog", "   - CJMW ARCHICAD Blog", "   - coreBLOG", "   - Debunk TheBIM", "   - How To Use ARCHICAD (in Japanese)", "   - Luca Manelli | Blog (in Italian)", "   - Noletoblog (in Portuguese)", "   - Onland.info", "   - Shoegnome", "   - Skewed", "   - We Are Enzyme Blog Asia", "   - WWA BIM"]
+
+		var theOption = cflLib.cfl2Str(dict, theOption, "AC Blogs list (22)")
+
+		if (theOption == "AC Blogs list (22)") {
+			safariLib.openURL("https://www.graphisoft.com/users/user-blogs/")
+
+		} else if (theOption == "   - ARCHICAD South Africa") {
+			safariLib.openURL("http://www.archicad.co.za/blog")
+
+		} else if (theOption == "   - ARCHVISTA Consulting | Cases") {
+			safariLib.openURL("https://archvista.com/cases/")
+
+		} else if (theOption == "   - Arquitecturama.MX (in English and Spanish)") {
+			safariLib.openURL("http://juanpablos.blogspot.com/")
+
+		} else if (theOption == "   - AsiaBIM") {
+			safariLib.openURL("https://asiabim.wordpress.com/")
+
+		} else if (theOption == "   - Atinne Blog (in Spanish)") {
+			safariLib.openURL("http://www.atinne.com/category/atinne-blog/")
+
+		} else if (theOption == "   - BIM Engine Blog") {
+			safariLib.openURL("http://blog.graphisoftus.com/")
+
+		} else if (theOption == "   - BIM6x Blog") {
+			safariLib.openURL("http://www.bim6x.com/blog")
+
+		} else if (theOption == "   - BIMES Blog") {
+			safariLib.openURL("http://www.bimes.com/blog/")
+
+		} else if (theOption == "   - Bobrow Consulting Group") {
+			safariLib.openURL("http://www.bobrow.com/")
+		} else if (theOption == "   - Bond Bryan Architects BIM Blog") {
+			safariLib.openURL("http://bimblog.bondbryan.com/")
+
+		} else if (theOption == "   - Cadimage Blog") {
+			safariLib.openURL("http://blog.cadimageworld.com/")
+
+		} else if (theOption == "   - CJMW ARCHICAD Blog") {
+			safariLib.openURL("http://cjmwarch.blogspot.com/")
+
+		} else if (theOption == "   - coreBLOG") {
+			safariLib.openURL("http://www.applecoredesigns.co.uk/coreblog/")
+
+		} else if (theOption == "   - Debunk TheBIM") {
+			safariLib.openURL("http://debunkthebim.blogspot.com/")
+
+		} else if (theOption == "   - How To Use ARCHICAD (in Japanese)") {
+			safariLib.openURL("http://www.howtousearchicad.com/?_ga=2.109032130.1774544135.1544276665-1080724355.1510639722")
+
+		} else if (theOption == "   - Luca Manelli | Blog (in Italian)") {
+			safariLib.openURL("http://www.lucamanelli.com/")
+
+		} else if (theOption == "   - Noletoblog (in Portuguese)") {
+			safariLib.openURL("http://noletoblog.blogspot.com/")
+
+		} else if (theOption == "   - Onland.info") {
+			safariLib.openURL("http://www.onland.info/")
+
+		} else if (theOption == "   - Shoegnome") {
+			safariLib.openURL("http://www.shoegnome.com/")
+
+		} else if (theOption == "   - Skewed") {
+			safariLib.openURL("http://www.skewed.com.au/")
+
+		} else if (theOption == "   - We Are Enzyme Blog Asia") {
+			safariLib.openURL("http://www.weareenzyme.com/blog/")
+
+		} else if (theOption == "   - WWA BIM") {
+			safariLib.openURL("https://wwabim.wordpress.com/")
+		}
+	}
+} else if (theApp == "6. Microsoft") {
+
+	var theOption = cflLib.cfl2Str(["Products", "More"], theApp, "Products")
+
+	if (theOption == "Products") {
+		safariLib.openURL("https://products.office.com/en-us/compare-all-microsoft-office-products?&activetab=1");
+	}
+
+} else if (theApp == "7. Xero") {
+
+	var theOption = cflLib.cfl2Str(["Site", "Product, Features-W, Releases, New Invoicing", "Timeline, Xero Central", "Walter Profile"], theApp, "Product, Features-W, Releases, New Invoicing")
+
+
+	if (theOption == "Site") {
+		safariApp.activate();
+		safariLib.openURL("https://www.xero.com");
+
+	} else if (theOption == "Product, Features-W, Releases, New Invoicing") {
+		safariApp.activate();
+
+		safariLib.openURL("https://www.xero.com/blog/category/product/");
+		safariLib.openURL("https://community.xero.com/business/topic/23/4/latest/?status=WorkingOnIt");
+		safariLib.openURL("https://central.xero.com/s/article/Xero-Releases#2020");
+		safariLib.openURL("https://central.xero.com/s/article/Invoicing-in-Xero");
+
+	} else if (theOption == "Timeline, Xero Central") {
+		safariApp.activate();
+
+		safariLib.openURL("https://www.xero.com/about/product-releases/");
+		safariLib.openURL("https://central.xero.com/s/");
+
+	} else if (theOption == "Walter Profile") {
+		safariApp.activate();
+		safariLib.openURL("https://profiles.xero.com/people/walterchongo");
+	}
+
+} else if (theApp == "Cr4cks") {
+	safariLib.openURL("https://cr4cks.com");
+
+} else if (theApp == "Kickasstorrents") {
+	safariLib.openURL("https://kickasstorrents.to");
+
+} else if (theApp == "Uploaded") {
+	displayLib.alert("Atenção — pesquisa indirecta no Google!", "Exemplo — uploaded.net archicad 23")
+
+	safariLib.openURL("http://uploaded.net");
+
+} else if (theApp == "Imagem + Textura (Trazer) + Vídeo") {
+
+	var theOption = cflLib.cfl2Str(["Pinterest", "Unsplash", "Pixabay"], theApp, "Pinterest")
+
+	if (theOption == "Pinterest") {
+		safariLib.openURL("https://www.pinterest.com/walexchongo/");
+
+	} else if (theOption == "Unsplash") {
+		safariLib.openURL("https://unsplash.com");
+
+	} else if (theOption == "Pixabay") {
+		safariLib.openURL("https://pixabay.com");
+
+	}
+} else if (theApp == "Lojas") {
+
+	var theOption = cflLib.cfl2Str(["***** BRING TradecarView, Alababa, More", "---------------", "Amazon", "Ebay"], theApp, "Ebay")
+
+	if (theOption == "Amazon") {
+		safariLib.openURL("https://www.amazon.com");
+
+	} else if (theOption == "Ebay") {
+		safariLib.openURL("https://www.ebay.com");
+
+	}
+} else if (theApp == "Publicidade") {
+
+	var theOption = cflLib.cfl2Str(["Facebook", "Houzz"], theApp, "Houzz")
+
+	if (theOption == "Facebook") {
+		safariLib.openURL("https://www.facebook.com/XDIMLDA/?referrer=whatsapp");
+
+	} else if (theOption == "Amazon") {
+		safariLib.openURL("https://www.houzz.com/pro/xdimag/x-dim");
+	}
+
+} else if (theApp == "Objectos") {
+
+	var theOption = cflLib.cfl2Str(["***** BRING MORE", "---------------", "3D Warehouse"], theApp, "3D Warehouse")
+
+	if (theOption == "3D Warehouse") {
+		safariLib.openURL("https://3dwarehouse.sketchup.com");
+	}
+
+} else if (theApp == "Dicionários") {
+
+	var theOption = cflLib.cfl2Str(["Sinónimos, Infopédia", "Antónimos"], theApp, "Sinónimos, Infopédia")
+
+	if (theOption == "Sinónimos, Infopédia") {
+
+		var contentSearch = displayLib.dialog("Introduza a pesquisa", "")
+
+		safariApp.activate();
+		delay(d0p3)
+
+		safariLib.openURL("https://www.sinonimos.com.br");
+		delay(d3)
+
+		safariLib.superSafari("input", "id", "q", 0, contentSearch)  // Barra de pesquisa
+		delay(d0p3)
+		safariLib.superSafari("click", "id", "botao", 0, "") // Search
+		delay(d1)
+
+		safariLib.openURL("https://www.infopedia.pt/dicionarios/lingua-portuguesa/");
+		delay(d6)
+
+		safariLib.superSafari("input", "id", "search-bar-word", 0, contentSearch)
+		delay(d0p3)
+		safariLib.superSafari("click", "id", "search-bar-button", 0, "")
+
+	} else if (theOption == "Antónimos") {
+		safariLib.openURL("https://www.antonimos.com.br");
+	}
+}
+
+
+// ------------------------------------------ FUNCTIONS

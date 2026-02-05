@@ -1,0 +1,130 @@
+
+
+// v7.0.2
+
+
+var pathLib = Library("pathLib")
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 🔴🔴🔴🔴🔴🔴 USE colorLib
+
+
+
+
+
+
+
+
+var currentApp = Application.currentApplication();
+var saApp = (currentApp.includeStandardAdditions = true, currentApp);
+var systemEventsApp = Application("System Events");
+
+var numbersApp = Application("Numbers");
+
+var designAndSpecsPathStr = pathLib.getNumDesignAndSpecsPathStr()
+
+var theOptions = (currentApp.chooseFromList(["Pens Report", "Template"], { withPrompt: "Opção", defaultItems: "Necessidades"})).toString();
+
+if (theOptions == "Pens Report") {
+
+	var theOptionsSub = (currentApp.chooseFromList(["Archicad", "X-DIM"], { withPrompt: "Autor", defaultItems: "X-DIM"})).toString();
+
+	if (theOptionsSub == "X-DIM") {
+		var columnRed = 3
+		var columnGreen = 4
+		var columnBlue = 5
+
+		var columnRGBColor = 6
+
+	} else if (theOptionsSub == "Archicad") {
+		var columnRed = 9
+		var columnGreen = 10
+		var columnBlue = 11
+
+		var columnRGBColor = 12
+	}
+
+	numbersApp.activate()
+	var docNumDesignAndSpecs = numbersApp.open(Path(designAndSpecsPathStr))
+
+	var sheetPens = docNumDesignAndSpecs.sheets["AC-PENS"]
+	var tableThePens = sheetPens.tables["thePens"]
+
+	var editedPensList = []
+	var tableLengthRows = tableThePens.rowCount()
+	for(var i=3; i < tableLengthRows;i++) {
+		var valueRed = (tableThePens.rows[i].cells[columnRed].value())/255;
+		var valueGreen = (tableThePens.rows[i].cells[columnGreen].value())/255;
+		var valueBlue = (tableThePens.rows[i].cells[columnBlue].value())/255;
+
+
+		var penNumber = tableThePens.rows[i].cells[0].value();
+
+
+
+		var penDescription = tableThePens.rows[i].cells[1].value();
+		var penWeight = tableThePens.rows[i].cells[2].value();
+
+		var penWeight = formatNumber(penWeight, 2, 2)
+
+		var theQuotient = 1.24 // 1.20588235294 Coeficiente calculado entre RGB obtido e original (123/102)
+
+		tableThePens.rows[i].cells[columnRGBColor].backgroundColor = [Math.trunc(valueRed * 65535/theQuotient), Math.trunc(valueGreen * 65535/theQuotient), Math.trunc(valueBlue * 65535/theQuotient)]
+
+		if (theOptionsSub == "X-DIM") {
+			if (penDescription.includes(" • ")) {
+				tableThePens.rows[i].cells[7].value = penDescription.split(" • ")[1]
+				tableThePens.rows[i].textColor = "blue"
+
+				editedPensList.push(`${penNumber}	${penWeight}	${penDescription}`)
+
+			} else {
+				tableThePens.rows[i].cells[7].value = "555"
+				tableThePens.rows[i].textColor = [30000, 30000, 30000]
+
+			}
+		}
+
+	}
+
+	if (theOptionsSub == "X-DIM") {
+		var reportInfo = editedPensList.length + " canetas editadas\n–\n\n" + editedPensList.join("\n")
+
+		tableThePens.cells["B1"].value = reportInfo
+		tableThePens.cells["B1"].textColor = "blue"
+	}
+
+	docNumDesignAndSpecs.save()
+
+} else if (theOptions == "Template") {
+	currentApp.displayAlert("Convert AS to JS OR Code " + theOptions)
+
+}
+
+
+// --------------- FUNCTIONS
+
+function cfl2Str(theList, thePrompt, theDefaultItems, multipleStatus) {
+
+	if (multipleStatus == undefined) {
+		return (currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems})).toString();
+
+	} else if (multipleStatus == "m") {
+		return (currentApp.chooseFromList(theList, { withPrompt: thePrompt, defaultItems: theDefaultItems, multipleSelectionsAllowed: true})).toString();
+	}
+}
+
+function formatNumber(numberToFomat, toFixedDecimals, maxdecimals) {
+	return Number(parseFloat(numberToFomat).toFixed(toFixedDecimals)).toLocaleString('en', {minimumFractionDigits: maxdecimals});
+}

@@ -1,0 +1,209 @@
+// v1.0
+// const {
+// 	copy,
+// 	copyPaste,
+// 	copyPasteWithSelectAll,
+// 	copyWithSelectAll,
+// 	cut,
+// 	doMenu,
+// 	doMenuBar,
+// 	doSubMenu,
+// 	goToBottonAtEndLine,
+// 	goToTopAtStartLine,
+// 	paste,
+// 	print,
+// 	selectAll,
+// 	selectNextAllParagraphs,
+// 	selectNextLine,
+// 	selectNextParagraph,
+// 	selectPreviousCharacters,
+// 	selectPreviousInputParagraph,
+// 	selectPreviousParagraph,
+// 	setClipboard,
+// 	theClipboard,
+// 	undo,
+// } = Library("menuLib")
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var seApp = Application('System Events');
+
+// --------------------------------------- DELAYS
+
+var d0p1 = 0.1;
+var d0p3 = 0.3;
+var d0p5 = 0.5;
+//var d1 = 1
+//var d1p5 = 1.5
+
+// ---------------------------------------
+
+function copy() {
+  delay(d0p3);
+  seApp.keystroke('c', { using: 'command down' });
+  delay(d0p3);
+}
+
+function copyPaste(textToCopyPaste) {
+  delay(d0p3);
+  saApp.setTheClipboardTo(textToCopyPaste);
+  delay(d0p3);
+
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+}
+
+function copyPasteWithSelectAll(textToCopyPaste) {
+  delay(d0p3);
+  saApp.setTheClipboardTo(textToCopyPaste.toString());
+  delay(d0p3);
+
+  seApp.keystroke('a', { using: 'command down' });
+  delay(d0p3);
+
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+}
+
+function copyWithSelectAll() {
+  delay(d0p3);
+  seApp.keystroke('a', { using: 'command down' });
+  delay(d0p3);
+  seApp.keystroke('c', { using: 'command down' });
+  delay(d0p3);
+}
+
+function cut() {
+  delay(d0p3);
+  seApp.keystroke('x', { using: 'command down' });
+  delay(d0p3);
+}
+
+function doMenu(appName, menuName, menuItem) {
+  delay(d0p3);
+  var frontApp = Application(appName);
+  frontApp.activate();
+
+  var frontAppSE = seApp.processes.byName(appName);
+  var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+  delay(d0p3);
+  menuName.menus[0].menuItems.byName(menuItem).click();
+  delay(d0p3);
+}
+
+function doMenuBar(appName, menuName, menuItem) {
+  delay(d0p3);
+  var frontApp = Application(appName);
+  frontApp.activate();
+
+  var frontAppSE = seApp.processes.byName(appName);
+  var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName).click();
+  delay(d0p3);
+}
+
+function doSubMenu(appName, menuName, menuItem, subMenuItem) {
+  delay(d0p3);
+  var frontApp = Application(appName);
+  frontApp.activate();
+
+  var frontAppSE = seApp.processes.byName(appName);
+  var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+  delay(0.3);
+  menuName.menus[0].menuItems.byName(menuItem).menus[0].menuItems.byName(subMenuItem).click(); /// Dots - 3 pontos (...) ou Option ; (…)
+  delay(d0p3);
+}
+
+function goToBottonAtEndLine() {
+  // 🔴🔴🔴 Not Used Yet
+  seApp.keyCode(125, { using: 'command down' });
+}
+
+function goToTopAtStartLine() {
+  // 🔴🔴🔴 Not Used Yet
+  seApp.keyCode(126, { using: 'command down' });
+}
+
+function paste() {
+  delay(d0p3);
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+}
+
+function print(appName) {
+  delay(d0p3);
+  doMenu(appName, 'File', 'Print…');
+  delay(d0p3);
+}
+
+function selectAll() {
+  delay(d0p3);
+  seApp.keystroke('a', { using: 'command down' });
+  delay(d0p3);
+}
+
+function selectNextAllParagraphs() {
+  delay(d0p1);
+  seApp.keyCode(125, { using: ['shift down', 'command down'] });
+  delay(d0p1);
+}
+
+function selectNextLine(numberOfLinesToSelect) {
+  delay(d0p1);
+
+  for (var i = 0; i < numberOfLinesToSelect; i++) {
+    seApp.keyCode(125, { using: 'shift down' });
+  }
+  delay(d0p1);
+}
+
+function selectNextParagraph() {
+  delay(d0p1);
+  seApp.keyCode(125, { using: ['shift down', 'option down'] });
+  delay(d0p1);
+}
+
+function selectPreviousCharacters(numberOfCharactersToSelect) {
+  delay(d0p1);
+
+  for (var i = 0; i < numberOfCharactersToSelect; i++) {
+    seApp.keyCode(123, { using: 'shift down' });
+  }
+  delay(d0p1);
+}
+
+function selectPreviousInputParagraph(lineText, numberOfCharactersToSelect) {
+  delay(d0p1);
+
+  if (numberOfCharactersToSelect == 'all') {
+    var numberOfCharactersToSelect = lineText.length;
+  }
+
+  for (var i = 0; i < numberOfCharactersToSelect; i++) {
+    seApp.keyCode(123, { using: 'shift down' });
+  }
+  delay(d0p1);
+}
+
+function selectPreviousParagraph() {
+  delay(d0p1);
+  seApp.keyCode(126, { using: ['shift down', 'option down'] });
+  delay(d0p1);
+}
+
+function setClipboard(textToCopy) {
+  delay(d0p3);
+  return saApp.setTheClipboardTo(textToCopy);
+  delay(d0p3);
+}
+
+function theClipboard() {
+  delay(d0p3);
+  return saApp.theClipboard();
+  delay(d0p3);
+}
+
+function undo() {
+  delay(d0p1);
+  seApp.keystroke('z', { using: 'command down' });
+  delay(d0p1);
+}

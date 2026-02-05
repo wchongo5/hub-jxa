@@ -1,0 +1,571 @@
+
+
+// 6.0
+
+var pathLib = Library("pathLib")
+
+
+
+var currentApp = Application.currentApplication()
+var saApp = (currentApp.includeStandardAdditions = true, currentApp)
+var systemEventsApp = Application("System Events")
+
+var finderApp = Application("Finder")
+var numbersApp = Application("Numbers")
+
+var safariApp = Application("Safari")
+var safariAppControllerAp = systemEventsApp.applicationProcesses
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3
+var d0p5 = 0.5
+var d1 = 1
+var d2 = 2
+var d1p5 = 1.5
+var d3 = 3
+var d4 = 4
+//var d5 = 5
+var d7 = 7
+//var d10 = 10
+
+// ---------------------------------------
+
+var dateMain = new Date()
+
+var yyyy = (dateMain.getFullYear().toString());
+
+var mm = addZero(dateMain.getMonth() + 1);
+var mmStr = dateMain.toLocaleString("en", {month: "long"});
+var dd = addZero(dateMain.getDate());
+
+var activityArchiveBankStatementsFolder = Path(pathLib.getBanksPathStr() + "/ACTIVIDADES BANK5/ACTIVITYARCHIVE")
+
+function run(input, parameters) {
+
+	currentApp.displayAlert("❗️❗️❗️❗️❗️\nDatas CSV editadas para os pagamentos \n• JANEIRO — 9,460.34 da BCX")
+
+	finderApp.reveal(input[0]).extensionHidden = true
+	delay(d0p3)
+
+	numbersApp.activate()
+	numbersApp.open(input[0])
+	delay(d1p5)
+
+	var filePathString = (input[0]).toString()
+	var filePathStringItems	= filePathString.split("/")
+  var fileName	= filePathStringItems.pop();
+
+	//var pathFolderAction = filePathStringItems.join("/"); // Nesta posição os ficheiros estarão dentro da pasta Folder Action e vai activar quando receber os saves o que não é necessário
+
+	var folderActionName	= filePathStringItems.pop();
+
+	var parentPathFolderAction = filePathStringItems.join("/"); // Nesta posição os ficheiros estarão fora da pasta Folder Action [ √ ]
+
+	var destinyPath = parentPathFolderAction
+
+	var docNumbersInStatement = numbersApp.documents[0]
+
+	var yyyyMnDdFromClipboard = saApp.theClipboard()
+	var yyyyExtraxted = yyyyMnDdFromClipboard.slice(0,4)
+
+	if (Number(yyyyExtraxted) == Number(yyyy) || Number(yyyyExtraxted) == (Number(yyyy) - 1)) {
+
+		var dateStartRevised = yyyyMnDdFromClipboard
+
+	} else {
+
+		var datePreviousMonth  = dateMain.setMonth(dateMain.getMonth() - 1)
+
+		var datePreviousMonthCalculeted = new Date(datePreviousMonth);
+
+		// mmNum sem var para estar disponível em outras funções
+		mmNum = datePreviousMonthCalculeted.getMonth() + 1;
+
+		var mmStrPrevious = dateInfo(datePreviousMonthCalculeted, {month:"long"})
+
+		var ddEntryStart = dDialog(`Dia (Início)\n\n—\nDeverá introduzir a data pois não foi encontrada no formato "yyyyMmDd" Clipboard❗️`, dd)
+
+		var mmStrTrack = monthSelector(mmNum, mmStrPrevious).slice(0, 3)
+		var mmNumTrack = mmStr2mmNum(mmStrTrack)
+
+		if (Number(mmNumTrack) >= Number(mm)) {
+			var yyyyTrack = yyyy - 1
+
+		} else {
+			var yyyyTrack = yyyy
+		}
+
+		var dateStart = newDate(dDialog("Data (Início)", ddEntryStart + " " + mmStrTrack + " " + yyyyTrack))
+
+		var dateDdStart = dateInfo(dateStart, {day:"2-digit"})
+		var dateMmStart = dateInfo(dateStart, {month:"2-digit"})
+		var dateYyyyStart = dateInfo(dateStart, {year:"numeric"})
+
+		var dateStartRevised = dateYyyyStart + dateMmStart + dateDdStart
+	}
+
+	if (folderActionName.includes("BIM")) {
+
+		var tableStatementBIM = docNumbersInStatement.sheets[0].tables[0]; // Tabela de Processamento
+
+		///////////////////////////// DELETE EMPTY ROWS OF 5294
+
+
+
+		var tableStatementBIMLength = tableStatementBIM.rowCount()
+
+		for(var i = 11; i < tableStatementBIMLength; i++) {
+			var value = tableStatementBIM.rows[i].cells[2].value();
+			if (value == null) {
+				break;
+			}
+		}
+
+		tableStatementBIM.cells["C" + i].textColor = "magenta"
+		var cellNum = (i+1)
+
+		tableStatementBIM.selectionRange = tableStatementBIM.ranges["C" + cellNum + ":C" + tableStatementBIMLength]
+		delay(d1)
+
+		doMenu("Numbers", "Table", "Delete Rows")
+		delay(d3)
+
+
+		/////////////////////////////
+
+		var tableStatementBIMLength = tableStatementBIM.rowCount()
+
+		//tableStatementBIM.cells["E" + tableStatementBIMLength].value = "Fila 1"
+
+		tableStatementBIM.ranges["D" + (tableStatementBIMLength) + ":H" + (tableStatementBIMLength)].textColor = "orange" // "red"
+
+
+		for (var i = 0; i < 20; i++) {
+			tableStatementBIM.cells["B" + (tableStatementBIMLength - i)].value = (i+1)
+		}
+
+		delay(d0p3)
+
+		var rowsToDelete = Number(dDialog('Apagar quantas filas, na base?\n—\nUsar os números das filas.\n\n\n❗️\nVerificar se, continua 1ª coluna de data a "Data da Transação (agora) = Data valor (antes do Novo InternetBanking 2020)"', ""));
+
+		tableStatementBIM.rows[11].textColor = "blue";
+		tableStatementBIM.rows[tableStatementBIMLength-1-rowsToDelete].textColor = "blue";
+
+		for(var i=0; i < rowsToDelete; i++) {
+			var tableStatementBIMLength = tableStatementBIM.rowCount()
+			tableStatementBIM.rows[tableStatementBIMLength-1].delete()
+		}
+
+		//docNumbersInStatement.sheets[1].delete() // Não existe no Novo InternetBanking
+
+		// Delete unnecessary rows (11) at top
+		for (var i = 0; i < 9; i++) {
+			tableStatementBIM.rows[0].delete()
+		}
+
+		tableStatementBIM.columns["C"].textColor = "blue";
+
+		// Delete unnecessary columns (3) at left
+		// No novo InternetBanking 2020, usamos a coluna "Data da Transação (agora) = Data valor (antes)"
+		tableStatementBIM.columns[0].delete();
+		tableStatementBIM.columns[0].delete();
+		tableStatementBIM.columns[1].delete(); // Vai apagar a 2ª coluna por que nesta fase, 1ª é Data da Transação
+
+		var tableStatementBIMLength = tableStatementBIM.rowCount() // Length 2
+
+		tableStatementBIM.selectionRange = tableStatementBIM.ranges["A1:H" + tableStatementBIMLength]
+
+    doMenu("Numbers", "Table", "Unmerge All Cells")
+    delay(d0p3)
+
+		tableStatementBIM.columns[2].delete();
+		tableStatementBIM.columns[3].delete();
+
+		var tableStatementBIMLength = tableStatementBIM.rowCount()
+
+    for(var j= 0;j < tableStatementBIMLength;j++) {
+
+    	var value = tableStatementBIM.rows[j].cells[3].value();
+
+			if (value > 0) {
+				tableStatementBIM.rows[j].cells[2].value = value
+				tableStatementBIM.rows[j].cells[2].textColor = "blue"
+    	}
+    }
+
+		tableStatementBIM.cells["B1"].addColumnBefore();
+
+		// COPY, PASTE, WIDTH =60 OF AMOUNT COLUMN
+		tableStatementBIM.selectionRange = tableStatementBIM.ranges["D1:D" + tableStatementBIMLength]
+
+
+		systemEventsApp.keystroke("c", { using: "command down" })
+		delay(d0p3)
+
+		tableStatementBIM.selectionRange = tableStatementBIM.ranges["B1:B1"]
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d0p3)
+
+		tableStatementBIM.columns["B"].width = 60;
+
+		// DELETE LAST UNNECESSARIES COLUMNS
+		for(var i=0; i < 4; i++) { // Era 5 no antigo InternetBanking
+			tableStatementBIM.columns[3].delete();
+		}
+
+		tableStatementBIM.cells["A1"].addRowAbove();
+
+		tableStatementBIM.cells["A1"].value = "*Date"
+		tableStatementBIM.cells["B1"].value = "*Amount"
+		tableStatementBIM.cells["C1"].value = "Description"
+
+	} else if (folderActionName.includes("BCI")) {
+
+		var tableStatementBCI = docNumbersInStatement.sheets[0].tables[0]; // Tabela de Processamento
+
+		var tableStatementBCILength = tableStatementBCI.rowCount()
+
+		tableStatementBCI.ranges["D10:F10"].textColor = "red";
+
+		var rowsToDelete = Number(dDialog("Apagar quantas filas?", ""));
+
+		tableStatementBCI.columns["D"].textColor = "blue";
+
+
+		tableStatementBCI.rows[tableStatementBCILength-1].textColor = "blue";
+		tableStatementBCI.rows[9 + rowsToDelete].textColor = "blue";
+
+		// Delete unnecessary rows (11) at top
+		for(var i=0; i < 9 + rowsToDelete; i++) {
+			tableStatementBCI.rows[0].delete();
+		}
+
+		// Delete unnecessary columns (3) at left
+		for (var i=0; i < 3; i++) {
+			tableStatementBCI.columns[0].delete();
+		}
+
+		// REPLACE "," by "" and "," by "."
+		var tableStatementBCILength = tableStatementBCI.rowCount()
+
+    for (var i= 0; i < tableStatementBCILength; i++) {
+
+    	var value = tableStatementBCI.rows[i].cells[2].value();
+
+			tableStatementBCI.rows[i].cells[2].value = value.replace(".", "")
+    }
+
+    for(var j= 0; j < tableStatementBCILength; j++) {
+
+    	var value = tableStatementBCI.rows[j].cells[2].value();
+
+			tableStatementBCI.rows[j].cells[2].value = value.replace(",", ".")
+    }
+
+		tableStatementBCI.cells["B1"].addColumnBefore();
+
+		// COPY, PASTE, WIDTH =60 OF AMOUNT COLUMN
+		tableStatementBCI.selectionRange = tableStatementBCI.ranges["D1:D" + tableStatementBCILength]
+		doMenu("Numbers", "Edit", "Copy") // Negou copy usando System Events
+
+		delay(d0p3)
+
+		tableStatementBCI.selectionRange = tableStatementBCI.ranges["B1:B1"]
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d0p3)
+
+		tableStatementBCI.columns["B"].width = 60;
+
+		// DELETE LAST UNNECESSARIES COLUMNS
+		for(var i=0; i < 3; i++) {
+			tableStatementBCI.columns[3].delete();
+		}
+
+		tableStatementBCI.cells["A1"].addRowAbove();
+
+		tableStatementBCI.cells["A1"].value = "*Date"
+		tableStatementBCI.cells["B1"].value = "*Amount"
+		tableStatementBCI.cells["C1"].value = "Description"
+
+	}
+
+	numbersApp.activate()
+	delay(d0p3)
+
+	var numbersFileName = "/" + folderActionName + " " + dateStartRevised + " - " + (yyyy + mm + dd) + ".numbers" //  "/" para entrar na pasta
+
+	var numbersFilePath = Path(destinyPath + numbersFileName)
+
+	docNumbersInStatement.save({in: numbersFilePath}) // SAVE // ACTIVIDADES FROM BANK5|WBCI DATESTART - DATEEND • 20200420B1
+
+
+	finderApp.activate()
+	finderApp.reveal(numbersFilePath)
+	delay(d0p3)
+
+	finderApp.open(numbersFilePath)
+	delay(d0p5)
+
+	numbersApp.activate()
+	var docNumbersOpenDoc = numbersApp.documents[0]
+	delay(d0p5)
+
+	finderApp.delete(numbersFilePath) // Delete main Numbers Statement document from wich CSV will be created // Mas vai continuar aberto para verificação
+
+	var docExportExtensionDoc = ".csv"
+	var docExportExtensionUpperWithoutDot = docExportExtensionDoc.split(".")[1].toUpperCase()
+
+	//console.log(docExportExtensionUpperWithoutDot)
+
+	var csvFileName = "/" + docNumbersOpenDoc.name() + " (" + docExportExtensionUpperWithoutDot + ")" + docExportExtensionDoc //  "/" para entrar na pasta
+	var csvFilePath = Path(destinyPath + csvFileName)
+
+	var docNumbersInStatementExport = numbersApp.export(docNumbersOpenDoc, {to: csvFilePath, as: docExportExtensionUpperWithoutDot})
+
+	//docNumbersInStatement.close({saving: "no"}) DELDEL IN FUTURE // Eliminado por que este documento era o Extrato em Excel aberto mas a partir de Numbers 10.3.9 (20210115), quando fizer Save para Numbers com novo nome, fecha automaticamente o Excel que estava aberto
+	//delay(d0p3) // Era 0.3
+	docNumbersOpenDoc.close({saving: "no"})
+	delay(d0p3) // Era 0.3 / Estava desactivado
+
+	finderApp.activate()
+	finderApp.reveal(csvFilePath)
+	delay(d1)
+
+	// Attachment Path
+	var itemList  = finderApp.selection(); // Selected folder for SAVE and Selected files for Attachments
+
+	if (!(itemList[0] == undefined)) {  // Para evitar erro quando não tiver selecionado ou pasta ou ficheiro
+		var csvFileSelected = itemList[0];
+		var csvFileString = decodeURI(csvFileSelected.url()).slice(7);
+
+	}
+
+	finderApp.delete(input[0]) // Delete original Statement XLS
+
+	safariApp.activate()
+	delay(d0p3)
+
+	if (folderActionName.includes("WBIM1")) {
+		openURL("https://go.xero.com/Bank/Import.aspx?accountID=A8C6B26C-81F2-462C-A5C8-8CD1AE3AC89B")
+
+	} else if (folderActionName.includes("WBIM2")) {
+		openURL("https://go.xero.com/Bank/Import.aspx?accountID=BD148C67EF8F4D34B647AE49BE2AF811")
+
+	} else if (folderActionName.includes("WBCI1")) {
+		openURL("https://go.xero.com/Bank/Import.aspx?accountID=E20F56A9-A064-4712-B734-49D55566D243")
+
+	} else if (folderActionName.includes("XBIM1")) {
+		openURL("https://go.xero.com/Bank/Import.aspx?accountID=5D6C89CF7E1E4F7585C46D639C7C8463")
+
+	} else if (folderActionName.includes("XBIM2")) {
+		openURL("https://go.xero.com/Bank/Import.aspx?accountID=F08E3643DABD4B489DEDA9573A8069AF")
+	}
+	delay(d4)
+
+	superSafari("click", "id", "UploadFile", 0, 0)
+	delay(d0p3) // Era delay(d0p3)
+
+	saApp.setTheClipboardTo(csvFileString);
+	delay(d1) // Era delay(d2)
+
+	systemEventsApp.keystroke("g", { using: [ "shift down", "command down" ] })
+	delay(d0p3) // Era delay(d2)
+	systemEventsApp.keystroke("v", { using: "command down" })
+	delay(d0p3) // Era delay(d0p3)
+	systemEventsApp.keyCode(76) // Go
+	delay(d1p5)
+	systemEventsApp.keyCode(76) // Choose
+	delay(d2)
+
+	safariAppControllerAp.byName("Safari").windows[0].splitterGroups[0].tabGroups[0].groups[0].groups[0].scrollAreas[0].uiElements[0].groups[4].groups[0].groups[0].buttons.byName("Import").click()
+
+	delay(d7)
+
+	superSafari("click", "id", "saveButton", 0, 0) // Save
+	delay(d3)
+
+	superSafari("click", "id", "ext-gen34", 0, 0) // OK
+
+	// Move CSV file to activityArchiveBankStatementsFolder
+	finderApp.move(csvFileSelected, {to: activityArchiveBankStatementsFolder})
+
+}
+
+
+
+// -------------------------------------------- FUNCTIONS
+
+function dDialog(theTitle, theDefaultAnswer, theButtons, theDefaultButton, theCancelButton) {
+
+	if (theButtons == undefined) {
+		return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer}).textReturned;
+	} else {
+		return currentApp.displayDialog(theTitle, { defaultAnswer: theDefaultAnswer, buttons: theButtons, defaultButton: theDefaultButton, cancelButton: theCancelButton}).textReturned;
+	}
+}
+
+
+function isAppRunning(appName) {
+    try {
+        return Application(appName).running();
+    } catch (e) {
+        return false;
+    }
+}
+
+function mmStr2mmNum(monthStr) {
+	// Accept any year and day. I need month only
+	// Formato de mês aceite "June", "Jun"
+	var thisD = new Date(monthStr + " 20 1980")
+	return addZero(thisD.getMonth() + 1);
+}
+
+function newDate(dateInput) { // AS STRING "20 Feb 2020"
+	return new Date(dateInput)
+}
+
+function dateInfo(dateInput, theOptions) { //
+	return dateInput.toLocaleString("en", theOptions)
+}
+
+function monthSelector(mmNum, mmStr) {
+
+	if (mmNum == 10) {var mmNum = "Q"}
+	if (mmNum == 11) {var mmNum = "A"}
+	if (mmNum == 12) {var mmNum = "Z"}
+
+	var monthSelector = (currentApp.chooseFromList(["1. January","2. February","3. March","4. April","5. May","6. June","7. July", "8. August","9. September","Q. October","A. November","Z. December"], { withPrompt: "Mês", defaultItems: (mmNum.toString()) + ". " + mmStr})).toString();
+
+	return monthSelector.slice(3, monthSelector.length)
+}
+
+function getURL() {
+	return safariApp.windows[0].currentTab.url()
+}
+
+function openURL(urlInput) {
+	const firstWindow = safariApp.windows[0]
+	const tab = safariApp.Tab({url: urlInput})
+	firstWindow.tabs.push(tab)
+	firstWindow.currentTab = tab
+	delay(d1)
+
+	var urlSubscriptionCurrentTab = getURL()
+
+	// "favorites://" is link of blank page
+	if (urlSubscriptionCurrentTab == "favorites://") {
+		delay(d0p3)
+
+		// Open Location - garantir que que barra de endereço esteja activa (Spend activa imediatamente mas Create Invoice não)
+		systemEventsApp.keystroke("l", { using: "command down" })
+		delay(d0p3)
+
+		saApp.setTheClipboardTo(urlInput)
+		delay(d1)
+
+		systemEventsApp.keystroke("v", { using: "command down" })
+		delay(d1)
+
+		systemEventsApp.keyCode(76) // Press Enter
+		delay(d1)
+	}
+}
+
+// ------- LEADINGZERO
+function addZero(i) {
+  if (i < 10) {
+    i = "0" + i;
+  }
+  return i.toString();
+}
+
+function ChooseDateSaveVersion(yyyy, mm, dd, s) { // Útil yyyy, mm, dd, s
+	if (s == 1) { var s = "A" }
+	if (s == 2) { var s = "B" }
+	if (s == 3) { var s = "C" }
+	if (s == 4) { var s = "D" }
+	if (s == 5) { var s = "E" }
+	if (s == 6) { var s = "F" }
+	if (s == 7) { var s = "G" }
+	if (s == 8) { var s = "H" }
+	if (s == 9) { var s = "I" }
+	if (s == 10) {
+		var theINumber = s
+		var s = "J"
+		currentApp.displayAlert("Excesso de Saves!", { message: "Por questões de organização este é o último Save (" + theINumber + "º/" + s + "), apaga os anteriores, substitui a letra " + s + " por A para recomeçar e continuar com B!" + "\n" + "\n" + "\n" + "—" + "\n" + "Se fizer mais Saves sem apagar os anteriores, o App vai substitui o último documento (" + theINumber + "º/" + s + ")."})
+	}
+	return theDateSaveVersion = yyyy + mm + dd + s + "1"
+}
+
+function doMenu(appName, menuName, menuItem) {
+
+	var frontApp = Application(appName);
+
+	frontApp.activate();
+
+	var frontAppSE = systemEventsApp.processes.byName(appName);
+
+	var menuName = frontAppSE.menuBars[0].menuBarItems.byName(menuName);
+	delay(d0p3)
+
+	menuName.menus[0].menuItems.byName(menuItem).click();
+}
+
+function superSafari(theAction, type, identifier, num, input) {
+
+	safariApp = Application('Safari')
+
+	if (theAction == "click") {
+
+		var action = "click();"
+
+	} else if (theAction == "get") {
+
+		var action = "innerHTML;"
+
+	} else if (theAction == "submit") {
+
+		var action = "submit();"
+
+	} else if (theAction == "input") {
+
+		var action = "value = \"" + input + "\";"
+
+	} else if (theAction == "force") {
+
+		var action = "onchange();"
+
+	}
+
+	if (type == "id") {
+
+		var getElementBy = "getElementById('" + identifier + "')."
+
+	} else if (type == "class") {
+
+		var getElementBy = "getElementsByClassName('" + identifier + "')[" + num + "]."
+
+	} else if (type == "tag") {
+
+		var getElementBy = "getElementsByTagName('" + identifier + "')[" + num + "]."
+
+	} else if (type == "name") {
+
+		var getElementBy = "getElementsByName('" + identifier + "')[" + num + "]."
+
+	}
+
+	var theJS = "document." + getElementBy + action
+
+		if (theAction == "get") {
+
+			var theGet = safariApp.doJavaScript(theJS, { in: safariApp.windows[0].currentTab })
+
+			return theGet
+
+		} else {
+
+			safariApp.doJavaScript(theJS, { in: safariApp.windows[0].currentTab })
+		}
+}
