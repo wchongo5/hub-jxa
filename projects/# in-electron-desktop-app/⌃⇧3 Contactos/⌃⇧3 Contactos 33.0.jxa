@@ -1,0 +1,1486 @@
+// 33.0
+
+ObjC.import('AppKit');
+
+const { sortArray } = Library('appLib');
+const { cfl, cfl2Str } = Library('cflLib');
+const contactLib = Library('contactLib');
+const { ddEntryWithPreviousAndOrNext30DaysDisplay, formatDateV3, monthSelector, timeElapsed } = Library('datetimeLib');
+const { alert, dialog } = Library('displayLib');
+const documentLib = Library('documentLib');
+const menuLib = Library('menuLib');
+const numberLib = Library('numberLib');
+const objCLib = Library('objCLib');
+const pathLib = Library('pathLib');
+const spaceLib = Library('spaceLib');
+const systemLib = Library('systemLib');
+const xxAutoLib = Library('xxAutoLib');
+
+const currentApp = Application.currentApplication();
+const saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+const seApp = Application('System Events');
+
+const contactsApp = Application('Contacts');
+const contactsAppControllerP = seApp.processes['Contacts'];
+
+// --------------------------------------- DELAYS
+
+const d0p3 = 0.3;
+const d1 = 1;
+const d2 = 2;
+const d5 = 5;
+
+// ---------------------------------------
+const inboxPathStr = pathLib.getInboxPathStr();
+// ---------------------------------------
+
+// servicesList
+var alimentacaoItem = 'Alimentação — Bolos, Comida, Drinks, ---, Multiservices';
+var alimentacaoList = ['Bolos', 'Comida', 'Drinks', '---------------', 'Multiservices'];
+
+var comunicacaoItem = 'Comunicação — Informação, Telecomunicações, Vagas';
+var comunicacaoList = ['Informação', 'Telecomunicações', 'Vagas'];
+
+var formacaoItem = 'Formação — Geral, ---, Archicad, Coding, GDL';
+var formacaoList = ['Geral', '---------------', 'Archicad', 'Coding', 'GDL'];
+
+var gestaoItem = 'Gestão — Geral, ---, Aduaneira, Compra (Imobiliário, Viatura)';
+var gestaoList = ['Geral', 'Aduaneira', 'Compra'];
+var gestaoCompraList = ['Imobiliário', 'Viatura'];
+
+var higienizacaoItem = 'Higienização — Cabeleireiro, Fumigação, Lavandaria';
+var higienizacaoList = ['Cabeleireiro', 'Fumigação', 'Lavandaria'];
+
+var informaticaItem = 'Informática - Impressão, Redes';
+var informaticaList = ['Impressão', 'Redes'];
+
+var locacaoItem = 'Locação — Equipamento, Instalações, Viatura';
+var locacaoList = ['Equipamento', 'Instalações', 'Viatura'];
+
+var proteccaoItem = 'Protecção — Guarda, Segurança';
+var proteccaoList = ['Guarda', 'Segurança'];
+
+var manutencaoItem =
+  'Manutenção — Bicicleta, Eletrodoméstico (Geral, Rádio, TV, Watch Parede), Mobiliário, Tecnologias (Celular, Geral, Mac, Tablet), Viatura (Alarme, Bate-Chapa, Coloração, Estacionamento, Fios (Electricidade), Lavagem, Mecânica, Pneu, Rádio, Vigilância)';
+var manutencaoList = ['Bicicleta', 'Eletrodoméstico', 'Tecnologias', 'Mobiliário', 'Viatura'];
+var manutencaoElectrodomesticosList = ['Geral', 'Rádio', 'TV', 'Watch Parede'];
+var manutencaoTecologiasList = ['Celular', 'Geral', 'Mac', 'Tablet', 'Win'];
+
+var manutencaoViaturaList = [
+  'Alarme',
+  'Bate-Chapa',
+  'Coloração',
+  'Estacionamento',
+  'Fios (Electricidade)',
+  'Lavagem',
+  'Mecânica',
+  'Pneu',
+  'Rádio',
+  'Vigilância',
+];
+
+var transporteItem = 'Transporte — Aéreo, Marítimo, Terrestre';
+var transporteList = ['Aéreo', 'Marítimo', 'Terrestre'];
+
+var servicesList = [
+  alimentacaoItem,
+  'Banco',
+  comunicacaoItem,
+  formacaoItem,
+  gestaoItem,
+  higienizacaoItem,
+  informaticaItem,
+  locacaoItem,
+  proteccaoItem,
+  manutencaoItem,
+  'Residencial',
+  'Seguradora',
+  transporteItem,
+];
+
+const nowFormatted = formatDateV3(new Date());
+
+if (!nowFormatted) {
+  throw new Error(`"Data" inválida`);
+}
+
+const {
+  components: {
+    year: { Y4: yearY4 },
+    month: { M1: monthM1, M2: monthM2, long: monthLong },
+  },
+  formats: { dateY4M2D2, dateY4M2D2__H2M2S2 },
+} = nowFormatted;
+
+var operation = cfl2Str(
+  ['Create - Contact', 'Contactos & Grupos', 'Delete - All Groups', 'Modify', '---------------', 'Update/Create Groups'],
+  'Operação',
+  'Create - Contact'
+);
+
+if (operation == 'Create - Contact') {
+  var timesByContact = dialog('Quantos contactos?\n\n— Actualiza automaticamente contactos em JSON (não inclui Notas)', '1');
+
+  for (var h = 0; h < timesByContact; h++) {
+    var { ddEntryPadded: ddEntryStart } = ddEntryWithPreviousAndOrNext30DaysDisplay(
+      `Anteriores`,
+      `Contacto ${
+        h + 1
+      }/${timesByContact}\n\nPessoa - Dia do conhecimento\n\n—\nSe o contacto for "P5I Beneficiário Indefinido ou Novo ou Todos", a data é da compra da propriedade.`
+    );
+
+    //var mmNumTrack = monthSelector("Mês", monthM1, monthLong, "returnMm")
+    var mmNumTrack = monthSelector('Mês', monthM1, monthLong, 'auto_mm');
+
+    if (Number(mmNumTrack) > Number(monthM2)) {
+      // >= em Extrato Start Date
+      var yyyyTrack = Number(yearY4) - 1;
+    } else {
+      var yyyyTrack = yearY4;
+    }
+
+    var personKnewDate = dialog('Pessoa - Data do conhecimento', yyyyTrack + mmNumTrack + ddEntryStart);
+
+    var personIntermediaryStatus = cfl2Str(['Não', 'Sim'], 'Tem Pessoa Intermediária?', 'Não');
+
+    if (personIntermediaryStatus == 'Não') {
+      var personIntermediary = '';
+    } else if (personIntermediaryStatus == 'Sim') {
+      var contactFilter2Input = dialog('Filtro para encontrar o contacto!', '');
+      var contactFilter1Auto = 'personIntermediary';
+      var newContactDescrip = ''; // Sem efeito mas necessário para posição de "NoFilters"
+
+      // NO NEED TO UPDATE contactFinder DEL5 IN FUTURE
+      var personIntermediary = contactLib.contactFinderToCreate(
+        contactFilter1Auto,
+        contactFilter2Input,
+        'Pessoa Intermediária - Em P5I inclui Walter (Eu)',
+        newContactDescrip,
+        'NoFilters'
+      );
+    }
+
+    var contactPlataform = cfl2Str(['1. P1', '3. P3', '5. P5'], 'Plataforma', '5. P5');
+
+    if (contactPlataform == '1. P1') {
+      var contactCategory = cfl2Str(
+        ['1. P1M - Ministério & Plus', '---------------', '2. P1FB - Bens', '3. P1FS - Serviços'],
+        'Operação',
+        '2. P1FB - Bens'
+      );
+
+      var { provinceNumberPadded } = spaceLib.getProvinceInfo([''], 'Maputo (Cidade)');
+
+      var contactCategoryCode = contactCategory.split(' ')[1];
+
+      if (contactCategory == '1. P1M - Ministério & Plus') {
+        var contactCategSub = cfl2Str(
+          [
+            '0 Instituto Nacional de Estatística / INE',
+            '---------------',
+            '1 Ministério da Saúde / MISAU',
+            '2 Ministério da Educação e Desenvolvimento Humano / MINED',
+            '3 Ministério do Trabalho,  Emprego e Segurança Social / MITESS',
+            '4 Ministério da Economia e Finanças / MEF',
+            '5 Ministério das Obras Públicas, Habitação e Recursos Hídricos / MOPHRH',
+            '6 Ministério do Interior / MINT',
+            '7 Ministério da Defesa Nacional / MDN',
+            '8 Ministériostério da Administração Estatal e Função Pública / MAEFP',
+            '9 Ministério da Ciência e Tecnologia, Ensino Superior e Técnico Profissional / MCTESTP',
+            '10 Ministério dos Negócios Estrangeiros e Cooperação / MINEC',
+            '11 Ministério da Indústria e Comércio / MIC',
+            '12 Ministério da Justiça e Assuntos Constitucionais e Religiosos / MJCR',
+            '13 Ministério da Terra, Ambiente e Desenvolvimento Rural / MITADER',
+            '14 Ministério da Agricultura e Segurança Alimentar / MASA',
+            '15 Ministério da Juventude e Desportos / MJD',
+            '16 Ministério da Cultura e Turismo / MICULTUR',
+            '17 Ministério dos Transportes e Comunicações / MTC',
+            '18 Ministério do Mar, Águas Interiores e Pescas / MIMAIP',
+            '19 Ministério dos Recursos Minerais e Energia / MIREME',
+            '20 Ministério do Género, Criança e Acção Social / MGCAS',
+            '21 Ministério dos Combatentes / MICO',
+          ],
+          'Ministério & Plus',
+          '2 Ministério da Educação e Desenvolvimento Humano / MINED'
+        );
+
+        var contactCategorySubCode = cfl2Str(
+          ['Próprio Ministério & Plus', 'Secção do Ministério / Funcionário'],
+          'Opção',
+          'Secção do Ministério / Funcionário'
+        );
+
+        var contactCategorySubCodeTrack = contactCategorySubCode;
+
+        var categPosition = numberLib.addZero(contactCategSub.split(' ')[0]);
+
+        if (contactCategorySubCode == 'Próprio Ministério & Plus') {
+          var contactCategorySubCode = contactCategSub.split(' / ')[1];
+        } else if (contactCategorySubCode == 'Secção do Ministério / Funcionário') {
+          var contactFilter2Input = dialog('Segundo filtro - Ignore para não usá-lo!', '');
+
+          var contactFilter1Auto = contactCategoryCode + provinceNumberPadded + categPosition;
+
+          var contactCategorySubCode = contactLib.contactFinderToCreate(
+            contactFilter1Auto,
+            contactFilter2Input,
+            contactFilter1Auto + ' | Contactos desta categoria + 2º filtro',
+            'NOVA SECÇÃO',
+            'WithFilters'
+          );
+
+          var contactCategorySubCode = contactCategorySubCode.split(/P[1-5]\w+\s/)[1];
+
+          if (contactCategorySubCode == 'NOVA SECÇÃO') {
+            var contactCategorySubCode = dialog('NOVA SECÇÃO', '');
+          }
+        }
+
+        var contactCategoryCodeFinal = contactCategoryCode + provinceNumberPadded + categPosition + ' ' + contactCategorySubCode;
+      } else if (contactCategory == '2. P1FB - Bens' || contactCategory == '3. P1FS - Serviços') {
+        var contactGroup = cfl2Str(['Empresa', 'Individual'], 'Tipo', 'Empresa');
+
+        if (contactCategory == '2. P1FB - Bens') {
+          var goodsList = [
+            'Água',
+            'Carro',
+            'Escritório',
+            'Gráfica (Facturas, Recibos)',
+            'Interiores - Desenhados, Prontos - (Iluminação, Equipamento sanitário, Mobiliário, Etc)',
+            'Material - Betão, Cofragem, Electricidade, Geral, Inertes, Prefabricado, Solares, Tinta, Vidro e Alumínio',
+            'Óptica',
+            'Peças',
+            'Tecnologia — Equipamento - (Aparelhagem, Computador, Geleira, Etc), Software, Multiservices',
+            'Vestuário',
+          ];
+
+          // COPY goodsList
+          //saApp.setTheClipboardTo(goodsList.join("\n"))
+
+          var contactCategSub = documentLib.replaceAccentC1(
+            cfl2Str(
+              goodsList,
+              'Bens',
+              'Material - Betão, Cofragem, Electricidade, Geral, Inertes, Prefabricado, Solares, Tinta, Vidro e Alumínio'
+            )
+          );
+
+          if (contactCategSub.includes('Interiores')) {
+            var contactCategSubExtra1 = cfl2Str(['Desenhados', 'Prontos'], 'Tipo', 'Prontos');
+          } else if (contactCategSub.includes('Material')) {
+            var contactCategSubExtra1 = cfl2Str(
+              ['Betão', 'Cofragem', 'Electricidade', 'Geral', 'Inertes', 'Prefabricado', 'Solares', 'Tinta', 'Vidro e Alumínio'],
+              'Tipo',
+              'Geral'
+            );
+          } else if (contactCategSub.includes('Tecnologia')) {
+            var contactCategSubExtra1 = cfl2Str(['Equipamento', 'Software', 'Multiservices'], 'Tipo', 'Software');
+          }
+        } else if (contactCategory == '3. P1FS - Serviços') {
+          // COPY servicesList
+          //saApp.setTheClipboardTo(servicesList.join("\n"))
+
+          var contactCategSub = cfl2Str(servicesList, 'Serviços', manutencaoItem);
+
+          if (contactCategSub.includes('Alimentação')) {
+            var contactCategSubExtra1 = cfl2Str(alimentacaoList, 'Tipo de ' + contactCategSub, 'Comida');
+          } else if (contactCategSub.includes('Comunicação')) {
+            var contactCategSubExtra1 = cfl2Str(comunicacaoList, 'Tipo de ' + contactCategSub, 'Informação');
+          } else if (contactCategSub.includes('Formação')) {
+            var contactCategSubExtra1 = cfl2Str(formacaoList, 'Tipo de ' + contactCategSub, 'Archicad');
+          } else if (contactCategSub.includes('Gestão')) {
+            var contactCategSubExtra1 = cfl2Str(gestaoList, 'Tipo de ' + contactCategSub, 'Geral');
+
+            if (contactCategSubExtra1 == 'Compra') {
+              var contactCategSubExtra2 = cfl2Str(gestaoCompraList, 'Tipo de ' + contactCategSubExtra1, 'Viatura');
+            }
+          } else if (contactCategSub.includes('Higienização')) {
+            var contactCategSubExtra1 = cfl2Str(higienizacaoList, 'Tipo de ' + contactCategSub, 'Cabeleireiro');
+          } else if (contactCategSub.includes('Locação')) {
+            var contactCategSubExtra1 = cfl2Str(locacaoList, 'Tipo de ' + contactCategSub, 'Equipamento');
+          } else if (contactCategSub.includes('Informática')) {
+            var contactCategSubExtra1 = cfl2Str(informaticaList, 'Tipo de ' + contactCategSub, 'Impressão');
+          } else if (contactCategSub.includes('Protecção')) {
+            var contactCategSubExtra1 = cfl2Str(proteccaoList, 'Tipo de ' + contactCategSub, 'Guarda');
+          } else if (contactCategSub.includes('Manutenção')) {
+            var contactCategSubExtra1 = cfl2Str(manutencaoList, 'Tipo de ' + contactCategSub, 'Viatura');
+
+            if (contactCategSubExtra1 == 'Eletrodoméstico') {
+              var contactCategSubExtra2 = cfl2Str(manutencaoElectrodomesticosList, 'Tipo de ' + contactCategSubExtra1, 'TV');
+            }
+            if (contactCategSubExtra1 == 'Tecnologias') {
+              var contactCategSubExtra2 = cfl2Str(manutencaoTecologiasList, 'Tipo de ' + contactCategSubExtra1, 'Mac');
+            }
+            if (contactCategSubExtra1 == 'Viatura') {
+              var contactCategSubExtra2 = cfl2Str(manutencaoViaturaList, 'Tipo de ' + contactCategSubExtra1, 'Mecânica');
+            }
+          } else if (contactCategSub.includes('Transporte')) {
+            var contactCategSubExtra1 = cfl2Str(transporteList, 'Tipo de ' + contactCategSub, 'Terrestre');
+
+            var contactCategSubExtra2 = cfl2Str(
+              ['Encomnda', 'Material', 'Passageiros'],
+              'Tipo de Mercadoria' + `\n\n—\n🔴 Taxista está em "Passageiros"!\n`,
+              'Material'
+            );
+
+            var contactCategSubExtra2TrackPassengers = contactCategSubExtra2;
+          }
+        }
+
+        if (contactGroup == 'Empresa') {
+          var contactFilter2Input = dialog('Segundo filtro - Ignore para não usá-lo!', '');
+
+          var contactFilter1Auto = contactCategory.slice(3, 6) + provinceNumberPadded + contactCategory[6] + contactCategSub[0];
+
+          var contactCompanyName = contactLib.contactFinderToCreate(
+            contactFilter1Auto,
+            contactFilter2Input,
+            contactFilter1Auto + ' | Contactos desta categoria + 2º filtro',
+            'NOVA EMPRESA',
+            'WithFilters'
+          );
+
+          var contactCompanyName = contactCompanyName.split(/P[1-5]\w+\s/)[1];
+
+          if (contactCompanyName == 'NOVA EMPRESA') {
+            var contactCompanyName = dialog('NOVA EMPRESA', '');
+          }
+        } else {
+          var contactCompanyName = 'INDIVIDUAL';
+        }
+
+        // contactCategSubExtra1 == "" é usado no loop 2º contacto pois vem com variável contactCategSubExtra1 = ""
+        if (contactCategSubExtra1 == undefined || contactCategSubExtra1 == '') {
+          var contactCategSubExtra1 = '';
+        } else {
+          var contactCategSubExtra1 = contactCategSubExtra1[0];
+        }
+
+        // contactCategSubExtra2 == "" é usado no loop 2º contacto pois vem com variável contactCategSubExtra2 = ""
+        if (contactCategSubExtra2 == undefined || contactCategSubExtra2 == '') {
+          var contactCategSubExtra2 = '';
+        } else {
+          var contactCategSubExtra2 = contactCategSubExtra2[0];
+        }
+
+        // P1FB
+        var contactCategoryCodeFinal =
+          contactCategoryCode.slice(0, 3) +
+          provinceNumberPadded +
+          contactCategoryCode[3] +
+          contactCategSub[0] +
+          contactCategSubExtra1 +
+          contactCategSubExtra2 +
+          ' ' +
+          contactCompanyName;
+      }
+    } else if (contactPlataform == '3. P3') {
+      var contactCategory = cfl2Str(
+        [
+          '1. P3C - Consultoria',
+          '2. P3E - Empreiteiro',
+          '3. P3F - Familiar',
+          '4. P3O - Obra',
+          '5. P3P - Parceria',
+          '6. P3T - Técnicos',
+          '9. P3X - X-DIM (Ainda)',
+        ],
+        'Secção',
+        '6. P3T - Técnicos'
+      );
+
+      // 🔴 "9. P3X - X-DIM (Ainda)" deverão contemplar "Recrutamento R18.2"
+
+      var { provinceNumberPadded } = spaceLib.getProvinceInfo([''], 'Maputo (Cidade)');
+      var contactCategoryCode = contactCategory.split(' ')[1];
+
+      if (
+        contactCategory == '1. P3C - Consultoria' ||
+        contactCategory == '2. P3E - Empreiteiro' ||
+        contactCategory == '5. P3P - Parceria' ||
+        contactCategory == '6. P3T - Técnicos'
+      ) {
+        if (
+          contactCategory == '1. P3C - Consultoria' ||
+          contactCategory == '2. P3E - Empreiteiro' ||
+          contactCategory == '5. P3P - Parceria'
+        ) {
+          if (contactCategory == '1. P3C - Consultoria') {
+            var contactCategSub = cfl2Str(['Ambiental', 'Construção', 'Topografia', 'Urbanismo'], 'Especialização', 'Construção');
+          } else if (contactCategory == '2. P3E - Empreiteiro') {
+            var contactCategSub = cfl2Str(
+              ['E - Edifícios', 'P - Estradas e Pontes', 'T - Tudo (Edifícios, Estradas e Pontes)'],
+              'Especialização',
+              'E - Edifícios'
+            );
+          }
+
+          if (contactCategSub) {
+            var contactCategSubC1 = contactCategSub[0];
+          }
+
+          var contactFilter2Input = dialog('Segundo filtro - Ignore para não usá-lo!', '');
+          var contactFilter1Auto = contactCategory.slice(3, 6);
+
+          var newContactDescrip =
+            'NOV' + contactCategory.substr(-1).toUpperCase() + ' ' + contactCategory.split(' ')[3].toUpperCase();
+
+          var contactCompanyName = contactLib.contactFinderToCreate(
+            contactFilter1Auto,
+            contactFilter2Input,
+            contactFilter1Auto + ' | Contactos desta categoria + 2º filtro',
+            newContactDescrip,
+            'WithFilters'
+          );
+
+          var contactCompanyNameTrack = contactCompanyName.split(/P[1-5]\w+\s/)[1];
+
+          if (contactCompanyNameTrack == newContactDescrip) {
+            if (
+              contactCategory == '1. P3C - Consultoria' ||
+              contactCategory == '2. P3E - Empreiteiro' ||
+              contactCategory == '6. P3T - Técnicos'
+            ) {
+              var partnerOption = getPartnerOption();
+            }
+
+            var contactCompanyName = dialog(newContactDescrip, '');
+
+            if (contactCategory == '2. P3E - Empreiteiro') {
+              var contractorLevel = '-C' + dialog(`Classe do empreiteiro`, `3`);
+            }
+          } else {
+            // P3C10C NOME // Parceiro: P3C10CP NOME
+            // P3E10E-C7 NOME // Parceiro: P3E10EP-C7 NOME
+
+            // P de Parceiria é sempre caracter 7
+            if (contactCompanyName[6] == 'P') {
+              var partnerOption = 'P';
+            }
+
+            if (contactCategory == '2. P3E - Empreiteiro') {
+              var contractorLevel = contactCompanyName.match(/-C\w/)[0];
+              var contactCompanyName = contactCompanyName.split(contractorLevel + ' ')[1];
+            } else {
+              var contactCompanyName = contactCompanyName.split(/P[1-5]\w+\s/)[1];
+            }
+          }
+
+          if (contractorLevel === undefined) {
+            contractorLevel = '';
+          }
+          if (contactCategSubC1 === undefined) {
+            contactCategSubC1 = '';
+          }
+          if (partnerOption === undefined) {
+            partnerOption = '';
+          }
+
+          var contactCategoryCodeFinal =
+            contactCategoryCode +
+            provinceNumberPadded +
+            contactCategSubC1 +
+            partnerOption +
+            contractorLevel +
+            ' ' +
+            documentLib.changeCase(contactCompanyName, 'UPPER');
+        } else if (contactCategory == '6. P3T - Técnicos') {
+          var contactCategSub = cfl2Str(
+            [
+              'Ambiental',
+              'Arquitecto',
+              'Biólogo',
+              'Civil',
+              'Contabilista',
+              'Electrotécnico',
+              'Electrotécnico & Som',
+              'Geólogo',
+              'Geotécnico',
+              'Hidráulico',
+              'Médico',
+              'Mecânico',
+              'Paisagista',
+              'Topógrafo',
+              '---------------',
+              'Medidor',
+              'Projectista',
+            ],
+            'Técnico',
+            'Civil'
+          );
+
+          if (
+            contactCategSub == 'Civil' ||
+            contactCategSub.includes('Electrotécnico') ||
+            contactCategSub == 'Topógrafo' ||
+            contactCategSub == 'Medidor' ||
+            contactCategSub == 'Projectista'
+          ) {
+            var technicianDegree = cfl2Str(['01 Superior', '02 Médio', '03 Abaixo de Médio'], 'Nível', '01 Superior');
+
+            var contactCategSub = contactCategSub + technicianDegree.split(' ')[0];
+          }
+
+          var partnerOption = getPartnerOption();
+
+          var contactCategoryCodeFinal =
+            contactCategoryCode + provinceNumberPadded + partnerOption + ' ' + documentLib.changeCase(contactCategSub, 'UPPER');
+        }
+      } else if (contactCategory == '3. P3F - Familiar') {
+        var contactCategSub = cfl2Str(['Anastância', 'Walter', '---------------', 'Casal'], 'Parceiro ou Casal', 'Walter');
+
+        if (contactCategSub == 'Casal') {
+          var contactCategSubExtra1 = cfl2Str(['Afilhado', 'Comadre', 'Friend', 'Padrinhos'], 'Tipo', 'Comadre');
+
+          var contactCategoryCodeFinal =
+            contactCategoryCode +
+            provinceNumberPadded +
+            contactCategSub[0] +
+            ' ' +
+            documentLib.changeCase(contactCategSubExtra1, 'UPPER');
+        } else {
+          var contactCategorySubExtra1Gender = cfl2Str(['Feminino', 'Masculino'], 'Género', 'Masculino');
+
+          if (contactCategorySubExtra1Gender == 'Feminino') {
+            var GLC = 'a'; // Gender Last Character
+            var brotherGender = 'Irmã';
+          } else {
+            var GLC = 'o';
+            var brotherGender = 'Irmão';
+          }
+
+          // Ilustre é designação para "CONHECIDA/CONHECIDO"
+
+          var contactCategSubExtra1 = cfl2Str(
+            [
+              'Ilustre',
+              '---------------',
+              'Cunhad' + GLC,
+              'Escolar',
+              'Friend',
+              brotherGender,
+              'Kid',
+              'Mãe',
+              'Prim' + GLC,
+              'Sobrinh' + GLC,
+              'Ti' + GLC,
+              'Vovo',
+            ],
+            'Tipo\n\n—\nIlustre é Conhecido\n',
+            'Prim' + GLC
+          );
+
+          if (contactCategSubExtra1 == 'Escolar') {
+            var contactCategorySubExtra1School = cfl2Str(
+              ['Primária', 'Secundária', 'Pré-Universitária', 'Universidade'],
+              'Referência',
+              'Secundária'
+            );
+
+            if (contactCategorySubExtra1School == 'Pré-Universitária') {
+              var contactCategorySubExtra1SchoolID = 'PU';
+            } else {
+              var contactCategorySubExtra1SchoolID = contactCategorySubExtra1School[0];
+            }
+
+            var contactCategSubExtra1 = contactCategSubExtra1 + '-' + contactCategorySubExtra1SchoolID;
+          }
+
+          if (
+            contactCategSubExtra1 == 'Cunhad' + GLC ||
+            contactCategSubExtra1 == 'Friend' ||
+            contactCategSubExtra1 == 'Mãe' ||
+            contactCategSubExtra1 == 'Prim' + GLC ||
+            contactCategSubExtra1 == 'Sobrinh' + GLC ||
+            contactCategSubExtra1 == 'Ti' + GLC ||
+            contactCategSubExtra1 == 'Vovo'
+          ) {
+            if (contactCategSubExtra1 == 'Mãe') {
+              var contactCategSubExtra2 = 'Indirecta';
+            } else {
+              var contactCategSubExtra2 = cfl2Str(['Direct' + GLC, 'Indirect' + GLC], 'Tipo', 'Indirect' + GLC);
+            }
+
+            var contactCategoryCodeFinal =
+              contactCategoryCode +
+              provinceNumberPadded +
+              contactCategSub[0] +
+              contactCategSubExtra1[0] +
+              contactCategSubExtra2[0] +
+              ' ' +
+              documentLib.changeCase(contactCategSubExtra1, 'UPPER');
+          } else {
+            var contactCategoryCodeFinal =
+              contactCategoryCode +
+              provinceNumberPadded +
+              contactCategSub[0] +
+              ' ' +
+              documentLib.changeCase(contactCategSubExtra1, 'UPPER');
+          }
+        }
+      } else if (contactCategory == '4. P3O - Obra') {
+        // J12345 DELDEL
+        // P3O10 12345I5 NomeDoExecutor
+        // P3O09 PEDREIRO NomeDoExecutor
+        var contactCategSub = cfl2Str(
+          [
+            'Canalizador',
+            'Carpinteiro',
+            'Electricista',
+            'Gesso Paredes & Tectos',
+            'Impermeabilizador',
+            'Jardineiro',
+            'Ladrilhador',
+            'Pedreiro',
+            'Pintor',
+            'Serralheiro',
+            'Vidro & Aluminio',
+            '--------------',
+            '12345I5',
+            'Membro',
+          ],
+          'Mestre',
+          'Pedreiro'
+        );
+
+        if (contactCategSub == '12345I5') {
+          var nameD = 'NomeDoExecutor';
+        }
+
+        if (contactCategSub == 'Membro') {
+          var contactFilter2Input = dialog('Segundo filtro - Ignore para não usá-lo!', '');
+          var contactFilter1Auto = 'P3O';
+
+          // NO NEED TO UPDATE contactFinder DEL5 IN FUTURE
+          var masterName = contactLib.contactFinderToCreate(
+            contactFilter1Auto,
+            contactFilter2Input,
+            contactFilter1Auto + ' | Mestre do Membro',
+            'WithFilters'
+          );
+
+          var contactCategSub = contactCategSub[0] + '-' + documentLib.changeCase(masterName, 'UPPER');
+        }
+
+        var contactCategoryCodeFinal =
+          contactCategoryCode + provinceNumberPadded + ' ' + documentLib.changeCase(contactCategSub, 'UPPER');
+      }
+    } else if (contactPlataform == '5. P5') {
+      var contactCategory = cfl2Str(
+        [
+          '1. P5AA - Arquitectura',
+          '1. P5AU - Urbanismo',
+          '2. P5AC - Construção',
+          '3. P5AE - Empreitada',
+          '4. P5AF - Fiscalização',
+          '5. P5AT - Técnica',
+          '6. P5I - Imobiliária',
+          'Q. P5D - Website',
+          'A. P5D - Logotipo',
+          'Z. P5R Rebanho WR1',
+          'W. P5S - Simplitask',
+          'S. P5V Vendas X',
+        ],
+        'Serviço',
+        '1. P5AA - Arquitectura'
+      );
+
+      var contactCategoryItems = contactCategory.split(' ');
+
+      var contactCategoryCode = contactCategoryItems[1];
+
+      if (contactCategoryCode != 'P5R') {
+        var contactGroup = cfl2Str(['Empresa (Estado/Empresa Privada)', 'Individual'], 'Grupo do Contacto', 'Individual');
+      }
+
+      if (contactCategoryCode == 'P5I') {
+        var property = cfl2Str(
+          [
+            'IA4 Ngulelene',
+            'IA5 Chiconela',
+            'IW1 Chicumbane',
+            'IW2 Zona Verde',
+            'IW3 P-Bilene 1',
+            'IW4 P-Bilene 2',
+            'IW5 Zimpeto',
+            'IW6 Vila Olímpica',
+            'IW7 C-Socimédia',
+            'IX1 Facim',
+          ],
+          'Imobiliária',
+          'IW5 Zimpeto'
+        );
+
+        var contactOwnerPosition = cfl2Str(
+          ['Casa', 'Espaço', 'Quarto', '---------------', 'Autoridade', 'Buyer', 'Limpador', 'Ocupante', 'Seller', 'Vizinho'],
+          'Posição/Ocupação\n\n—\nSe o contacto for "Beneficiário Indefinido ou Novo ou Todos", seleciona "Casa".\n',
+          'Quarto'
+        );
+
+        // "X" é adoptado para agrupar contactos não para negócio (Seller, Vizinho, etc)
+        // "Y" é para agrupar contactos em activo
+        // "Z" é para agrupar contactos passados (Introdução manual de Y para Z)
+
+        if (contactOwnerPosition == 'Casa' || contactOwnerPosition == 'Espaço' || contactOwnerPosition == 'Quarto') {
+          if (contactOwnerPosition == 'Casa') {
+            var contactHousePosition = cfl2Str(
+              ['Locador', '---------------', 'Beneficiário Indefinido', 'Novo', 'Todos'],
+              'Posição/Ocupação especial na Categoria "Casa"',
+              'Locador'
+            );
+
+            if (
+              contactHousePosition == 'Beneficiário Indefinido' ||
+              contactHousePosition == 'Novo' ||
+              contactHousePosition == 'Todos'
+            ) {
+              var nameD = contactHousePosition;
+              var spaceNumber = '00';
+            }
+          }
+
+          if (
+            (contactOwnerPosition == 'Casa' && contactHousePosition == 'Locador') ||
+            contactOwnerPosition == 'Espaço' ||
+            contactOwnerPosition == 'Quarto'
+          ) {
+            var spaceNumber = numberLib.addZero(dialog('Número', ''));
+          }
+
+          if (contactOwnerPosition == 'Espaço') {
+            var frontOrInside = cfl2Str(['Dentro', 'Frontal'], 'Dentro ou Frontal?', 'Frontal');
+            var frontOrInside = frontOrInside[0];
+          } else {
+            var frontOrInside = '';
+          }
+
+          var contactOwnerPositionID = 'Y' + contactOwnerPosition[0] + frontOrInside + spaceNumber;
+        } else {
+          if (contactOwnerPosition == 'Seller') {
+            var positionSub = cfl2Str(['Dono', 'Intermediário'], 'Posição do Seller', 'Dono');
+
+            if (positionSub == 'Intermediário') {
+              var positionSubC1 = positionSub[0];
+            }
+          }
+
+          if (positionSubC1 == undefined) {
+            var positionSubC1 = '';
+          }
+
+          var contactOwnerPositionID = 'X' + contactOwnerPosition[0] + positionSubC1;
+        }
+
+        if (property.includes('IW2') || property.includes('IW5') || property.includes('IW6') || property.includes('IX1')) {
+          var provinceNumberPadded = '10';
+        } else if (
+          property.includes('IA4') ||
+          property.includes('IA5') ||
+          property.includes('IW1') ||
+          property.includes('IW3') ||
+          property.includes('IW4')
+        ) {
+          var provinceNumberPadded = '09';
+        } else if (property.includes('IW7')) {
+          var provinceNumberPadded = '08';
+        }
+
+        var propertyCode = property.split(' ')[0];
+
+        var contactCategoryCodeProv = contactCategoryCode + provinceNumberPadded + ' ' + propertyCode + contactOwnerPositionID;
+
+        if (personIntermediary != '') {
+          var theNoteGeneral = 'Intermediário^: ' + personIntermediary + '\n---------------';
+        } else {
+          var theNoteGeneral = '';
+        }
+
+        if (contactOwnerPosition == 'Casa' || contactOwnerPosition == 'Espaço' || contactOwnerPosition == 'Quarto') {
+          var personAccepted = cfl2Str(['Procurar em Contactos', 'Walter (Eu)'], 'Quem lhe Aceitou', 'Walter (Eu)');
+
+          if (personAccepted == 'Procurar em Contactos') {
+            var contactFilter2Input = dialog('Filtro para encontrar o contacto!', '');
+            var contactFilter1Auto = 'personIntermediary';
+            var newContactDescrip = '';
+
+            var personAccepted = contactLib.contactFinderToCreate(
+              contactFilter1Auto,
+              contactFilter2Input,
+              'Seleciona a pessoa que lhe Aceitou',
+              newContactDescrip,
+              'NoFilters'
+            );
+          }
+
+          var objectCode = propertyCode + contactOwnerPosition[0] + frontOrInside + spaceNumber;
+
+          var noteSpecific =
+            'Quem lhe Aceitou: ' +
+            personAccepted +
+            '\nData do contrato/acordo: \nData da entrada: \nData da Saída: \n' +
+            contactOwnerPosition +
+            ': ' +
+            objectCode +
+            '\nValor Inicial: \nData pagamento 1: ';
+        } else {
+          if (
+            contactOwnerPosition == 'Autoridade' ||
+            contactOwnerPosition == 'Buyer' ||
+            contactOwnerPosition == 'Limpador' ||
+            contactOwnerPosition == 'Ocupante'
+          ) {
+            var noteSpecific = `Data ` + contactOwnerPosition + `: ` + dialog('Data', `${dateY4M2D2}`);
+          } else if (contactOwnerPosition == 'Seller') {
+            var noteSpecific = 'Selling Date: ' + dialog('Data da Venda', `${dateY4M2D2}`);
+          }
+        }
+
+        if (noteSpecific == undefined) {
+          var noteSpecific = '';
+        } else {
+          if (personIntermediary != '') {
+            var noteSpecific = '\n' + noteSpecific;
+          } else {
+            var noteSpecific = noteSpecific;
+          }
+        }
+
+        var note = theNoteGeneral + noteSpecific;
+
+        if (noteSpecific == '') {
+          var note = note;
+        } else {
+          var note = dialog('Nota', note);
+        }
+      } else if (contactCategoryCode == 'P5R') {
+        // P5R REBANHO RW1 César ^Irmã 20150812
+        var contactCategoryCodeProv = 'P5R09 REBANHO RW1';
+      } else if (contactCategoryCode == 'P5V') {
+        var sellingObj = cfl2Str(['Computador', 'Impressora', 'Mobiliário', 'Viaturas'], 'Objecto', 'Computador');
+
+        var { provinceNumberPadded } = spaceLib.getProvinceInfo([''], 'Maputo (Cidade)');
+        var contactCategoryCodeProv = contactCategoryCode + provinceNumberPadded + sellingObj[0];
+      } else {
+        var { provinceNumberPadded } = spaceLib.getProvinceInfo([''], 'Maputo (Cidade)');
+
+        if (contactCategoryCode.includes('P5A') || contactCategoryCode.includes('P5D') || contactCategoryCode.includes('P5S')) {
+          // Vai receber E de empresa ou I de Individual a posterior
+          var contactCategoryCodeProv = contactCategoryCode.slice(0, 3) + provinceNumberPadded;
+
+          if (contactCategoryCode.includes('P5A') || contactCategoryCode.includes('P5D')) {
+            var firstConsultancy = '\n\n• PrimeiraConsultoria: ' + contactCategoryItems[3];
+          }
+        } else {
+          var contactCategoryCodeProv = contactCategoryCode.slice(0, 3) + provinceNumberPadded + contactCategoryCode.slice(3);
+        }
+      }
+
+      if (contactGroup == 'Empresa (Estado/Empresa Privada)') {
+        if (contactCategoryCode.includes('P5A') || contactCategoryCode.includes('P5D') || contactCategoryCode.includes('P5S')) {
+          var contactCategoryCodeProv = contactCategoryCodeProv + 'E';
+        }
+
+        var contactFilter2Input = dialog('Segundo filtro - Ignore para não usá-lo!', '');
+        var contactFilter1Auto = contactCategoryCodeProv.match(/P5\w+/)[0]; //.slice(0,6)
+
+        var contactCompanyName = contactLib.contactFinderToCreate(
+          contactFilter1Auto,
+          contactFilter2Input,
+          contactFilter1Auto + ' | Contactos desta categoria + 2º filtro',
+          'NOVA EMPRESA',
+          'WithFilters'
+        );
+
+        var contactCompanyName = ' ' + contactCompanyName.split(/P[1-5]\w+\s/)[1];
+
+        // O espaço antes de "NOVA EMPRESA" é resultante do espaço acima <var contactCompanyName = " " + >
+        if (contactCompanyName == ' NOVA EMPRESA') {
+          var contactCompanyName = ' ' + dialog('NOVA EMPRESA', '');
+        }
+      } else {
+        if (contactCategoryCode.includes('P5A') || contactCategoryCode.includes('P5D') || contactCategoryCode.includes('P5S')) {
+          var contactCategoryCodeProv = contactCategoryCodeProv + 'I';
+        }
+
+        var contactCompanyName = ''; // "Individual"
+      }
+
+      var contactCategoryCodeFinal = contactCategoryCodeProv + contactCompanyName;
+    }
+
+    if (nameD == undefined) {
+      var nameD = 'Nome Apelido';
+    }
+
+    if (contactCategorySubCodeTrack == 'Próprio Ministério & Plus') {
+      var firstName_ = 'Central';
+    } else {
+      if (contactCategSubExtra2TrackPassengers == 'Passageiros') {
+        var extraTitle = `\n\n—\n🔴 Se for taxista, e no "lastName" não aparecer "taxista" acrescenta (Taxista) no fim do "firstName".\n\nNote que os taxistas tendem a ter "Taxista" no nome da empresa.\n`;
+      } else {
+        var extraTitle = '';
+      }
+
+      var firstName_ = dialog('Nome & Apelido / Central' + extraTitle, nameD);
+    }
+
+    // Add Employer if Protection
+    if (contactCategory == '3. P1FS - Serviços') {
+      if (contactCategSub.includes('Protecção')) {
+        var employerCat = cfl2Str(
+          ['Funcionário de Empresa', 'Funcionário de Singular', 'Independente'],
+          'Categoria do Empregador',
+          'Funcionário de Singular'
+        );
+
+        if (employerCat.includes('Funcionário')) {
+          var contactFilter1Auto = 'protectionEmployerCat'; //undefined
+          var contactFilter2Input = dialog('Filtro para empregador', '');
+          var contactFilter2InputWithEmployerCat = employerCat + ' | ' + contactFilter2Input;
+
+          // NO NEED TO UPDATE contactFinder DEL5 IN FUTURE
+          var employer = contactLib.contactFinderToCreate(
+            contactFilter1Auto,
+            contactFilter2InputWithEmployerCat,
+            contactFilter2Input + ' | Contactos usando 2º filtro somente',
+            'NOT USED',
+            'WithFilters'
+          );
+
+          var firstName_ = firstName_ + ' (' + employer + ')';
+        }
+      }
+    }
+
+    if (
+      contactPlataform == '5. P5' &&
+      !contactCategory.includes('P5I') &&
+      !contactCategory.includes('P5R') &&
+      !contactCategory.includes('P5V')
+    ) {
+      var consultancyGroupStatus = cfl2Str(['Não', 'Sim'], 'Adicionar no Grupo de Consultoria?', 'Não');
+    }
+
+    var noteLine1 = 'Data contacto: ' + personKnewDate;
+
+    if (personIntermediary != '') {
+      var firstName_ = firstName_ + ' ^';
+    }
+
+    if (contactCategoryCodeFinal.includes('P5I')) {
+      if (personIntermediary != '') {
+        var noteDivider1 = '\n';
+      } else {
+        var noteDivider1 = '\n---------------\n';
+      }
+
+      var note = noteLine1 + noteDivider1 + note + '\n';
+    } else {
+      if (personIntermediary != '') {
+        //var firstName_ = firstName_ + " ^"
+        var noteLine2 = 'Intermediário^: ' + personIntermediary;
+      } else {
+        var noteLine2 = '';
+      }
+
+      var noteDivider1 = '---------------';
+
+      if (noteLine2 == '') {
+        var note = noteLine1 + '\n' + noteDivider1 + '\n';
+      } else {
+        var note = noteLine1 + '\n' + noteLine2 + '\n' + noteDivider1 + '\n';
+      }
+    }
+
+    var centralTrack = firstName_.split(' ')[0];
+
+    if (centralTrack == 'Central') {
+      var extraNoteDesc = 'Tem extra nota?';
+    } else {
+      var extraNoteDesc = 'Tem extra nota?\n\n—\n• Nota qualquer\n• Job Title\n• Etc\n';
+    }
+
+    // Extra note para TUDO. Se é Arquitecto de Ministério ou do Banco, se é cliente Médico, se é inquilino Civil ou …
+    var extraNoteStatus_ = extraNoteStatus(extraNoteDesc);
+
+    if (extraNoteStatus_ == 'Não') {
+      var extraNote = '';
+    } else if (extraNoteStatus_ == 'Sim') {
+      var firstName_FirstItem = firstName_.split(' ')[0];
+
+      // Get last character of first item of First Name
+      var firstName_FirstItemLastC = firstName_FirstItem.slice(-1);
+
+      if (firstName_FirstItemLastC == 'a') {
+        var GLC = 'a'; // Gender Last Character
+      } else {
+        var GLC = 'o';
+      }
+
+      var jobTitleAndMoreExtraNotes = [
+        'Escrever',
+        'Inverter Género da Opção 🔴',
+        '--------------',
+        'Ambiental',
+        'Arquitect' + GLC,
+        'Biólog' + GLC,
+        'Civil',
+        'Contabilista',
+        'Electrotécnic' + GLC,
+        'Geólog' + GLC,
+        'Geotécnic' + GLC,
+        'Hidráulic' + GLC,
+        'Jurista',
+        'Médic' + GLC,
+        'Mecânic' + GLC,
+        'Paisagista',
+        'Topógraf' + GLC,
+        '--------------',
+        'Canalizador',
+        'Carpinteir' + GLC,
+        'Electricista',
+        'Gesso Paredes & Tectos',
+        'Impermeabilizador',
+        'Jardineir' + GLC,
+        'Ladrilhador',
+        'Pedreir' + GLC,
+        'Pintor',
+        'Serralheir' + GLC,
+        'Vidro & Aluminio',
+        '--------------',
+        'Medidor',
+        'Projectista',
+        'Técnic' + GLC,
+        '--------------',
+        'Funcionári' + GLC,
+        'Recepcionista',
+      ];
+
+      if (centralTrack == 'Central') {
+        // Split para eliminar " ^"
+        var extraNote = cfl2Str(['Escrever'], 'Nota Extra para o Contacto', 'Escrever');
+      } else {
+        var extraNote = cfl2Str(
+          jobTitleAndMoreExtraNotes,
+          'Nota Extra para o Contacto\n\n—\n' +
+            firstName_ +
+            '\n--------------\nPara inverter o género, seleciona opção pretendida e a "Inverter Género da Opção 🔴"',
+          'Civil',
+          'm'
+        );
+
+        if (extraNote.includes('Inverter Género da Opção 🔴')) {
+          var extraNoteToInvertGender = extraNote.replace('Inverter Género da Opção 🔴,', '');
+
+          if (extraNoteToInvertGender.slice(-1) == 'a') {
+            var extraNote = extraNoteToInvertGender.slice(0, extraNoteToInvertGender.length - 1) + 'o';
+          } else if (extraNoteToInvertGender.slice(-1) == 'o') {
+            var extraNote = extraNoteToInvertGender.slice(0, extraNoteToInvertGender.length - 1) + 'a';
+          }
+        }
+      }
+
+      if (extraNote == 'Escrever') {
+        var extraNote = dialog('Extra Nota', '');
+      }
+
+      var extraNote = '\n• ' + extraNote;
+    }
+
+    if (firstConsultancy == undefined) {
+      var firstConsultancy = '';
+    }
+
+    var note = note + extraNote + firstConsultancy;
+
+    var lastName_ = contactCategoryCodeFinal;
+
+    var completeName = `${lastName_} ${firstName_}`;
+
+    // currentApp.displayAlert(completeName) // J12345
+
+    var contactDetails = cfl2Str(['Telefone', 'Email', 'URL'], 'Detalhes', 'Telefone', 'm');
+
+    var person = contactsApp.Person({ firstName: firstName_, lastName: lastName_, note: note });
+
+    contactsApp.people.push(person);
+
+    if (contactDetails.includes('Email')) {
+      var theEmail = dialog('Email', '');
+      var email = contactsApp.Email({ label: 'Work', value: theEmail });
+      person.emails.push(email);
+    }
+
+    if (contactDetails.includes('URL')) {
+      var theUrl = dialog('URL', '');
+      var url = contactsApp.Url({ label: 'home page', value: theUrl });
+      person.urls.push(url);
+    }
+
+    if (contactDetails.includes('Telefone')) {
+      var telephoneNumbers = documentLib
+        .ensureSpaceAfterCommaInStr(dialog(`Números separados por vírgula e com ou sem prefixos, se for nacionais`, ''))
+        .split(', ');
+
+      for (var i = 0; i < telephoneNumbers.length; i++) {
+        var telephoneNumber = telephoneNumbers[i].replace(/ /g, '');
+
+        if ((telephoneNumber.startsWith('+258') && telephoneNumber.length === 12) || telephoneNumber.length === 8) {
+          var operator = 'Fixo';
+
+          if (telephoneNumber.startsWith('+258')) {
+            var telephoneNumber = telephoneNumber.replace('+258', '');
+          }
+
+          var phone = contactsApp.Phone({ label: operator, value: '+258' + telephoneNumber });
+        } else {
+          if (telephoneNumber.startsWith('+258')) {
+            var telephoneNumber = telephoneNumber.replace('+258', '');
+          }
+
+          // Mozambican mobile operators
+          // telephoneNumber.slice(0,2). Exclude international numbers beacuse they start with "+"
+          if (['82', '83', '84', '85', '86', '87'].includes(telephoneNumber.slice(0, 2))) {
+            if (telephoneNumber.slice(0, 2) == '82' || telephoneNumber.slice(0, 2) == '83') {
+              var operator = 'Mcel';
+            } else if (telephoneNumber.slice(0, 2) == '84' || telephoneNumber.slice(0, 2) == '85') {
+              var operator = 'Vodacom';
+            } else if (telephoneNumber.slice(0, 2) == '86' || telephoneNumber.slice(0, 2) == '87') {
+              var operator = 'Movitel';
+            }
+
+            var phone = contactsApp.Phone({ label: operator, value: '+258' + telephoneNumber });
+          } else {
+            var operator = cfl(['Angola', 'RSA', 'Swaziland'], 'Seleciona operadora', 'RSA');
+
+            var phone = contactsApp.Phone({ label: operator, value: telephoneNumber });
+          }
+        }
+
+        person.phones.push(phone);
+      }
+    }
+
+    if (consultancyGroupStatus == 'Sim') {
+      var consultancyGroup = contactsApp.groups.whose({ name: 'P5 - Consultoria' });
+      contactsApp.add(person, { to: consultancyGroup });
+    }
+
+    contactsApp.save();
+
+    // OPEN CARD USING OBJECTIVE C
+    var cardURL = 'addressbook://' + person.id();
+
+    var urlStr = $.NSString.stringWithFormat(cardURL);
+    var urlStrURL = $.NSURL.URLWithString(urlStr);
+    $.NSWorkspace.sharedWorkspace.openURL(urlStrURL);
+
+    // Resizing Window of Card
+    var windowWidth = 750;
+    var windowHeight = 1000;
+
+    // 2048 is With of MacBook 16" (see more in GUI - 00)
+    contactsApp.windows[0].bounds = { x: (2048 - windowWidth) / 2, y: 25, width: windowWidth, height: windowHeight };
+    delay(d5);
+
+    // Closing Card
+    contactsApp.windows[0].close();
+    delay(d1);
+  }
+
+  xxAutoLib.autoGetAndSaveContacts();
+} else if (operation == 'Contactos & Grupos') {
+  var contactsOption = cfl2Str(
+    ['Contactos', 'Contactos por Grupo', 'Contactos com Emails', 'Contactos sem Emails'],
+    'Referência',
+    'Contactos'
+  );
+
+  if (contactsOption == 'Contactos') {
+    //peopleAll
+
+    var peopleAll = peopleAll().sort();
+    var theReference = cfl2Str(peopleAll, contactsOption + ' ' + peopleAll.length, peopleAll[0]);
+  } else if (contactsOption == 'Contactos por Grupo') {
+    // peopleInGroup
+
+    var peopleInGroup = peopleInGroup().sort();
+
+    var theReference = cfl2Str(peopleInGroup, contactsOption + ' ' + peopleInGroup.length, peopleInGroup[0]);
+  } else if (contactsOption == 'Contactos com Emails') {
+    //peopleWithEmails
+
+    var peopleWithEmails = peopleWithEmails().sort();
+    var theReference = cfl2Str(peopleWithEmails, contactsOption + ' ' + peopleWithEmails.length, peopleWithEmails[0]);
+  } else if (contactsOption == 'Contactos sem Emails') {
+    //peopleWithOutEmails
+
+    var peopleWithOutEmails = peopleWithOutEmails().sort();
+    var peopleWithOutEmails = cfl2Str(
+      peopleWithOutEmails,
+      contactsOption + ' ' + peopleWithOutEmails.length,
+      peopleWithOutEmails[0]
+    );
+  }
+} else if (operation == 'Delete - All Groups') {
+  while (contactsApp.groups.length > 0) {
+    contactsApp.groups[0].delete();
+  }
+
+  contactsApp.save();
+} else if (operation == 'Modify') {
+  var lastNameOldAndNew = dialog('Nomes - Serão copiado!', 'oldLastName | newLastNameEMPRESAouSINGULAR');
+
+  saApp.setTheClipboardTo(lastNameOldAndNew);
+
+  var theOldLastName = lastNameOldAndNew.split(' | ')[0];
+  var theNewLastName = lastNameOldAndNew.split(' | ')[1];
+
+  var peopleToChange = contactsApp.people.whose({ lastName: theOldLastName })();
+
+  var peopleToChangeList = [];
+
+  for (var i = 0; i < peopleToChange.length; i++) {
+    peopleToChangeList.push(i + 1 + ' ' + peopleToChange[i].lastName() + ' ' + peopleToChange[i].firstName());
+  }
+
+  currentApp.displayAlert(
+    peopleToChange.length + ' contactos — Last Name de ' + theOldLastName + ' para ' + theNewLastName + '?',
+    { message: peopleToChangeList.join('\n'), buttons: ['Cancel', 'OK'], defaultButton: 2, cancelButton: 1 }
+  );
+
+  peopleToChange.forEach(person => {
+    let lastName_ = person.lastName();
+
+    //if(lastName.startsWith("Test5Last")) {
+    if (lastName_ == theOldLastName) {
+      person.lastName = theNewLastName;
+    }
+  });
+  contactsApp.save();
+} else if (operation == 'Update/Create Groups') {
+  var startDateTime = new Date();
+
+  // var groupsInfoSelected = [
+  // 	["P1F - Banco •", ["P1F", "SB"], "and"],
+  // 	// ["P1F - Fornecedor •", ["P1F"], ""],
+  // 	// ["P1F - Graphisoft - ACBuy & Support", ["Note", ["GraphisoftSupportXD5", "ArchicadBuyXD5"]], ""],
+  // 	// ["P1F - Graphisoft - ACBuy & Support", ["Note", ["GraphisoftSupportXD5"]], ""],
+  // 	// ["P5A - #Empresa", ["P5A01AE"], ""],
+  // 	// ["P5A - #Individual", ["P5A01A"], ""],
+  // ]
+
+  var groupsInfo = contactLib.getGroupsInfo();
+
+  /*
+	const groupNames = groupsInfo.map(item => item[0])
+	const groupNamesD = groupNames.filter(
+		name => name.includes("P5") && (name.includes("#Empresa"))
+	)
+
+	var groupNamesSelected = cfl(groupNames, "Seleciona operadora", groupNamesD, "m")
+
+	const groupsInfoSelected = groupsInfo.filter(group => groupNamesSelected.includes(group[0]));
+	*/
+
+  const groupsInfoSelected = contactLib.getGroupsInfoSelected(groupsInfo);
+
+  const _groups = contactsApp.groups;
+  const groupNamesSet = new Set(_groups.name()); // Use a Set for O(1) lookup
+  const _people = contactsApp.people();
+
+  _people.forEach(person => {
+    groupsInfoSelected.forEach(([groupNameInput, filters, filtersRelation]) => {
+      updateGroups(contactsApp, groupNamesSet, person, groupNameInput, filters, filtersRelation);
+    });
+  });
+
+  contactsApp.save();
+
+  const groupsInfoTxt = groupsInfoSelected
+    .map((item, index, array) => {
+      return `${index + 1}. Nome: ${item[0]} | Filtros: ${item[1].join(', ')} | Relação de filtros: ${item[2]}`;
+    })
+    .join('\n');
+
+  var endDateTime = new Date();
+  var processTimeElapsed = timeElapsed(startDateTime, endDateTime);
+
+  const { dateY4M2D2__H2M2S2: end_dateY4M2D2__H2M2S2 } = formatDateV3(endDateTime).formats;
+
+  // ARCHIVE "Update/Create Groups" PROCCESSED groupsInfoSelected
+  objCLib.writeToFile(
+    `${inboxPathStr}/LOG - CONTACTOS - PROCCESSED GROUPSINFO ${end_dateY4M2D2__H2M2S2} (${groupsInfoSelected.length}) (${processTimeElapsed}).txt`,
+    groupsInfoTxt
+  );
+
+  // ------------ Check "Contacts App" has names that "groupsInfo" does not have and vice-versa
+
+  const groupsInfoNames = groupsInfo.map(item => item[0]);
+
+  const groupNames = sortArray(contactsApp.groups.name());
+
+  const groupNamesNotInContactsApp = groupsInfoNames.filter(item => !groupNames.includes(item));
+
+  if (groupNamesNotInContactsApp.length > 0) {
+    alert(`Nomes que estão em "groupsInfo" mas não estão em "Contacts App":`, `${groupNamesNotInContactsApp.join('\n')}`);
+  }
+
+  const groupNamesNotInGroupsInfo = groupNames.filter(item => !groupsInfoNames.includes(item));
+
+  if (groupNamesNotInGroupsInfo.length > 0) {
+    alert(`Nomes que estão em "Contacts App" mas não estão em "groupsInfo":`, `${groupNamesNotInGroupsInfo.join('\n')}`);
+  }
+}
+
+// ------------------------------------------ FUNCTIONS
+// ------------ NEW
+function updateGroups(contactsApp, groupNamesSet, person, groupNameInput, filters, filtersRelation) {
+  try {
+    // Extract person information once
+    let personInfoToTrack = extractPersonInfo(person, filters);
+
+    if (filters[0] === 'Note') {
+      var filters = filters[1];
+    }
+
+    if (shouldProcessPerson(personInfoToTrack, filters, filtersRelation)) {
+      processPerson(contactsApp, groupNamesSet, person, person.name(), groupNameInput);
+    }
+  } catch (error) {
+    //   console.error('Error processing person:', error);
+
+    alert(`Error processing person:`, `${error.message}`);
+  }
+}
+
+function extractPersonInfo(person, filters) {
+  if (filters[0] === 'Note') {
+    return person.note() || ''; // Fallback to empty string if note is null or undefined
+  } else {
+    // Check if lastName exists and is not null or undefined
+    const lastName = person.lastName();
+    if (lastName) {
+      var filter1Items = filters[0].split(' ');
+
+      if (filter1Items.length > 1) {
+        // For ["P1F10BTS GRAPHISOFT"] from ["P1F - Graphisoft", ["P1F10BTS GRAPHISOFT"], ""],
+        return lastName;
+      } else {
+        // For ["P1F", "SB"] from ["P1F - Banco •", ["P1F", "SB"], "and"]
+        return lastName.split(' ')[0];
+      }
+    } else {
+      return ''; // Fallback to empty string if lastName is null or undefined
+    }
+  }
+}
+
+function shouldProcessPerson(personInfoToTrack, filters, filtersRelation) {
+  // Check if personInfoToTrack is null or undefined
+  if (personInfoToTrack == null) {
+    return false;
+  }
+
+  if (filtersRelation === 'or') {
+    // Ensure the filter is not an empty string
+    return filters.some(filter => filter && personInfoToTrack.includes(filter));
+  } else if (filtersRelation === 'and') {
+    // Ensure the filter is not an empty string
+    return filters.every(filter => filter && personInfoToTrack.includes(filter));
+  } else {
+    // Check for empty string filter
+    return filters[0] && personInfoToTrack.includes(filters[0]);
+  }
+}
+
+function processPerson(contactsApp, groupNamesSet, person, personName, groupNameInput) {
+  if (groupNamesSet.has(groupNameInput)) {
+    let existingGroup = contactsApp.groups[groupNameInput];
+    let existingGroupNames = existingGroup.people.name();
+
+    if (!existingGroupNames.includes(personName)) {
+      contactsApp.add(person, { to: existingGroup });
+    }
+  } else {
+    let newGroup = contactsApp.Group({ name: groupNameInput });
+    contactsApp.groups.push(newGroup);
+    contactsApp.add(person, { to: newGroup });
+    groupNamesSet.add(groupNameInput); // Update the set
+  }
+}
+
+// ------------
+
+function extraNoteStatus(prompt) {
+  return cfl2Str(['Não', 'Sim'], prompt, 'Não');
+}
+
+function peopleAll() {
+  var peopleAll = [];
+  var peopleArray = contactsApp.people();
+
+  for (var i = 0; i < peopleArray.length; ++i) {
+    peopleAll.push(peopleArray[i].name());
+  }
+  return peopleAll;
+}
+
+// peopleInGroup
+function peopleInGroup() {
+  var peopleInGroup = [];
+  var theGroups = contactsApp.groups();
+
+  for (var i = 0; i < theGroups.length; ++i) {
+    var thePeople = theGroups[i].people();
+    for (var j = 0; j < thePeople.length; ++j) {
+      peopleInGroup.push(theGroups[i].name() + ' | ' + thePeople[j].name());
+    }
+  }
+  return peopleInGroup;
+}
+
+// peopleWithEmails
+function peopleWithEmails() {
+  var peopleWithEmails = [];
+  var peopleArray = contactsApp.people();
+
+  for (var i = 0; i < peopleArray.length; ++i) {
+    try {
+      if (peopleArray[i].emails()[0].value()) {
+        peopleWithEmails.push(peopleArray[i].name() + '	•	' + peopleArray[i].emails()[0].value());
+      }
+    } catch {
+      //
+    }
+  }
+  return peopleWithEmails;
+}
+
+// peopleWithOutEmails
+function peopleWithOutEmails() {
+  var peopleWithOutEmails = [];
+  var peopleArray = contactsApp.people();
+
+  for (var i = 0; i < peopleArray.length; ++i) {
+    try {
+      if (peopleArray[i].emails()[0].value()) {
+        // If error, does not have email
+        //
+      }
+    } catch {
+      peopleWithOutEmails.push(peopleArray[i].name());
+    }
+  }
+  return peopleWithOutEmails;
+}
+
+function getPartnerOption() {
+  var cooperatorStatus = cfl2Str(['Não', 'Sim'], 'Parceiro', 'Não');
+
+  if (cooperatorStatus == 'Sim') {
+    return 'P';
+  } else {
+    return '';
+  }
+}

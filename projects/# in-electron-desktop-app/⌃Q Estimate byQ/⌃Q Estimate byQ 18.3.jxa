@@ -1,0 +1,1699 @@
+// v18.3
+
+var pathLib = Library('pathLib');
+const { getND, goToFolderCopyPaste } = Library('finderLib');
+var iWorkLib = Library('iWorkLib');
+
+var menuLib = Library('menuLib');
+var documentLib = Library('documentLib');
+var displayLib = Library('displayLib');
+var cflLib = Library('cflLib');
+var numberLib = Library('numberLib');
+var projectLib = Library('projectLib');
+
+var currentApp = Application.currentApplication();
+var saApp = ((currentApp.includeStandardAdditions = true), currentApp);
+var seApp = Application('System Events');
+
+var finderApp = Application('Finder');
+var numbersApp = Application('Numbers');
+var numbersAppControllerP = seApp.processes['Numbers'];
+var excelApp = Application('Microsoft Excel');
+
+// ---------------------------------------
+const ND = getND();
+
+// --------------------------------------- DELAYS
+
+var d0p3 = 0.3;
+var d0p5 = 0.5;
+var d1 = 1;
+var d1p5 = 1.5;
+var d2 = 2;
+var d3 = 3;
+var d5 = 5;
+var d10 = 10;
+
+// ---------------------------------------------------------
+
+var numXA5PathObj = Path(pathLib.getNumXA5PathStr());
+
+// BOOLEANS
+
+var formatQuote = false;
+var includeFormulasInputAndHighlightChaptersAndNotes = true;
+var chapterAndNoteInMagenta = true;
+var globalTrueOrFalse = false;
+
+var alertDisplay = `\n\n--------------\nAceita duas opções conjugadas:\n🔴 Opção 3 com uma das opções "• Capítulos & Notas a Preto", "• Excluir intro de Fórmulas e formatação de Capítulos e Notas" ou "• Formatar a Estimativa"\n🔴 Opção 3 as duas opções "• Capítulos & Notas a Preto", "• Excluir intro de Fórmulas e formatação de Capítulos e Notas"`;
+
+var options = cflLib.cfl(
+  [
+    `• Capítulos & Notas a Preto`,
+    `• Excluir intro de Fórmulas e formatação de Capítulos e Notas`,
+    `• Formatar a Estimativa`,
+    `--------------- Numeração`,
+    'Actualizar',
+    '---------------',
+    'Quantidades - Excel',
+    'Quantidades - PDF Sheet By Page',
+    'Quantidades - PDF Save As by Sheet',
+    '---------------',
+    '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)',
+    '2. Orçamento - Filtro por Valores (Sheet corrente)',
+    '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers',
+    '4. Orçamento - PriceK Checker ColumnAdd',
+    '5. Orçamento - PriceK Checker ColumnDelete',
+    '6. Orçamento - SummaryAndDuration Maker',
+    '-----',
+    'Z. Orçamento - PDF Save As by Sheet',
+    '---------------',
+    'Z. Orçamento - Excel',
+  ],
+  `Opção ${alertDisplay}\n`,
+  '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers',
+  'm'
+);
+
+var optionsL = options.length;
+
+if (optionsL == 1) {
+  var option = options[0];
+
+  if (option == '6. Orçamento - SummaryAndDuration Maker') {
+    var chapterAndNoteInMagenta = false;
+  }
+} else if (optionsL == 2) {
+  if (options[0] == `• Capítulos & Notas a Preto`) {
+    var chapterAndNoteInMagenta = false;
+  } else if (options[0] == `• Excluir intro de Fórmulas e formatação de Capítulos e Notas`) {
+    var includeFormulasInputAndHighlightChaptersAndNotes = false;
+  } else if (options[0] == `• Formatar a Estimativa`) {
+    var formatQuote = true;
+  } else {
+    displayLib.alert(`ERRO❗️`, `As duas opções selecionadas, não estão configuradas!`);
+  }
+
+  //var option = options[0]
+  var option = options[1];
+} else if (optionsL == 3) {
+  if (
+    options[0] == `• Capítulos & Notas a Preto` &&
+    options[1] == `• Excluir intro de Fórmulas e formatação de Capítulos e Notas` &&
+    options[2] == `3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers`
+  ) {
+    var chapterAndNoteInMagenta = false;
+    var includeFormulasInputAndHighlightChaptersAndNotes = false;
+  } else {
+    displayLib.alert(`ERRO❗️`, `As três opções selecionadas, não estão configuradas!`);
+  }
+
+  //var option = options[0]
+  var option = options[2];
+} else if (optionsL > 2) {
+  displayLib.alert(`ERRO❗️`, `Não tem opção para acima de 2 selecções (${optionsL})!`);
+}
+
+if (option == `3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers`) {
+  var globalTrueOrFalse = true;
+}
+
+var docNum = numbersApp.documents[0];
+// var docNumName = docNum.name()
+var docNumName = docNum.name().replace('.numbers', '');
+
+var docsNum = numbersApp.documents();
+
+var docNumXA5 = docsNum.filter(document => document.name().includes('CONFIGURAÇÕES XA5'))[0];
+
+if (!docNumXA5) {
+  var docNumXA5 = numbersApp.open(numXA5PathObj);
+  delay(d3);
+}
+
+delay(d1);
+menuLib.doMenu('Numbers', 'Window', docNumName);
+delay(d1);
+
+// var docNumXA5 = numbersApp.open(numXA5PathObj)
+
+// var {customerName, invoiceCs, includeCost, savePdf, writeQuantitiesInEstimateByQ, buildingsNumsFilteredToWriteQuantitiesInEstimateByQ} = projectLib.getProjectInProcessInfo(docNumXA5)
+
+var { buildingsNumsFilteredToWriteQuantitiesInEstimateByQ } = projectLib.getProjectInProcessInfo(docNumXA5);
+
+if (option.includes('Quantidades') || option == 'Z. Orçamento - PDF Save As by Sheet' || option == 'Z. Orçamento - Excel') {
+  // var docNum = numbersApp.documents[0]
+
+  var docNumPathStrItems = docNum.file().toString().split('/');
+
+  // 🔴 O export faz replace (Excel testado, falta PDF) do Mapa anteriormente exportado (caso exista), assim não há necessidade de criar versões de Save As do exportado pois não úteis
+  // 🔴 O este documento excel não pode estar aberto pois ao abrir vai considerar este e perder o exportado recentemente
+
+  var docNumNameWithExtension = docNumPathStrItems.pop();
+
+  if (option.includes('Quantidades')) {
+    var docNumNameWithExtensionItems = docNumNameWithExtension.split(` ${ND} `);
+
+    var docNumNameWithExtensionItemToUpdateItems = docNumNameWithExtensionItems[2].split(' ');
+
+    var invoiceCs = docNumNameWithExtensionItemToUpdateItems[docNumNameWithExtensionItemToUpdateItems.length - 1];
+
+    docNumNameWithExtensionItems[0] = '00X00EQ';
+    docNumNameWithExtensionItems[2] = 'MAPA DE QUANTIDADES ' + invoiceCs;
+
+    var docNumNewNameWithExtension = docNumNameWithExtensionItems.join(` ${ND} `);
+  } else if (option.includes('Z. Orçamento - PDF Save As by Sheet')) {
+    var docNumNewNameWithExtension = docNumNameWithExtension.replace('.numbers', ' - TEMPORARYSAVE.numbers');
+  } else if (option.includes('Z. Orçamento - Excel')) {
+    var docNumNewNameWithExtension = docNumNameWithExtension.replace('.numbers', ' - EXCEL.numbers');
+  }
+
+  var docNumNewNameWithoutExtension = docNumNewNameWithExtension.split('.numbers')[0];
+
+  var docNumDuplicatedPathStr = docNumPathStrItems.join('/'); //+ "/"
+
+  menuLib.doMenu('Numbers', 'File', 'Duplicate');
+  delay(d1);
+  menuLib.doMenu('Numbers', 'File', 'Save…');
+  delay(d0p3);
+
+  saApp.setTheClipboardTo(docNumNewNameWithoutExtension);
+  delay(d1);
+  seApp.keystroke('v', { using: 'command down' });
+  delay(d0p3);
+
+  goToFolderCopyPaste(docNumDuplicatedPathStr);
+
+  numbersApp.activate();
+  var docNumDuplicated = numbersApp.documents[0];
+  var sheets = docNumDuplicated.sheets;
+  var sheetsL = sheets.length;
+
+  // In CAPA, REPLACE "ESTIMATIVA DE CUSTO E DURAÇÃO" by "MAPA DE QUANTIDADES"
+  if (option.includes('Quantidades - PDF')) {
+    docNumDuplicated.sheets['00 CAPA'].tables[0].cells['A4'].value = 'MAPA DE QUANTIDADES';
+  }
+
+  // SUMMARY TABLE | USE *17% & 10%
+  var tableSummaryOrDuration = docNumDuplicated.sheets['00 RESUMO'].tables[0];
+  delay(d0p5);
+
+  var tableSummaryOrDurationColumnsL = tableSummaryOrDuration.columnCount();
+
+  if (tableSummaryOrDurationColumnsL == 6) {
+    // Apagar coluna de verificação, se exitir
+    iWorkLib.deleteColumns(tableSummaryOrDuration, 1, 1);
+  }
+
+  // --------------- DELETE COLUMNS, CLEAR PRICES
+
+  var totalsAboveZeroIsError = [];
+
+  for (var h = 0; h < sheetsL; h++) {
+    var sheet = sheets[h];
+    var sheetName = sheet.name().toLowerCase();
+    var table = sheet.tables[0];
+
+    // SKIP SHEET
+    if (skipSheet(sheetName)) {
+      continue;
+    }
+
+    docNumDuplicated.activeSheet.set(docNumDuplicated.sheets[sheetName]);
+
+    var tableRowsL = table.rowCount();
+
+    for (var i = 1; i < tableRowsL; i++) {
+      var iSum = i + 1;
+      var fillId_Track = table.cells['D' + iSum].value();
+
+      if (fillId_Track) {
+        // Geral
+        // Delete General Rows of IDs
+        if (fillId_Track.slice(0, 5) == 'Geral') {
+          iWorkLib.deleteRows(table, 1, i);
+
+          i -= 1;
+          tableRowsL -= 1;
+        }
+      }
+    }
+
+    if (option.includes('Z. Orçamento - PDF Save As by Sheet')) {
+      iWorkLib.hideColumns(table, ['C', 'D', 'F', 'G', 'I']);
+    } else if (option.includes('Quantidades') || option.includes('Z. Orçamento - Excel')) {
+      if (option.includes('Quantidades')) {
+        // ----- APAGAR OS PREÇOS UNITÁRIOS
+        // 🔴 A fórmula do total por item continua
+        table.selectionRange = table.ranges['J2:J' + tableRowsL];
+        delay(d0p5); // Era d0p3, de reperente começou a falhar
+
+        seApp.keyCode(51);
+        delay(d0p3);
+      } else if (option.includes('Z. Orçamento - Excel')) {
+        table.selectionRange = table.ranges['J2:J' + tableRowsL];
+        delay(d0p3);
+        seApp.keystroke('c', { using: 'command down' });
+        delay(d0p3);
+        menuLib.doMenu('Numbers', 'Edit', 'Paste Formula Results');
+        delay(d0p3);
+      }
+
+      // ----- APAGAR A COLUNA DE PREÇOS K
+      iWorkLib.deleteColumns(table, 1, 8);
+      delay(d0p3);
+
+      // CONTINGÊNCIA using *10%
+      table.cells['J' + (tableRowsL - 2)].value = '=J' + (tableRowsL - 3) + '*10%';
+
+      // IVA using *17%
+      table.cells['J' + (tableRowsL - 1)].value = '=(J' + (tableRowsL - 3) + '+J' + (tableRowsL - 2) + ')*17%';
+
+      // ----- MONITORAR O TOTAL QUE DEVE SER 0.00
+
+      var total = table.cells['J' + tableRowsL].value();
+
+      if (option.includes('Quantidades')) {
+        if (total > 0) {
+          totalsAboveZeroIsError.push('• ' + sheetName.toUpperCase() + ' ' + numberLib.formatNumber(total, 2, 2));
+        }
+      }
+
+      // ----- APAGAR COPY PASTE QUANTITIES "Paste Formula Results"
+      table.selectionRange = table.ranges['H2:H' + tableRowsL];
+      delay(d0p3);
+      seApp.keystroke('c', { using: 'command down' });
+      delay(d0p3);
+      menuLib.doMenu('Numbers', 'Edit', 'Paste Formula Results');
+      delay(d0p3);
+
+      // ----- APAGAR % QUANT & QUANT  K (2 loops in columns 5)
+      iWorkLib.deleteColumns(table, 2, 5);
+
+      // ----- APAGAR CHAPTER SUB IDENTIFIER & FILL_ID
+      iWorkLib.deleteColumns(table, 2, 2);
+    }
+  }
+
+  if (option.includes('Quantidades') || option.includes('Z. Orçamento - Excel')) {
+    // Não inclui a última fila de totais
+    for (var i = 2; i < tableSummaryOrDuration.rowCount(); i++) {
+      // Todas colunas recuaram uma letra (de D para C) pois eliminamos a coluna (B) de verificação
+      tableSummaryOrDuration.cells['C' + i].value = '=B' + i + '*10%';
+      tableSummaryOrDuration.cells['D' + i].value = '=(B' + i + ('+C' + i) + ')*17%';
+    }
+
+    // Delete Sheets "00 COEFICIENTES" & "00 CAPA"
+    //var sheetNames2Delete = ["00 COEFICIENTES", "00 A5O-DATABASE", "00 CAPA", "00 ESTIMATIVA DE DURAÇÃO"]
+
+    var sheetNames2Delete = ['00 COEFICIENTES', '00 A5O-DATABASE', '00 ESTIMATIVA DE DURAÇÃO'];
+
+    if (
+      option != 'Quantidades - PDF Sheet By Page' &&
+      option != 'Quantidades - PDF Save As by Sheet' &&
+      option != 'Z. Orçamento - Excel'
+    ) {
+      var sheetNames2Delete = sheetNames2Delete.concat('00 CAPA');
+    }
+
+    // DELETE EXTRA SHEETS
+    for (var i = 0; i < sheetNames2Delete.length; i++) {
+      var currentName = sheetNames2Delete[i];
+
+      docNumDuplicated.activeSheet.set(docNumDuplicated.sheets[currentName]);
+      delay(d0p3);
+
+      try {
+        // To deselect any table to activate Window with "Delete Sheet"
+
+        var table = docNumDuplicated.sheets[currentName].tables[0];
+
+        // Se não tiver selecção na tabela, vai dar erro e sai de try block sem executar o "Scape" que dava beef se não houvesse selecção
+        var range = table.selectionRange.name();
+
+        delay(d0p3);
+        seApp.keyCode(53); // Scape somente se tiver selecção na tabel, ver code acima
+      } catch {
+        //
+      }
+      delay(d0p3);
+      numbersAppControllerP.windows[0].buttons.byName('Delete Sheet').click();
+    }
+  }
+
+  if (option == 'Quantidades - Excel' || option == 'Quantidades - PDF Sheet By Page' || option == 'Z. Orçamento - Excel') {
+    // 🔴 123 // Orçamento PDF
+
+    if (option == 'Quantidades - Excel' || option == 'Z. Orçamento - Excel') {
+      var docExtensionToExport = '.xlsx'; // Antes de v12.X era ".xls"
+      var expExtension = 'Microsoft Excel';
+    } else if (option == 'Quantidades - PDF Sheet By Page') {
+      var docExtensionToExport = '.pdf';
+      var expExtension = 'PDF';
+    }
+
+    var pathAndName = Path(docNumDuplicatedPathStr + '/' + docNumNewNameWithoutExtension + docExtensionToExport);
+    delay(d0p3);
+
+    if (option.includes('Excel')) {
+      docNumDuplicated.export({ to: pathAndName, as: expExtension, withProperties: { excludeSummaryWorksheet: true } });
+    } else {
+      docNumDuplicated.export({ to: pathAndName, as: expExtension });
+    }
+
+    finderApp.reveal(pathAndName).extensionHidden = true;
+    finderApp.open(pathAndName);
+    delay(d10);
+
+    //var docExcel = excelApp.open(pathAndName) // 🔴🔴🔴 Falha, não apanha sheets
+    var docExcel = excelApp.workbooks[0];
+
+    var excelSheets = docExcel.sheets;
+
+    for (var i = 0; i < excelSheets.length; i++) {
+      var excelSheet = excelSheets[i];
+      var excelSheetName = excelSheet.name();
+
+      delay(d1);
+
+      if (excelSheetName.includes(' - ')) {
+        var excelSheetNameItems = excelSheet.name().split(' - ');
+
+        var excelSheetNameItem1 = excelSheetNameItems[0];
+        var excelSheetNameItem2 = excelSheetNameItems[1];
+
+        // In Number is sheet is "00 RESUMO" and table is "\n\n00 RESUMO\n\n" and here in Excel arrives as "00 RESUMO - \n\n00 RESUMO\n\n" sheet name merging sheetName and TableName
+        if (excelSheetNameItem1.includes('RESUMO')) {
+          excelSheet.name = excelSheetNameItem1.split(' - ')[0];
+        } else if (excelSheetNameItem1.slice(0, 2) == excelSheetNameItem2.slice(0, 2)) {
+          var excelSheetNewName = excelSheetNameItems.slice(0, excelSheetNameItems.length - 1).join(' - ');
+
+          excelSheet.name = excelSheetNewName;
+        }
+      }
+    }
+
+    delay(d1);
+
+    docExcel.save();
+    delay(d1);
+  } else if (option == 'Quantidades - PDF Save As by Sheet' || option == 'Z. Orçamento - PDF Save As by Sheet') {
+    var sheetNames = docNum.sheets.name();
+
+    var sheetNamesFiltered = sheetNames.filter(name => !name.includes('COEFICIENTES') && !name.includes('DATABASE'));
+
+    for (var i = 0; i < sheetNamesFiltered.length; i++) {
+      var sheetName = sheetNamesFiltered[i];
+      var sheetNameTrack = sheetName.toLowerCase();
+
+      // Objectivo: eliminar ".numbers" ou " - TEMPORARYSAVE.numbers" e aproveitar colocar espaço antes e depois de "-" antes de Sheet Name
+
+      if (option == 'Quantidades - PDF Save As by Sheet') {
+        var formatedPdfNewName = docNumNewNameWithExtension.replace('.numbers', '') + ' - ' + sheetName;
+      } else if (option == 'Z. Orçamento - PDF Save As by Sheet') {
+        var formatedPdfNewName = docNumNewNameWithExtension.replace(' - TEMPORARYSAVE.numbers', '') + ' - ' + sheetName;
+      }
+
+      iWorkLib.numbersSaveAsPDF(
+        numbersAppControllerP,
+        docNum,
+        i,
+        sheetNamesFiltered,
+        sheetName,
+        docNumDuplicatedPathStr,
+        formatedPdfNewName
+      );
+    }
+  }
+
+  docNumDuplicated.save();
+  delay(d0p3);
+
+  docNumDuplicated.close();
+  delay(d0p3);
+
+  finderApp.delete(Path(docNumDuplicatedPathStr + '/' + docNumNewNameWithExtension));
+
+  if (totalsAboveZeroIsError.length > 0) {
+    delay(d1);
+
+    displayLib.alert(`EDIFICAÇÕES COM ITENS NÃO ZERADOS❗️`, `${totalsAboveZeroIsError.join('\n')}`);
+  }
+} else if (option.includes('Orçamento - PriceK Checker')) {
+  numbersApp.activate();
+
+  // var docNum = numbersApp.documents[0]
+
+  var sheets = docNum.sheets;
+  var sheetsL = sheets.length;
+
+  for (var h = 0; h < sheetsL; h++) {
+    var sheet = sheets[h];
+    var sheetName = sheet.name();
+    //var sheetNameTrack = sheetName.toLowerCase()
+    var table = sheet.tables[0];
+
+    // SKIP SHEET
+    if (skipSheet(sheetName)) {
+      continue;
+    }
+
+    var tableRowsL = table.rowCount();
+    var tableColumnsL = table.columnCount();
+
+    if (tableColumnsL == 11 && option == '5. Orçamento - PriceK Checker ColumnDelete') {
+      iWorkLib.deleteColumns(table, 1, 9);
+    } else if (tableColumnsL == 10 && option == '4. Orçamento - PriceK Checker ColumnAdd') {
+      table.columns[8].addColumnAfter();
+      table.columns[9].textWrap = false;
+      table.columns[9].textColor = 'red';
+      table.cells['I1'].value = '$KCHECKER';
+      table.cells['I2'].value = '=FORMULATEXT(G2)';
+      table.selectionRange = table.cells['H2'];
+      delay(d0p3);
+      seApp.keystroke('b', { using: 'command down' }); // Desactivar BOLD em "H2"
+      delay(d0p3);
+
+      seApp.keystroke('c', { using: 'command down' });
+      delay(d0p3);
+
+      table.selectionRange = table.ranges['I2:I' + (tableRowsL - 5)];
+      delay(d0p3);
+
+      seApp.keystroke('v', { using: 'command down' });
+      delay(d0p3);
+
+      seApp.keyCode(53); // Scape
+    }
+  }
+} else {
+  // var docNum = numbersApp.documents[0]
+
+  var docNumName = docNum.name();
+
+  if (option == 'Actualizar' || option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)') {
+    if (option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)') {
+      var filterStrs = displayLib.dialog('Filtros | Separá-los por vírgula', 'filtro1, filtro2');
+    }
+
+    var filterSheetOption = cflLib.cfl2Str(['Activo', 'Todos'], 'Sheets', 'Activo');
+  } else if (option == '2. Orçamento - Filtro por Valores (Sheet corrente)') {
+    var minimumAmount = displayLib.dialog('Filtro — Valor mínimo', '5000'); // 15000
+    var maximumAmount = displayLib.dialog(
+      'Filtro — Valor máximo\n\n\n—\nSe for todos valores acima de mínimo, deixar em branco.',
+      ''
+    );
+
+    if (!Number(maximumAmount)) {
+      var maximumAmount = 1000000000000;
+      var maximumAmountTrack = maximumAmount;
+    }
+  } else if (
+    option == '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers' ||
+    option == '6. Orçamento - SummaryAndDuration Maker'
+  ) {
+    var sheetNames = docNum.sheets.name();
+
+    createCoefficientsAndCoverSheetsIfDoesNotExist(sheetNames, docNumXA5);
+
+    var filterSheetOption = 'Todos';
+  }
+
+  if (option != '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers') {
+    var buildingsNumsFilteredToWriteQuantitiesInEstimateByQ = null;
+  }
+
+  var processSheetsItems = processSheets(
+    option,
+    filterStrs,
+    filterSheetOption,
+    minimumAmount,
+    maximumAmount,
+    maximumAmountTrack,
+    buildingsNumsFilteredToWriteQuantitiesInEstimateByQ
+  ).split(' | ');
+
+  // STRING TO BACK TO LIST
+  var itemsFilteredGeneralStr = processSheetsItems[0];
+
+  var itemsFilteredGeneralWithReplacedLastItemsplitter = itemsFilteredGeneralStr.replace(/\••$/, '');
+  var itemsFilteredGeneral = itemsFilteredGeneralWithReplacedLastItemsplitter.split(/••,/);
+
+  var itemJoiner = processSheetsItems[1];
+  var partialTotal = Number(processSheetsItems[2]);
+
+  var itemsFilteredByWordsStr = processSheetsItems[3];
+  // Replace last "••" added in processSheets
+  var itemsFilteredByWordsWithReplacedLastItemsplitter = itemsFilteredByWordsStr.replace(/\••$/, '');
+  var itemsFilteredByWords = itemsFilteredByWordsWithReplacedLastItemsplitter.split(/••,/);
+
+  var filters = processSheetsItems[4];
+
+  if (option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)') {
+    var itemsFilteredByWordsMapped = itemsFilteredByWords.map(
+      item =>
+        item.split(itemJoiner)[0] +
+        itemJoiner +
+        numberLib.formatNumber(item.split(itemJoiner)[1], 2, 2) +
+        itemJoiner +
+        item.split(itemJoiner)[2] +
+        itemJoiner +
+        item.split(itemJoiner)[3]
+    );
+
+    var itemSelected = cflLib.cfl2Str(
+      itemsFilteredByWordsMapped,
+      'Items filtrados (' + filters + ')',
+      itemsFilteredByWordsMapped[0]
+    );
+  } else if (option == '2. Orçamento - Filtro por Valores (Sheet corrente)') {
+    var partialTotalStr = numberLib.formatNumber(partialTotal, 2, 2);
+
+    var vat = partialTotal * vatPercentage; //0.17
+    var vatStr = numberLib.formatNumber(vat, 2, 2);
+
+    var total = partialTotal + vat;
+    var totalStr = numberLib.formatNumber(total, 2, 2);
+
+    if (itemsFilteredGeneral.length == 0) {
+      var itemSelected = cflLib.cfl2Str(
+        ['Sem itens filtrados'],
+        'RESULTADOS\n\n• Valores do Orçamento  para verificação (Cálculos independentes dos do Orçamento)\n	• ' +
+          'Total Parcial ' +
+          partialTotalStr +
+          '\n	• IVA ' +
+          vatStr +
+          '\n	• Total ' +
+          totalStr,
+        ['Sem itens filtrados']
+      );
+    } else {
+      var collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+      itemsFilteredGeneral.sort(collator.compare);
+
+      var itemsFilteredMapped = itemsFilteredGeneral.map(
+        item =>
+          numberLib.formatNumber(item.split(itemJoiner)[0], 2, 2) +
+          itemJoiner +
+          item.split(itemJoiner)[1] +
+          itemJoiner +
+          item.split(itemJoiner)[2]
+      );
+
+      var itemSelected = cflLib.cfl2Str(
+        itemsFilteredMapped,
+        'RESULTADOS\n\n• Valores do Orçamento  para verificação (Cálculos independentes dos do Orçamento)\n	• ' +
+          'Total Parcial ' +
+          partialTotalStr +
+          '\n	• IVA ' +
+          vatStr +
+          '\n	• Total ' +
+          totalStr +
+          '\n\n• Itens filtrados\n	• Selecione o item a processar\n',
+        itemsFilteredMapped[0]
+      );
+    }
+  }
+
+  if (
+    option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)' ||
+    (option == '2. Orçamento - Filtro por Valores (Sheet corrente)' && itemsFilteredGeneral.length > 0)
+  ) {
+    var processOtion = cflLib.cfl2Str(
+      ['Copiar o item', '---------------', 'Copiar o preço', 'Copiar o número', 'Copiar o descritivo'],
+      'Opção de Cópia ou Cancelar\n\n—\n' + 'ITEM SELECIONADO\n\n' + itemSelected,
+      'Copiar o preço'
+    );
+
+    if (processOtion == 'Copiar o item') {
+      saApp.setTheClipboardTo(itemSelected);
+    } else if (processOtion == 'Copiar o número' || processOtion == 'Copiar o preço' || processOtion == 'Copiar o descritivo') {
+      var itemSelectedItems = itemSelected.split(itemJoiner);
+
+      if (option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)') {
+        if (processOtion == 'Copiar o preço') {
+          saApp.setTheClipboardTo(itemSelectedItems[1]);
+        } else if (processOtion == 'Copiar o número') {
+          saApp.setTheClipboardTo(itemSelectedItems[2]);
+        } else if (processOtion == 'Copiar o descritivo') {
+          saApp.setTheClipboardTo(itemSelectedItems[3]);
+        }
+      } else if (option == '2. Orçamento - Filtro por Valores (Sheet corrente)') {
+        if (processOtion == 'Copiar o preço') {
+          saApp.setTheClipboardTo(itemSelectedItems[0]);
+        } else if (processOtion == 'Copiar o número') {
+          saApp.setTheClipboardTo(itemSelectedItems[1]);
+        } else if (processOtion == 'Copiar o descritivo') {
+          saApp.setTheClipboardTo(itemSelectedItems[2]);
+        }
+      }
+    }
+  }
+}
+
+if (
+  option.includes('Actualizar') ||
+  option == '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers' ||
+  option.includes('Orçamento - PriceK Checker') ||
+  option == '6. Orçamento - SummaryAndDuration Maker'
+) {
+  docNum.save();
+}
+
+// ------------------------------------------ FUNCTIONS
+
+function isValidItem(itemDesc, itemUnit, itemTotal) {
+  if (itemDesc != null && itemUnit != null && itemTotal != null) {
+    return true;
+  }
+}
+
+function isChapterItem(itemChapterIdentifier) {
+  if (itemChapterIdentifier == '•') {
+    return true;
+  }
+}
+
+function isChapterSub(itemChapterIdentifier) {
+  if (itemChapterIdentifier == '••') {
+    return true;
+  }
+}
+
+function isChapterSubSub(itemChapterIdentifier) {
+  if (itemChapterIdentifier == '•••') {
+    return true;
+  }
+}
+
+function isNoteItem(itemDesc) {
+  if (itemDesc != null && itemDesc.slice(0, 4).toLowerCase() == 'nota') {
+    return true;
+  }
+}
+
+function isNoteItemNotUppercased(itemDesc) {
+  if (itemDesc != null && itemDesc.slice(0, 4) != 'NOTA') {
+    return true;
+  }
+}
+
+function itemRepetionPairing(sheetTrackItem, currentItem) {
+  return sheetTrackItem.slice(0, 143) + ' | ' + currentItem.split(' / ')[1].slice(0, 118);
+}
+
+function isSequenceNumbering(quoteItemsNumbers, itemNum) {
+  try {
+    // Try para situações de não tiver número do item na Planilha ou em quoteItemsNumbers
+    var lastItemNum = quoteItemsNumbers[quoteItemsNumbers.length - 1].toString();
+    var lastCharacterOfLastItemNum = lastItemNum.slice(-1);
+    var itemNumStr = itemNum.toString();
+
+    // Para resolver o problema de Numbers ler "3.1" no lugar de "3.10"
+    // Antes de "3.10" é "3.9"
+    // Antes de "3.20" é "3.19"
+    // lastCharacterOfLastItemNum.length > 1 é para não considerar a sequência "9" e "9.1"
+
+    if (
+      (lastCharacterOfLastItemNum.slice(-1) == '9' && lastItemNum.length > 1 && itemNumStr.slice(-1) == '1') ||
+      (lastCharacterOfLastItemNum.slice(-1) == '9' && lastItemNum.length > 1 && itemNumStr.slice(-1) == '2') ||
+      (lastCharacterOfLastItemNum.slice(-1) == '9' && lastItemNum.length > 1 && itemNumStr.slice(-1) == '3') ||
+      (lastCharacterOfLastItemNum.slice(-1) == '9' && lastItemNum.length > 1 && itemNumStr.slice(-1) == '4') ||
+      (lastCharacterOfLastItemNum.slice(-1) == '9' && lastItemNum.length > 1 && itemNumStr.slice(-1) == '5')
+    ) {
+      return true;
+    }
+  } catch {
+    //
+  }
+}
+
+function skipSheet(sheetName) {
+  if (
+    sheetName.includes('coeficientes') ||
+    sheetName.includes('database') ||
+    sheetName.includes('capa') ||
+    sheetName.includes('resumo') ||
+    sheetName.includes('summary') ||
+    sheetName.includes('estimativa de duração')
+  ) {
+    return true;
+  }
+}
+
+function createCoefficientsAndCoverSheetsIfDoesNotExist(sheetNames, docNumXA5) {
+  numbersApp.activate();
+  var firstSheetName = numbersApp.documents[0].sheets[0].name();
+
+  var sheetNamesStr = sheetNames.toString().toLowerCase();
+
+  if (!sheetNamesStr.includes('coeficientes')) {
+    // 00 COEFICIENTES
+
+    var numbersSheet = numbersApp.Sheet({ name: '00 COEFICIENTES' });
+
+    menuLib.doMenu('Numbers', 'Window', 'Show First Sheet');
+
+    docNum.sheets.push(numbersSheet);
+
+    var tableDolaringAndPrice = numbersSheet.tables[0];
+    tableDolaringAndPrice.name = 'COEFICIENTES';
+
+    delay(d0p5);
+
+    menuLib.doSubMenu('Numbers', 'Table', 'Header Rows', '0');
+    delay(d0p5);
+    menuLib.doSubMenu('Numbers', 'Table', 'Header Columns', '0');
+
+    iWorkLib.deleteColumns(tableDolaringAndPrice, 2, 3);
+
+    tableDolaringAndPrice.columns[0].width = 420;
+    tableDolaringAndPrice.columns[1].width = 90;
+    tableDolaringAndPrice.columns[2].width = 50;
+
+    tableDolaringAndPrice.cells['A1'].value = 'Dólar';
+    tableDolaringAndPrice.cells['B1'].value = '1.00';
+
+    tableDolaringAndPrice.cells['A2'].value = 'Coeficiente preço';
+    tableDolaringAndPrice.cells['B2'].value = '1.00';
+
+    tableDolaringAndPrice.cells['A3'].value = 'Coeficiente Moeda (Auto)';
+    tableDolaringAndPrice.cells['B3'].value = '=B2/B1';
+
+    tableDolaringAndPrice.cells['A5'].value =
+      '=IF(C5,"ORÇAMENTO PARA X-DIM — CADA SHEET DEVE TER REFERÊNCIA CLFEXXXXXXO1, CLFEXXXXXXO2, …","ORÇAMENTO PARA X-DIM?")';
+    tableDolaringAndPrice.cells['B5'].value = 'CLFEXXXXXX';
+    tableDolaringAndPrice.cells['C5'].format = 'checkbox';
+    tableDolaringAndPrice.cells['C5'].value = 0;
+
+    tableDolaringAndPrice.cells['A8'].value = 'CONTINGÊNCIAS';
+
+    tableDolaringAndPrice.cells['B8'].value = '=IF(C8,10%,0%)';
+    //tableDolaringAndPrice.cells["B8"].format = "percent"
+    tableDolaringAndPrice.cells['C8'].format = 'checkbox';
+    tableDolaringAndPrice.cells['C8'].value = 1;
+
+    tableDolaringAndPrice.cells['A9'].value = 'IVA';
+    tableDolaringAndPrice.cells['B9'].value = '=IF(C9,17%,0%)';
+    //tableDolaringAndPrice.cells["B9"].format = "percent"
+    tableDolaringAndPrice.cells['C9'].format = 'checkbox';
+    tableDolaringAndPrice.cells['C9'].value = 1;
+
+    var theQuotient = 1.24; // 1.20588235294 Coeficiente calculado entre RGB obtido e original (123/102)
+
+    // TEXTCOLOR
+    tableDolaringAndPrice.columns[1].textColor = [
+      Math.trunc(((181 / 255) * 65535) / theQuotient),
+      Math.trunc(((23 / 255) * 65535) / theQuotient),
+      Math.trunc(((0 / 255) * 65535) / theQuotient),
+    ];
+
+    tableDolaringAndPrice.rows[2].textColor = 'gray';
+    tableDolaringAndPrice.rows[4].textColor = 'blue';
+
+    // Selecionar todas células
+    tableDolaringAndPrice.selectionRange = tableDolaringAndPrice.cellRange();
+
+    iWorkLib.numbersActivateFormatIndex(numbersAppControllerP, 2); // Activate Format > Text
+
+    // Bold All
+    numbersAppControllerP.windows[0].scrollAreas[3].groups[0].checkboxes[0].click();
+
+    var sheets = docNum.sheets;
+    var sheetsL = sheets.length;
+
+    for (var h = 0; h < sheetsL; h++) {
+      var sheet = sheets[h];
+      var sheetName = sheet.name();
+      var sheetNameTrack = sheetName.toLowerCase();
+      var table = sheet.tables[0];
+
+      // SKIP SHEET
+      if (skipSheet(sheetNameTrack)) {
+        continue;
+      }
+
+      docNum.activeSheet.set(docNum.sheets[sheetName]);
+
+      var tableRowsL = table.rowCount();
+
+      for (var i = 1; i < tableRowsL; i++) {
+        var iSum = i + 1;
+        var itemDesc = table.cells['B' + iSum].value();
+
+        if (itemDesc == 'SUBTOTAL') {
+          var subtotalCellName = table.cells['K' + iSum].name();
+        }
+
+        if (itemDesc == 'CONTINGÊNCIA') {
+          var contingencyCellName = table.cells['K' + iSum].name();
+          table.cells['K' + iSum].value = '=' + subtotalCellName + "*'COEFICIENTES'::B8";
+        }
+
+        if (itemDesc == 'IVA 17%') {
+          var vatCellName = table.cells['K' + iSum].name();
+          table.cells['K' + iSum].value = '=(' + subtotalCellName + '+' + contingencyCellName + ")*'COEFICIENTES'::B9";
+        }
+      }
+    }
+  }
+
+  if (!sheetNamesStr.includes('capa')) {
+    // 00 CAPA
+
+    // var docNumXA5 = numbersApp.open(numXA5PathObj)
+    var projectInfoSheetNames = docNumXA5.sheets.whose({ name: { _contains: 'PROJ - ' } }).name();
+
+    projectInfoSheetNames.sort();
+
+    currentApp.activate();
+    var projectInfoSheetName = cflLib.cfl2Str(projectInfoSheetNames, 'Sheet do Project Info', projectInfoSheetNames[0]);
+
+    var tableProjectInfo = docNumXA5.sheets[projectInfoSheetName].tables['Project Info'];
+    var customerName = tableProjectInfo.cells['B3'].value();
+    var object = tableProjectInfo.cells['C2'].value();
+    var date = tableProjectInfo.cells['B7'].value();
+
+    menuLib.doMenu('Numbers', 'Window', docNumName); // Go to ORÇAMENTOS Doc em processamento
+
+    var numbersSheet = numbersApp.Sheet({ name: '00 CAPA' });
+    docNum.activeSheet.set(docNum.sheets['00 COEFICIENTES']);
+    docNum.sheets.push(numbersSheet);
+
+    var tableCover = numbersSheet.tables[0];
+    delay(d0p5);
+
+    menuLib.doSubMenu('Numbers', 'Table', 'Header Rows', '0');
+    delay(d0p5);
+    menuLib.doSubMenu('Numbers', 'Table', 'Header Columns', '0');
+
+    iWorkLib.deleteColumns(tableCover, 4, 1);
+    iWorkLib.deleteRows(tableCover, 5, 6);
+
+    tableCover.columns[0].width = 660;
+
+    tableCover.rows[0].height = 182;
+    tableCover.rows[1].height = 20;
+    tableCover.rows[2].height = 40;
+    tableCover.rows[3].height = 110;
+    tableCover.rows[4].height = 110;
+    tableCover.rows[5].height = 20;
+
+    tableCover.cells['A1'].value = 'CLIENTE';
+    tableCover.cells['A2'].value = 'OBJECTO';
+    // tableCover.cells["A3"].value = "OBJECTO"
+
+    tableCover.cells['A4'].value =
+      "=IF('COEFICIENTES'::C5," +
+      '"ESTIMATIVA DE CUSTO E DURAÇÃO "' +
+      "&'COEFICIENTES'::B5," +
+      '"ESTIMATIVA DE CUSTO E DURAÇÃO"' +
+      ')';
+    tableCover.cells['A4'].fontSize = 17;
+
+    tableCover.cells['A5'].value = 'DATA';
+
+    tableCover.cells['A6'].value = 'FORMATAR, REPOSICIONAR TABELA & HIDE NAME / INSERIR LOGO5 / DEL5 THIS TEXT';
+    tableCover.cells['A6'].textColor = 'red';
+
+    iWorkLib.numbersActivateFormatIndex(numbersAppControllerP, 2); // Activate Format > Text
+
+    // BOLD CLIENTE & OBJECTO
+    tableCover.selectionRange = tableCover.ranges['A1:A1']; // CLIENTE
+    numbersAppControllerP.windows[0].scrollAreas[3].groups[0].checkboxes[0].click();
+
+    tableCover.selectionRange = tableCover.ranges['A3:A3']; // OBJECTO
+    numbersAppControllerP.windows[0].scrollAreas[3].groups[0].checkboxes[0].click();
+
+    // Selecionar todas células
+    tableCover.selectionRange = tableCover.cellRange();
+
+    // Alighn Center Text
+    numbersAppControllerP.windows[0].scrollAreas[3].groups[1].checkboxes[1].click();
+
+    // Center vertically
+    numbersAppControllerP.windows[0].scrollAreas[3].groups[2].checkboxes[1].click();
+
+    // Activate Format > Cell para esperar a formatação da tabela (eliminação de alguns borders)
+    numbersAppControllerP.windows[0].radioGroups[0].radioButtons.byName('Cell').click();
+
+    tableCover.cells['A1'].value = customerName;
+    tableCover.cells['A3'].value = object;
+    tableCover.cells['A5'].value = date;
+  }
+
+  if (!sheetNamesStr.includes('coeficientes')) {
+    displayLib.alert('No fim do processamento, reposicionar (a direita) o primeiro sheet (' + firstSheetName + ')!', '');
+  }
+}
+
+function processSheets(
+  option,
+  filterStrs,
+  filterSheetOption,
+  minimumAmount,
+  maximumAmount,
+  maximumAmountTrack,
+  buildingsNumsFilteredToWriteQuantitiesInEstimateByQ
+) {
+  // Go to ORÇAMENTOS Doc em processamento pois tinha activado docNumXA5
+  menuLib.doMenu('Numbers', 'Window', docNumName);
+
+  numbersApp.activate();
+  var docNum = numbersApp.documents[0];
+
+  // Informação Coeficientes
+
+  var tableCoefficients = docNum.sheets['00 COEFICIENTES'].tables[0];
+  //var tableCover = docNum.sheets["00 CAPA"].tables[0]
+
+  // Without "var " to be accessible out of function
+  vatPercentage = tableCoefficients.cells['B9'].value(); //.toString()
+
+  if (filterSheetOption == 'Activo' || option == '2. Orçamento - Filtro por Valores (Sheet corrente)') {
+    var sheetsL = 1;
+  } else if (filterSheetOption == 'Todos') {
+    var sheets = docNum.sheets;
+    var sheetsL = sheets.length;
+  }
+
+  var itemsFilteredGeneral = [];
+  var itemJoiner = ' — ';
+
+  var partialTotal = 0;
+  var partialTotalBySheet = 0;
+
+  var itemsFilteredByWords = [];
+
+  var summaryInfo = [['EDIFICAÇÃO', 'SUBTOTAL5DEL*', 'SUBTOTAL', 'CONTINGÊNCIAS', 'IVA', 'TOTAL']]; // Inicia com info p cabeçalho
+
+  var itemTotalEqualZeroIsError = [];
+  var trackItemNumRepetitions = [];
+  var trackItemDescRepetitions = [];
+  var trackNotUppercasedNotes = [];
+
+  var quoteItemsDetails = [];
+  var quoteItemsNumbers = [];
+  var quoteTablesNames = [];
+
+  for (var h = 0; h < sheetsL; h++) {
+    if (filterSheetOption == 'Activo' || option == '2. Orçamento - Filtro por Valores (Sheet corrente)') {
+      var table = docNum.activeSheet().tables[0];
+      var sheetPrefix = '';
+    } else if (filterSheetOption == 'Todos') {
+      var sheet = sheets[h];
+      var sheetName = sheet.name().toLowerCase();
+      var table = sheet.tables[0];
+
+      var sheetTrackItemNumRepetitions = [];
+      var collectionItemNumRepetitions = [];
+
+      var sheetTrackItemDescRepetitions = [];
+      var collectionItemDescRepetitions = [];
+
+      var sheetTrackNotUppercasedNotes = [];
+      var collectionNotUppercasedNotes = [];
+
+      // SKIP SHEET
+      if (skipSheet(sheetName)) {
+        continue;
+      }
+
+      // 0101g101 paisagismo
+      var buildingNum = sheetName.match(/g(\d{1}\d*)/)[1];
+
+      if (buildingsNumsFilteredToWriteQuantitiesInEstimateByQ) {
+        if (!buildingsNumsFilteredToWriteQuantitiesInEstimateByQ.includes(buildingNum)) {
+          continue;
+        }
+      }
+
+      var sheetName = sheet.name();
+      var sheetPrefix = sheetName.split(' ')[0] + ' / '; // 01 /
+
+      var sheetName4Summary = sheetName.toUpperCase();
+    }
+
+    // 🔴 FORMAT // WRAP TABLE TEXT
+    if (formatQuote && option == '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers') {
+      var tableSelection = table.cellRange();
+      tableSelection.textWrap = true;
+    }
+
+    var tableRowsL = table.rowCount();
+
+    var subtotal = [];
+    //var tableRowsL = table.rowCount()
+
+    // -------------- CHAPTER NUMBERING
+
+    if (option == 'Actualizar') {
+      // Delete Numbers Before
+      delay(d0p5);
+
+      table.selectionRange = table.ranges['A2:A' + tableRowsL];
+      delay(d0p5);
+
+      seApp.keyCode(51);
+      delay(d0p3);
+    }
+
+    var chapterNumber = 0;
+    var chapterItemNumber = 0;
+    var chapterItemSubNumber = 0;
+
+    for (var i = 1; i < tableRowsL; i++) {
+      var iSum = i + 1;
+
+      var itemNum = table.cells['A' + iSum].value();
+      var itemDesc = table.cells['B' + iSum].value();
+
+      var itemChapterIdentifier = table.cells['C' + iSum].value();
+      var itemUnit = table.cells['E' + iSum].value();
+
+      var itemUnitPriceK = table.cells['I' + iSum].value();
+      var itemUnitPrice = table.cells['J' + iSum].value();
+      var itemTotal = table.cells['K' + iSum].value();
+
+      if (option == 'Actualizar') {
+        if (isChapterSubSub(itemChapterIdentifier)) {
+          chapterItemSubNumber += 1;
+
+          table.cells['A' + iSum].value = chapterNumber + '.' + chapterItemNumber + '.' + chapterItemSubNumber;
+        } else if (isChapterSub(itemChapterIdentifier)) {
+          var chapterItemSubNumber = 0;
+          chapterItemNumber += 1;
+
+          table.cells['A' + iSum].value = chapterNumber + '.' + chapterItemNumber;
+        } else if (isChapterItem(itemChapterIdentifier)) {
+          chapterNumber += 1;
+          table.cells['A' + iSum].value = chapterNumber;
+
+          var chapterItemNumber = 0;
+        } else if (isValidItem(itemDesc, itemUnit, itemTotal)) {
+          chapterItemNumber += 1;
+
+          table.cells['A' + iSum].value = chapterNumber + '.' + chapterItemNumber;
+        }
+      } else {
+        // --------------- quoteItemsDetails
+
+        var trackItem = '• ' + sheetName + ' / ' + itemNum + ' ' + itemDesc;
+
+        if (itemUnitPrice != null && itemTotal == 0) {
+          itemTotalEqualZeroIsError.push(trackItem);
+
+          table.rows[i].textColor = 'red';
+        }
+
+        if (isChapterItem(itemChapterIdentifier) || isNoteItem(itemDesc)) {
+          if (isChapterItem(itemChapterIdentifier)) {
+            var chapterName = itemDesc;
+          }
+
+          if (isNoteItem(itemDesc)) {
+            var trackItemNote = '• ' + sheetName + ' / ' + chapterName + ' | ' + itemDesc;
+          }
+
+          if (chapterAndNoteInMagenta) {
+            if (isChapterItem(itemChapterIdentifier) && !itemDesc.includes('//')) {
+              table.cells['B' + iSum].value = itemDesc + ' // VERIFICAR ACTIVIDADES NECESSÁRIAS E SEQUÊNCIA';
+            }
+
+            table.rows[i].textColor = 'magenta';
+          } else {
+            if (globalTrueOrFalse) {
+              if (isChapterItem(itemChapterIdentifier) && itemDesc.includes('//')) {
+                table.cells['B' + iSum].value = itemDesc.split(' // ')[0];
+              }
+
+              table.rows[i].textColor = 'black';
+            }
+          }
+        }
+
+        // --------------- TRACK REPITION
+
+        // ----- NUMBERING
+
+        for (var j = 0; j < sheetTrackItemNumRepetitions.length; j++) {
+          var sheetTrackItemNumRepetition = sheetTrackItemNumRepetitions[j];
+          var sheetTrackItemNum = sheetTrackItemNumRepetition.split(' / ')[1].split(' ')[0];
+
+          if (itemNum == sheetTrackItemNum) {
+            if (!isSequenceNumbering(quoteItemsNumbers, itemNum)) {
+              if (trackItemNumRepetitions.length > 0 && collectionItemNumRepetitions.length == 0) {
+                trackItemNumRepetitions.push(' ');
+              }
+
+              collectionItemNumRepetitions.push(itemRepetionPairing(sheetTrackItemNumRepetition, trackItem));
+            }
+          }
+        }
+
+        // ----- DESCRIPTION
+
+        for (var j = 0; j < sheetTrackItemDescRepetitions.length; j++) {
+          var sheetTrackItemDescRepetition = sheetTrackItemDescRepetitions[j];
+          var sheetTrackItemDesc = sheetTrackItemDescRepetition.split(' / ')[1].split(' ').slice(1).join(' ');
+
+          if (itemDesc == sheetTrackItemDesc) {
+            if (trackItemDescRepetitions.length > 0 && collectionItemDescRepetitions.length == 0) {
+              trackItemDescRepetitions.push(' ');
+            }
+
+            collectionItemDescRepetitions.push(itemRepetionPairing(sheetTrackItemDescRepetition, trackItem));
+          }
+        }
+
+        // ----- NOTES NOT UPPERCASED IN POPULATE BELOW
+
+        // ADD ITEM AFTER TEST IF EXIST
+        if (itemNum != null) {
+          sheetTrackItemNumRepetitions.push(trackItem);
+          sheetTrackItemDescRepetitions.push(trackItem);
+        }
+
+        if (isNoteItem(itemDesc)) {
+          sheetTrackNotUppercasedNotes.push(trackItemNote);
+        }
+
+        // POPULATE COLLLECTIONS
+        if (i == tableRowsL - 1) {
+          for (var j = 0; j < collectionItemNumRepetitions.length; j++) {
+            trackItemNumRepetitions.push(collectionItemNumRepetitions[j]);
+          }
+
+          for (var j = 0; j < collectionItemDescRepetitions.length; j++) {
+            trackItemDescRepetitions.push(collectionItemDescRepetitions[j]);
+          }
+
+          for (var j = 0; j < sheetTrackNotUppercasedNotes.length; j++) {
+            var sheetTrackNotUppercasedNote = sheetTrackNotUppercasedNotes[j];
+            var sheetTrackNotUppercasedNote_ = sheetTrackNotUppercasedNote.split(' | ')[1].split(' ')[0];
+
+            if (isNoteItemNotUppercased(sheetTrackNotUppercasedNote_)) {
+              //if (h > 0 && j == 0) {
+
+              if (h > 4 && j == 0) {
+                // Sendo 4 o primeiro Sheet de Estimativas
+                trackNotUppercasedNotes.push(' ');
+              }
+
+              trackNotUppercasedNotes.push(sheetTrackNotUppercasedNote);
+            }
+          }
+        }
+
+        if (itemNum != null) {
+          if (itemUnitPrice == null) {
+            // Itens sem valores (explicação ou arranque do item …)
+            var itemUnitPrice = '';
+          } else {
+            var itemUnitPrice = numberLib.formatNumber(itemUnitPrice, 2, 2);
+          }
+
+          if (isSequenceNumbering(quoteItemsNumbers, itemNum)) {
+            itemNum += '0';
+          }
+
+          quoteItemsDetails.push(sheetName.split(' ')[0] + '			' + itemNum + '			' + itemUnitPrice);
+
+          quoteItemsNumbers.push(itemNum);
+        }
+
+        if (itemDesc == 'SUBTOTAL') {
+          var partialTotalCellName = table.cells['K' + iSum].name();
+        }
+
+        // Se "maximumAmount" não for Number ("", " ", "any string"), multificar itemUnitPrice por 5 (funciona qualquer número superior a 1 (1.1, 10 - eu escolhi 5)) para que maximumAmount seja sempre maior que itemUnitPrice de qualquer item corrente.
+
+        if (option == '2. Orçamento - Filtro por Valores (Sheet corrente)') {
+          if (maximumAmountTrack < Number(itemUnitPrice)) {
+            displayLib.alert(
+              'Aumentar "maximumAmountTrack: ' +
+                numberLib.formatNumber(maximumAmountTrack, 2, 2) +
+                '" para integrar o preço unitário de ' +
+                numberLib.formatNumber(itemUnitPrice, 2, 2),
+              ''
+            );
+          }
+        }
+
+        // --------------- Orçamento - PriceK Applier
+        if (option == '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers') {
+          if (includeFormulasInputAndHighlightChaptersAndNotes) {
+            if (itemUnitPriceK != null) {
+              table.cells['J' + iSum].value = '=I' + iSum + "*'COEFICIENTES'::$B$3";
+
+              // Note que tem <itemTotal> acima
+              var itemTotalUpdated = table.cells['K' + iSum].value();
+
+              // if (itemUnitPriceK > 0) {
+              if (itemTotalUpdated > 0) {
+                table.rows[i].textColor = 'black';
+              }
+            }
+          }
+
+          // --------------- FORMAT SECTIONS
+
+          //if (itemNum != null && !itemNum.toString().includes(".")) {
+
+          if (isChapterItem(itemChapterIdentifier)) {
+            var chapterStartNum = iSum;
+
+            if (formatQuote) {
+              // 🔴 FORMAT CHAPTERS
+
+              var rowToFormat = table.rows[iSum - 1];
+
+              rowToFormat.alignment = 'left';
+              table.selectionRange = rowToFormat;
+              delay(d0p3);
+
+              seApp.keystroke('b', { using: 'command down' });
+              delay(d0p3);
+            }
+          }
+
+          // --------------- PARTIAL TOTAL
+
+          if (includeFormulasInputAndHighlightChaptersAndNotes) {
+            if (itemDesc == 'Total Parcial') {
+              table.cells['K' + iSum].value = '=SUM(K' + (chapterStartNum + 1) + ':K' + (iSum - 1) + ')';
+
+              subtotal.push('K' + iSum);
+
+              if (formatQuote) {
+                // 🔴 FORMAT PARTIAL TOTAL
+                table.cells['B' + iSum].alignment = 'left';
+
+                table.selectionRange = table.rows[iSum - 1];
+                delay(d0p3);
+
+                seApp.keystroke('b', { using: 'command down' });
+                delay(d0p3);
+              }
+            }
+
+            // --------------- SUBTOTAL TO TOTAL
+
+            if (itemDesc == 'SUBTOTAL') {
+              // SUBTOTAL
+              table.cells['K' + iSum].value = '=SUM(' + subtotal.join('+') + ')';
+
+              // CONTINGÊNCIAS
+              table.cells['K' + (iSum + 1)].value = '=K' + iSum + "*'COEFICIENTES'::B8";
+
+              // IVA
+              table.cells['K' + (iSum + 2)].value = '=(K' + iSum + '+K' + (iSum + 1) + ")*'COEFICIENTES'::B9";
+
+              // TOTAL
+              table.cells['K' + (iSum + 3)].value = '=SUM(K' + iSum + ':K' + (iSum + 2) + ')';
+            }
+          }
+        }
+
+        // itemsFilteredGeneral
+        if (
+          (itemUnitPrice >= Number(minimumAmount) && itemUnitPrice <= Number(maximumAmount)) ||
+          option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)'
+        ) {
+          if (
+            itemDesc == 'Fundação' ||
+            itemDesc == 'Piso 1' ||
+            itemDesc == 'Piso 2' ||
+            itemDesc == 'Piso 3' ||
+            itemDesc == 'Piso 4' ||
+            itemDesc == 'Piso 5' ||
+            itemDesc == 'Piso 6' ||
+            itemDesc == 'Piso 7' ||
+            itemDesc == 'Piso 8' ||
+            itemDesc == 'Piso 9' ||
+            itemDesc == 'Piso 10'
+          ) {
+            for (var j = 1; j < 5; j++) {
+              var itemDescReal = table.rows[i - j].cells[1].value();
+
+              if (itemDescReal.slice(0, 5) != 'Piso ' && itemDescReal.slice(0, 8) != 'Fundação') {
+                var itemToPush = itemUnitPrice + itemJoiner + itemNum + itemJoiner + itemDesc + ' / ' + itemDescReal;
+
+                itemsFilteredGeneral.push(itemToPush + '••');
+                break;
+              }
+            }
+          } else {
+            var itemToPush = itemUnitPrice + itemJoiner + itemNum + itemJoiner + itemDesc;
+            itemsFilteredGeneral.push(itemToPush + '••');
+          }
+
+          //  + "••" is item splitter out function to back to list
+          // Out of function if I use "var itemsFilteredGeneral = processSheetsItems[0].split(",")", creates problem because some "itemDesc" has commas (,) and splits in wrong place
+          // See how i get "itemsFilteredGeneral" ou of funtion
+        }
+
+        if (option == '1. Orçamento - Filtro por Palavras (Sheet corrente ou todas)') {
+          var filters = documentLib.ensureSpaceAfterCommaInStr(filterStrs).split(', ');
+
+          for (var k = 0; k < filters.length; k++) {
+            var filter = filters[k];
+
+            if (itemToPush.toLowerCase().includes(filter.toLowerCase())) {
+              itemsFilteredByWords.push(sheetPrefix + filter + itemJoiner + itemToPush + '••');
+
+              //  + "••" is item splitter out function to back to list
+            }
+          }
+        }
+
+        // partialTotal
+        // TRY BLOCK PARA SUBSTITUIR VÍRGULAS CASO EXISTAM VALORES CO FORMATO AUTOMATIC NOT NUMBER
+        try {
+          var itemUnitPrice = itemUnitPrice.replace(/,/g, '');
+        } catch {
+          //
+        }
+
+        try {
+          var itemTotal = itemTotal.replace(/,/g, '');
+        } catch {
+          //
+        }
+
+        if (Number(itemUnitPrice) && Number(itemTotal)) {
+          var partialTotal = partialTotal + Number(itemTotal);
+          var partialTotalBySheet = partialTotal;
+        }
+      }
+    }
+
+    if (formatQuote && option == '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers') {
+      table.columns[0].alignment = 'left';
+      seApp.keyCode(53); // Scape
+    }
+
+    // COLLECT INFO FOR SUMMARY
+    if (option == '6. Orçamento - SummaryAndDuration Maker') {
+      var tableName = table.name();
+
+      // 01 EDIFICAÇÃO B::'ORÇAMENTO - SPICS • EDIFICAÇÃO A - PRINCIAPL'::I13
+      // Para sheets com tabelas de nomes iguais: com nome do sheet
+      //var partialTotalCellAutoLinkInfo = sheetName + "::'" + table.name() + "'::" + partialTotalCellName
+
+      //'ORÇAMENTO - SPICS • EDIFICAÇÃO A - PRINCIAPL'::I13
+      // Para sheets com tabelas de nomes diferentes: sem o nome do sheet
+      var partialTotalCellAutoLinkInfo = "'" + tableName + "'::" + partialTotalCellName;
+
+      summaryInfo.push([sheetName4Summary, numberLib.formatNumber(partialTotalBySheet, 2, 2), partialTotalCellAutoLinkInfo]);
+
+      // Zerar partialTotal e partialTotalBySheet para o novo Sheet
+      var partialTotal = 0;
+      var partialTotalBySheet = 0;
+
+      if (quoteTablesNames.includes(tableName)) {
+        displayLib.alert(
+          'Este orçamento tem tabelas de orçamentos com nomes iguais — A tabela resumo não vai buscar os Subtotais por Tab/Unidade de Intervencão.\n\nTABELAS DE ORÇAMENTOS PROCESSADAS',
+          quoteTablesNames.join('\n\n') + `\n\n—\nNome repetido: "${tableName}"`
+        );
+      }
+    }
+  }
+
+  if (option == '3. Orçamento - PriceK & Subtotal & ItemZeroChecker & ItemNumbers') {
+    currentApp.activate();
+
+    if (itemTotalEqualZeroIsError.length > 0) {
+      delay(d1);
+
+      var notUsed = cflLib.cfl2Str(itemTotalEqualZeroIsError, 'ITENS ZERADOS❗️', itemTotalEqualZeroIsError[0]);
+    }
+
+    if (trackItemNumRepetitions.length > 0) {
+      delay(d1);
+
+      var notUsed = cflLib.cfl2Str(trackItemNumRepetitions, 'NÚMEROS REPETIDOS POR SHEET❗️', trackItemNumRepetitions[0]);
+    }
+
+    if (trackItemDescRepetitions.length > 0) {
+      delay(d1);
+
+      var notUsed = cflLib.cfl2Str(trackItemDescRepetitions, 'DESCRITIVOS REPETIDOS POR SHEET❗️', trackItemDescRepetitions[0]);
+    }
+
+    if (trackNotUppercasedNotes.length > 0) {
+      delay(d1);
+
+      var notUsed = cflLib.cfl2Str(trackNotUppercasedNotes, `"NOTAS" NÃO EM LETRAS MAIÚSCULAS❗️`, trackNotUppercasedNotes[0]);
+    }
+
+    var quoteItemsDetailsSelected = cflLib.cfl2Str(
+      quoteItemsDetails,
+      `Controla a numeracão dos Itens (${quoteItemsDetails.length})❗️\n\n—\nRecolhe números correctamente até item X.59 (depois vai falhar os múltiplos de 10, será X.6 no lugar de X.60\n	- A situação X.3.20 é recolhida normalmente sem precisar de condição do App5 pois X.3.20 (2 vírgulas) é lido como String (diferente de X.6 (1 vírgula) que é lido como número)\n`,
+      quoteItemsDetails[0],
+      'm'
+    );
+  }
+
+  // Process
+  if (option == '6. Orçamento - SummaryAndDuration Maker') {
+    var summarySheetName = '00 RESUMO';
+    var durationSheetName = '00 ESTIMATIVA DE DURAÇÃO';
+
+    var summaryOrDurationSheetNames = [summarySheetName, durationSheetName];
+
+    var durationTableItems = [['EDIFICAÇÃO', 'DURAÇÃO K (MESES)', 'DURAÇÃO (MESES)']];
+
+    for (var j = 0; j < summaryOrDurationSheetNames.length; j++) {
+      var summaryOrDurationSheetName = summaryOrDurationSheetNames[j];
+
+      var sheetsNames4SheetStr = docNum.sheets.name().toString();
+
+      if (!sheetsNames4SheetStr.includes(summaryOrDurationSheetName)) {
+        numbersApp.activate();
+        var numbersSheet = numbersApp.Sheet({ name: summaryOrDurationSheetName });
+
+        var sheetAfterName = '00 CAPA';
+        var summaryAndDurationRowHeight = 30;
+
+        docNum.activeSheet.set(docNum.sheets[sheetAfterName]);
+
+        docNum.sheets.push(numbersSheet);
+
+        var tableSummaryOrDuration = numbersSheet.tables[0];
+        delay(d0p5);
+
+        menuLib.doSubMenu('Numbers', 'Table', 'Header Rows', '0');
+        delay(d0p5);
+        menuLib.doSubMenu('Numbers', 'Table', 'Header Columns', '0');
+
+        iWorkLib.deleteRows(tableSummaryOrDuration, 9, 1);
+
+        if (summaryOrDurationSheetName == summarySheetName) {
+          tableSummaryOrDuration.cells['E1'].addColumnAfter();
+
+          tableSummaryOrDuration.columns[0].width = 350;
+          tableSummaryOrDuration.columns[1].width = 100;
+          tableSummaryOrDuration.columns[2].width = 100;
+          tableSummaryOrDuration.columns[3].width = 100;
+          tableSummaryOrDuration.columns[4].width = 100;
+          tableSummaryOrDuration.columns[5].width = 100;
+
+          for (var i = 0; i < summaryInfo.length; i++) {
+            tableSummaryOrDuration.cells['A' + tableSummaryOrDuration.rowCount()].addRowBelow();
+
+            var iSum = i + 1;
+
+            if (i == 0) {
+              tableSummaryOrDuration.cells['A' + iSum].value = summaryInfo[i][0]; // Objecto
+              tableSummaryOrDuration.cells['B' + iSum].value = summaryInfo[i][1]; // Subtotal verificação
+              tableSummaryOrDuration.cells['C' + iSum].value = summaryInfo[i][2]; // Sutotal
+              tableSummaryOrDuration.cells['D' + iSum].value = summaryInfo[i][3]; // Contingências
+              tableSummaryOrDuration.cells['E' + iSum].value = summaryInfo[i][4]; // IVA
+              tableSummaryOrDuration.cells['F' + iSum].value = summaryInfo[i][5]; // Total
+            } else {
+              var buildingName = summaryInfo[i][0];
+
+              //tableSummaryOrDuration.cells["A"+iSum].value = summaryInfo[i][0]
+
+              tableSummaryOrDuration.cells['A' + iSum].value = buildingName;
+              tableSummaryOrDuration.cells['B' + iSum].value = summaryInfo[i][1];
+              tableSummaryOrDuration.cells['C' + iSum].value = '=' + summaryInfo[i][2];
+              //tableSummaryOrDuration.cells["D"+iSum].value = "=" + summaryInfo[i][2] + "*'COEFICIENTES'::B8"
+              tableSummaryOrDuration.cells['D' + iSum].value = '=C' + iSum + "*'COEFICIENTES'::B8";
+              tableSummaryOrDuration.cells['E' + iSum].value = '=(C' + iSum + ('+D' + iSum) + ")*'COEFICIENTES'::B9";
+              tableSummaryOrDuration.cells['F' + iSum].value = '=SUM(C' + iSum + ':' + 'E' + iSum + ')';
+
+              var buildingSummaryTotal = "='\n\n00 RESUMO\n\n'::F" + iSum + "*'COEFICIENTES'::B18";
+
+              durationTableItems.push([buildingName, buildingSummaryTotal]);
+            }
+
+            tableSummaryOrDuration.rows[i].height = summaryAndDurationRowHeight;
+          }
+
+          var tableSummaryOrDurationRowsL = tableSummaryOrDuration.rowCount();
+          tableSummaryOrDuration.cells['B' + tableSummaryOrDurationRowsL].value =
+            '=SUM(B2:B' + (tableSummaryOrDurationRowsL - 1) + ')';
+          tableSummaryOrDuration.cells['C' + tableSummaryOrDurationRowsL].value =
+            '=SUM(C2:C' + (tableSummaryOrDurationRowsL - 1) + ')';
+          tableSummaryOrDuration.cells['D' + tableSummaryOrDurationRowsL].value =
+            '=SUM(D2:D' + (tableSummaryOrDurationRowsL - 1) + ')';
+          tableSummaryOrDuration.cells['E' + tableSummaryOrDurationRowsL].value =
+            '=SUM(E2:E' + (tableSummaryOrDurationRowsL - 1) + ')';
+          tableSummaryOrDuration.cells['F' + tableSummaryOrDurationRowsL].value =
+            '=SUM(F2:F' + (tableSummaryOrDurationRowsL - 1) + ')';
+          delay(d0p3);
+
+          tableSummaryOrDuration.rows[tableSummaryOrDurationRowsL - 1].height = summaryAndDurationRowHeight;
+
+          tableSummaryOrDuration.columns[1].textColor = 'red'; // Red color for checking column
+
+          iWorkLib.alignHorizontal(tableSummaryOrDuration, 'B1:F1', 'right');
+          iWorkLib.numbersActivateFormatIndex(numbersAppControllerP, 2); // Activate Format > Text
+
+          // Bold cabeçalho
+          iWorkLib.bold(tableSummaryOrDuration, 'A1:F1');
+
+          // Bold Totais
+          iWorkLib.bold(tableSummaryOrDuration, 'A' + tableSummaryOrDurationRowsL + ':F' + tableSummaryOrDurationRowsL);
+
+          iWorkLib.alignVertical(tableSummaryOrDuration, 'A1:F' + tableSummaryOrDurationRowsL, 'center');
+
+          var decimalsTrack = tableSummaryOrDuration.cells['C2'].value(); // Sutbotal em C2
+
+          if (decimalsTrack > 0) {
+            // ORÇAMENTO
+            // Apply 2 deciamls
+            iWorkLib.setDecimals(numbersAppControllerP, tableSummaryOrDuration, 'B2:F' + tableSummaryOrDurationRowsL, 3, 'Up');
+          } else if (decimalsTrack == 0) {
+            // MAPA DE QUANTIDADES
+
+            iWorkLib.setDecimals(numbersAppControllerP, tableSummaryOrDuration, 'B2:F' + tableSummaryOrDurationRowsL, 1, 'Down');
+            delay(d0p3);
+
+            iWorkLib.setDecimals(numbersAppControllerP, tableSummaryOrDuration, 'B2:F' + tableSummaryOrDurationRowsL, 1, 'Up');
+          }
+
+          delay(d0p3);
+          seApp.keyCode(53); // Scape to deselect
+        } else if (summaryOrDurationSheetName == durationSheetName) {
+          tableSummaryOrDuration.columns[0].width = 700;
+          tableSummaryOrDuration.columns[1].width = 150; // HIDE DURATIONK
+          tableSummaryOrDuration.columns[2].width = 150;
+
+          for (var i = 0; i < durationTableItems.length; i++) {
+            var iSum = i + 1;
+
+            if (i == 0) {
+              tableSummaryOrDuration.cells['A' + iSum].value = durationTableItems[i][0]; // Objecto
+              tableSummaryOrDuration.cells['B' + iSum].value = durationTableItems[i][1]; // Duração K
+              tableSummaryOrDuration.cells['C' + iSum].value = durationTableItems[i][2]; // Duração
+            } else {
+              tableSummaryOrDuration.cells['A' + tableSummaryOrDuration.rowCount()].addRowBelow();
+              tableSummaryOrDuration.cells['A' + iSum].value = durationTableItems[i][0];
+              tableSummaryOrDuration.cells['B' + iSum].value = durationTableItems[i][1];
+            }
+
+            tableSummaryOrDuration.rows[i].height = summaryAndDurationRowHeight;
+          }
+
+          var tableSummaryOrDurationRowsL = tableSummaryOrDuration.rowCount();
+
+          // Apply 2 deciamls
+          iWorkLib.setDecimals(numbersAppControllerP, tableSummaryOrDuration, 'B2:B' + tableSummaryOrDurationRowsL, 3, 'Up');
+
+          delay(d0p3);
+
+          iWorkLib.alignHorizontal(tableSummaryOrDuration, 'B1:B' + tableSummaryOrDurationRowsL, 'right');
+          iWorkLib.numbersActivateFormatIndex(numbersAppControllerP, 2); // Activate Format > Text
+
+          // Bold cabeçalho
+          iWorkLib.bold(tableSummaryOrDuration, 'A1:C1');
+          delay(d0p3);
+
+          tableSummaryOrDuration.cells['D2'].value = '=MAX(B2:B' + tableSummaryOrDurationRowsL + ')';
+          delay(d0p3);
+
+          tableSummaryOrDuration.cells['E2'].value = '=RIGHT(D2,2)';
+
+          delay(d0p3);
+
+          var durationDecimal = tableSummaryOrDuration.cells['E2'].value();
+
+          var durationDecimalDigit1 = Number(durationDecimal.toString()[0]);
+
+          var increment = 2;
+
+          if (durationDecimalDigit1 < 3) {
+            // Até 3
+
+            var incrementOption = 'Down';
+
+            tableSummaryOrDuration.cells['C2'].value = '=ROUNDDOWN(D2,0)';
+          } else if (durationDecimalDigit1 > 2 && durationDecimalDigit1 < 8) {
+            var incrementOption = 'Up';
+
+            if (durationDecimalDigit1 == 3) {
+              var durationFormula = '=D2 + (0.5−0.3)';
+            } else if (durationDecimalDigit1 == 4) {
+              var durationFormula = '=D2 + (0.5−0.4)';
+            } else if (durationDecimalDigit1 == 5) {
+              // 🔴 Override increment and incrementOption
+              var increment = 1;
+              var incrementOption = 'Down';
+
+              var durationFormula = '=D2';
+            } else if (durationDecimalDigit1 == 6) {
+              var durationFormula = '=D2 - (0.5−0.4)';
+            } else if (durationDecimalDigit1 == 7) {
+              var durationFormula = '=D2 - (0.5−0.3)';
+            }
+
+            tableSummaryOrDuration.cells['C2'].value = durationFormula;
+          }
+          if (durationDecimalDigit1 > 7) {
+            var incrementOption = 'Down';
+            tableSummaryOrDuration.cells['C2'].value = '=ROUNDUP(D2,0)';
+          }
+
+          var rangeNameToFormat = 'C2:C' + tableSummaryOrDurationRowsL;
+          iWorkLib.alignHorizontal(tableSummaryOrDuration, 'C1:C' + tableSummaryOrDurationRowsL, 'center');
+
+          iWorkLib.alignVertical(tableSummaryOrDuration, 'A1:E' + tableSummaryOrDurationRowsL, 'center');
+
+          iWorkLib.setDecimals(numbersAppControllerP, tableSummaryOrDuration, rangeNameToFormat, increment, incrementOption);
+
+          // IF IS NOT ONLY ONE OBJECT, MERGE
+          if (rangeNameToFormat != 'C2:C2') {
+            iWorkLib.mergeCells(tableSummaryOrDuration, rangeNameToFormat);
+          }
+          delay(d5); // TIME TO CHECK DURATION BY OBJECT
+
+          iWorkLib.hideColumns(tableSummaryOrDuration, ['B', 'D', 'E']);
+        }
+
+        delay(d0p3);
+
+        tableSummaryOrDuration.name = `\n\n${summaryOrDurationSheetName}\n\n`;
+
+        delay(d0p3);
+
+        // Alighn Title left
+        //numbersAppControllerP.windows[0].scrollAreas[2].groups[1].checkboxes[0].click()
+
+        // numbersAppControllerP.windows[0].scrollAreas[1].groups[1].checkboxes[0].click()
+
+        iWorkLib.tableTitleAlign(numbersAppControllerP, 'Left');
+
+        delay(d0p3);
+
+        docNum.save();
+      } else {
+        displayLib.alert(`Este Orçamento já tem o Sheet "${summaryOrDurationSheetName}"`, '');
+      }
+    }
+  }
+
+  return itemsFilteredGeneral + ' | ' + itemJoiner + ' | ' + partialTotal + ' | ' + itemsFilteredByWords + ' | ' + filters;
+}
