@@ -736,7 +736,7 @@ function autoBackup(autoOrManualRun, callback) {
       // Copy all folders inside DATA
       ['/Users/xd5-wmac/Dropbox/DATA', [''], 'folders'],
 
-      // ['/Users/xd5-wmac/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins', ['xd5_'], 'folders'],
+      ['/Users/xd5-wmac/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins', ['xd5_'], 'folders'],
     ];
 
     var { dateY4M2D2__H2M2S2 } = formatDateV3(new Date()).formats;

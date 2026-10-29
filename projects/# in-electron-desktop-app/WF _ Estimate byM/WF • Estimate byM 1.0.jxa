@@ -82,6 +82,8 @@ function run(input, parameters) {
 
   var docNumXA5 = numbersApp.open(numXA5PathObj);
 
+  alert("XYZ-1")
+
   var {
     customerName,
     invoiceCs,
@@ -100,6 +102,9 @@ function run(input, parameters) {
 
   // alert(`${filePathStrsFromWfEstimateA5PathStrL}\n\n${numberOfTxtFilesToProcess}`, ``);
 
+  alert("XYZ-2")
+
+
   if (filePathStrsFromWfEstimateA5PathStrL == numberOfTxtFilesToProcess) {
     moveItems(filePathStrsFromWfEstimateA5PathStr, wfEstimateA5InProcessPathStr);
 
@@ -110,6 +115,9 @@ function run(input, parameters) {
 
     for (var f = 0; f < filePathStrsFromFolderInProcess.length; f++) {
       var startDateTime = new Date();
+
+  alert("XYZ-3")
+
 
       // --------------------------------------- COLORS
       const {
